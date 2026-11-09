@@ -158,10 +158,10 @@ table.wp th{font-family:var(--f-display);font-weight:600;font-size:11px;letter-s
 table.wp td{padding:2px 4px;border-bottom:1px solid var(--line)}
 table.wp tr.active td{background:var(--tele-soft)}
 table.wp tr.done td{color:var(--faint)}
-table.wp tr.wp-avoid td{background:var(--accent-soft);font-size:11.5px}
+table.wp tr.wp-avoid td{background:rgba(224,36,36,0.12);font-size:11.5px}
 .wp-n{font-family:var(--f-mono);font-weight:600;width:28px;text-align:center}
 .wp-tag{font-family:var(--f-mono);font-size:9.5px;padding:1px 4px;border-radius:2px;background:var(--panel-2);color:var(--muted);display:inline-block;white-space:nowrap}
-.wp-tag.avoid{background:var(--accent);color:var(--on-accent);font-weight:600}
+.wp-tag.avoid{background:#e02424;color:#ffffff;font-weight:600}
 .wp-tag.hub{background:var(--tele);color:#fff;font-weight:600}
 table.wp input{width:100%;min-width:42px;background:transparent;border:1px solid transparent;border-radius:3px;padding:2px 3px;font-family:var(--f-mono);font-size:12px}
 table.wp input:hover{border-color:var(--line)}
@@ -176,10 +176,10 @@ table.wp input:focus{border-color:var(--tele);outline:none;background:var(--pane
 #gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 #gl.drag{cursor:grabbing}
 .ov{position:absolute;background:var(--ov);border:1px solid var(--line);border-radius:4px;font-family:var(--f-mono);font-size:11px;color:var(--fg);padding:4px 8px;pointer-events:none;backdrop-filter:blur(3px)}
-.ov-hint{left:10px;top:10px;color:var(--muted);max-width:calc(58% - 20px)}
+.ov-hint, #hint{display:none!important}
 .ov-hud{right:10px;top:10px;display:grid;grid-template-columns:auto auto;gap:1px 10px;font-variant-numeric:tabular-nums}
 .ov-hud span{color:var(--muted)}
-.ov-wind{right:10px;top:88px;display:flex;align-items:center;gap:10px;padding:7px 10px;border-color:var(--tele);box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.ov-wind, #windHud{display:none!important}
 .ov-wind[hidden]{display:none!important}
 .wind-dial{width:46px;height:46px;flex:none;display:block}
 .wind-info{display:flex;flex-direction:column;gap:1px;font-variant-numeric:tabular-nums;line-height:1.28}
@@ -676,7 +676,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
 
         <div class="sec">
           <h3>Gió đô thị &amp; Giả lập sự cố</h3>
-          <label class="chk" style="margin-bottom:10px"><input type="checkbox" id="pWindOn" checked> Bật gió luồn giữa các tòa nhà (hiển thị hướng gió)</label>
+          <label class="chk" style="margin-bottom:10px"><input type="checkbox" id="pWindOn"> Bật gió luồn giữa các tòa nhà (hiển thị hướng gió)</label>
           <div class="field"><label for="pWind">Tốc độ gió</label><output id="oWind"></output><input type="range" id="pWind" min="0" max="12" step="1" value="5"></div>
           <div class="field"><label for="pWdir">Gió thổi từ hướng</label><output id="oWdir"></output><input type="range" id="pWdir" min="0" max="355" step="5" value="270"></div>
           <div class="field"><label for="pGust">Giật</label><output id="oGust"></output><input type="range" id="pGust" min="0" max="60" step="5" value="30"></div>
@@ -694,39 +694,19 @@ table.an-t tr.on td{background:var(--accent-soft)}
       <div class="ph"><span class="code">3D</span><h2 id="h3d">Đô thị &amp; Nhà máy sản xuất</h2>
         <div class="seg" role="group" aria-label="Thu phóng" id="zoomSeg" style="margin-left:auto"><button data-zoom="in" aria-label="Phóng to" title="Phóng to (phím +)">+</button><button data-zoom="out" aria-label="Thu nhỏ" title="Thu nhỏ (phím −)">−</button></div>
         <div class="seg" role="group" aria-label="Góc camera" id="camSeg">
-          <button data-cam="orbit" aria-pressed="true">Quỹ đạo</button><button data-cam="follow">Bám đuôi</button><button data-cam="fpv" title="Góc nhìn camera gắn trên drone (phím C)">Camera<span class="wide-only"> drone</span></button>
+          <button data-cam="orbit" aria-pressed="true">Xoay 3D</button><button data-cam="follow">Bám đuôi</button><button data-cam="traj">Xem quỹ đạo</button><button data-cam="fpv" title="Góc nhìn camera gắn trên drone (phím C)">Camera<span class="wide-only"> drone</span></button>
         </div>
       </div>
       <div class="stage" id="stage">
         <canvas id="gl" aria-label="Cảnh 3D đô thị và nhà máy của drone chở hàng"></canvas>
-        <div class="ov ov-hint" id="hint">Kéo: xoay · cuộn chuột, chụm 2 ngón hoặc +/−: thu phóng · click mặt đất: thêm điểm tuần tra / giao hàng</div>
+        <div class="ov ov-hint" id="hint" style="display:none!important"></div>
         <div class="ov ov-hud" id="hud">
           <span>ALT</span><b id="hudAlt">0.0 m</b>
           <span>GS</span><b id="hudGs">0.0 m/s</b>
           <span>LIDAR</span><b id="hudObs">—</b>
           <span>WP</span><b id="hudWp">—</b>
         </div>
-        <div class="ov ov-wind" id="windHud" aria-label="Chỉ báo hướng gió trên màn hình">
-          <svg class="wind-dial" viewBox="0 0 56 56" aria-hidden="true">
-            <circle cx="28" cy="28" r="24" fill="var(--panel-2)" stroke="var(--line-2)" stroke-width="1.5"/>
-            <text x="28" y="10" text-anchor="middle" font-size="7.5" font-weight="700" fill="var(--fg)">N</text>
-            <text x="48" y="30.5" text-anchor="middle" font-size="7" fill="var(--muted)">E</text>
-            <text x="28" y="50" text-anchor="middle" font-size="7" fill="var(--muted)">S</text>
-            <text x="8" y="30.5" text-anchor="middle" font-size="7" fill="var(--muted)">W</text>
-            <g id="windArrowG" transform="translate(28,28) rotate(90)">
-              <line x1="0" y1="14" x2="0" y2="-13" stroke="var(--tele)" stroke-width="2.6" stroke-linecap="round"/>
-              <polygon points="0,-17 -4.5,-8 4.5,-8" fill="var(--accent)"/>
-              <line x1="-4" y1="11" x2="4" y2="11" stroke="var(--tele)" stroke-width="1.8"/>
-              <line x1="-3" y1="14" x2="3" y2="14" stroke="var(--tele)" stroke-width="1.8"/>
-            </g>
-          </svg>
-          <div class="wind-info">
-            <span class="wind-title">LUỒNG GIÓ ĐÔ THỊ</span>
-            <span class="wind-dir" id="windHudDir">Từ 270° (Tây) → Đông</span>
-            <span class="wind-sub" id="windHudSpd">5.0 m/s · giật 30%</span>
-            <span class="wind-sub" id="windHudLim">Drone chịu được ~18.6 m/s</span>
-          </div>
-        </div>
+        <div class="ov ov-wind" id="windHud" style="display:none!important" hidden></div>
         <div class="ov ov-banner" id="banner" hidden></div>
         <div class="ov ov-err" id="glErr" hidden>Trình duyệt không khởi tạo được WebGL nên cảnh 3D không hiển thị. Mô phỏng, dashboard và máy trạng thái vẫn chạy bình thường.</div>
         <div class="cam-flash" id="camFlash" hidden aria-hidden="true"></div>
@@ -1179,7 +1159,7 @@ var Sim = (function(){
   const params = {
     takeoffAlt: 10, rtlAlt: 14, vMax: 8, missionAlt: 12, missionEnd: 'RTL',
     cargoMass: 1.5, autoAvoid: true, autoDrop: true, safeMargin: 4.5,
-    windOn: true, windSpeed: 5, windDir: 270, gust: 0.3, drain: 5, linkLost: false, adaptive: true,
+    windOn: false, windSpeed: 5, windDir: 270, gust: 0.3, drain: 5, linkLost: false, adaptive: true,
     // task: 'delivery' | 'patrol' | 'orbit' | 'scan'; loops: patrol laps (0 = until recalled); orbit: { e, n, r, u, dir, v, laps, lookU, name }
     task: 'delivery', loops: 1, orbit: null
   };
@@ -3553,17 +3533,74 @@ function init3D(){
     windParticles.push({ grp: item, e: e0, n: n0, u: u0, spdMul: 0.8 + Math.random() * 0.5 });
   }
 
-  // Flight Trail
-  const TMAX = 2000; const trailPos = new Float32Array(TMAX*3); let tCount = 0, lastTrailT = -1;
-  const trailGeo = new THREE.BufferGeometry(); trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3)); trailGeo.setDrawRange(0, 0);
-  const trailMat = new THREE.LineBasicMaterial({ color:0x0b7ba0, transparent:true, opacity:0.9 });
-  const trail = new THREE.Line(trailGeo, trailMat); trail.frustumCulled = false; scene.add(trail);
-  function pushTrail(p){
-    if (tCount >= TMAX){ trailPos.copyWithin(0, 3); tCount = TMAX - 1; }
-    trailPos[tCount*3] = p[0]; trailPos[tCount*3+1] = p[2]; trailPos[tCount*3+2] = -p[1]; tCount++;
-    trailGeo.setDrawRange(0, tCount); trailGeo.attributes.position.needsUpdate = true;
+  // Multi-lap Colorful Flight Trajectories
+  const trail = new THREE.Group(); scene.add(trail);
+  const LAP_COLORS = [
+    0x00e5ff, // Lượt 1: Xanh Cyan neon
+    0xff9100, // Lượt 2: Cam sáng neon
+    0xff007f, // Lượt 3: Hồng neon
+    0x00ff66, // Lượt 4: Xanh lá chuối neon
+    0xb026ff, // Lượt 5: Tím neon
+    0xffea00, // Lượt 6: Vàng neon
+    0x00bfff, // Lượt 7: Deep Sky Blue
+    0xff3333  // Lượt 8: Đỏ tươi
+  ];
+  const trailSegments = [];
+  let activeSeg = null;
+  let flightRunId = 1;
+  let wasGrounded = true;
+
+  function startNewTrailSegment(lapKey, colIdx){
+    const MAX_PTS = 2500;
+    const pos = new Float32Array(MAX_PTS * 3);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setDrawRange(0, 0);
+    const colorHex = LAP_COLORS[colIdx % LAP_COLORS.length];
+    const mat = new THREE.LineBasicMaterial({ color: colorHex, transparent: true, opacity: 0.95, linewidth: 2 });
+    const line = new THREE.Line(geo, mat);
+    line.frustumCulled = false;
+    trail.add(line);
+    activeSeg = { line, geo, pos, count: 0, lapKey, max: MAX_PTS };
+    trailSegments.push(activeSeg);
+    return activeSeg;
   }
-  function clearTrail(){ tCount = 0; trailGeo.setDrawRange(0, 0); }
+
+  function pushTrail(p, lapNumber){
+    const S = Sim.S;
+    if (wasGrounded && !S.grounded){
+      if (activeSeg && activeSeg.count > 10) flightRunId++;
+    }
+    wasGrounded = S.grounded;
+
+    const lapKey = flightRunId + '_' + (lapNumber || 1);
+    if (!activeSeg || activeSeg.lapKey !== lapKey){
+      const colIdx = (flightRunId - 1) * 3 + ((lapNumber || 1) - 1);
+      startNewTrailSegment(lapKey, colIdx);
+    }
+
+    if (activeSeg.count >= activeSeg.max){
+      activeSeg.pos.copyWithin(0, 3);
+      activeSeg.count = activeSeg.max - 1;
+    }
+    activeSeg.pos[activeSeg.count * 3] = p[0];
+    activeSeg.pos[activeSeg.count * 3 + 1] = p[2];
+    activeSeg.pos[activeSeg.count * 3 + 2] = -p[1];
+    activeSeg.count++;
+    activeSeg.geo.setDrawRange(0, activeSeg.count);
+    activeSeg.geo.attributes.position.needsUpdate = true;
+  }
+
+  function clearTrail(){
+    while (trail.children.length){
+      const c = trail.children.pop();
+      if (c.geometry) c.geometry.dispose();
+      if (c.material) c.material.dispose();
+    }
+    trailSegments.length = 0;
+    activeSeg = null;
+    flightRunId = 1;
+  }
 
   // Setpoint marker
   const spMat = new THREE.MeshBasicMaterial({ color:0xe2891a, transparent:true, opacity:0.9, depthTest:false });
@@ -3590,19 +3627,19 @@ function init3D(){
       wpGroup.add(ln);
     });
 
-    // Draw waypoints (Destination vs Avoidance Node)
+    // Draw waypoints (Destination vs Avoidance Node in RED)
     M.forEach((w, i) => {
       const isAvoid = w.kind === 'avoid';
       const top = toV(w.e, w.n, w.u);
-      const col = isAvoid ? tele : acc;
-      const pl = new THREE.Line(new THREE.BufferGeometry().setFromPoints([toV(w.e, w.n, 0.02), top]), new THREE.LineBasicMaterial({ color:lineC, transparent:true, opacity:isAvoid ? 0.45 : 0.85 }));
+      const col = isAvoid ? new THREE.Color(0xff2222) : acc;
+      const pl = new THREE.Line(new THREE.BufferGeometry().setFromPoints([toV(w.e, w.n, 0.02), top]), new THREE.LineBasicMaterial({ color:isAvoid ? new THREE.Color(0xff3333) : lineC, transparent:true, opacity:isAvoid ? 0.85 : 0.85 }));
       const ball = new THREE.Mesh(
-        isAvoid ? new THREE.OctahedronGeometry(0.32, 0) : new THREE.SphereGeometry(0.42, 16, 12),
-        new THREE.MeshBasicMaterial({ color:col })
+        isAvoid ? new THREE.SphereGeometry(0.48, 16, 12) : new THREE.SphereGeometry(0.42, 16, 12),
+        new THREE.MeshStandardMaterial({ color:col, emissive:isAvoid ? 0x660000 : 0x000000, roughness:0.25 })
       );
       ball.position.copy(top);
       const labTxt = isAvoid ? ('NÉ ' + (i+1)) : ('#' + (i+1));
-      const lab = textSprite(labTxt, '#1d1306', isAvoid ? '#52c2e4' : TK.accent, isAvoid ? 0.032 : 0.042);
+      const lab = textSprite(labTxt, '#ffffff', isAvoid ? '#d92525' : TK.accent, isAvoid ? 0.038 : 0.042);
       lab.position.copy(toV(w.e, w.n, w.u + 1.1));
       wpGroup.add(pl, ball, lab);
       wpBalls.push({ ball, isAvoid });
@@ -3715,19 +3752,24 @@ function init3D(){
     grid = new THREE.GridHelper(240, 120, new THREE.Color(TK['scene-grid']), new THREE.Color(TK['scene-grid2'])); grid.position.y = 0.006; scene.add(grid);
     hemi.intensity = TK.dark ? 0.65 : 0.9; sun.intensity = TK.dark ? 0.58 : 0.78;
     cityMeshes.forEach(c => { if (c.kind === 'building'){ c.mat.map = TK.dark ? winTexDark : winTexLight; c.mat.needsUpdate = true; } });
-    trailMat.color.set(TK.tele); spMat.color.set(TK.accent);
+    spMat.color.set(TK.accent);
     applyNight();
     rebuildMission();
   }
 
-  // Camera modes: Orbit, Follow, Top-down Urban Planning View
+  // Camera modes: Orbit, Follow, Trajectory Overview
   const cam = { mode:'orbit', az:0.85, el:0.44, dist:22.0, tgt:new THREE.Vector3(0, 2.5, 0), pos:new THREE.Vector3() };
   function setCam(mode){
     if (mode !== 'fpv' && cam.mode === 'fpv'){ camera.fov = 50; camera.updateProjectionMatrix(); }
     if (mode !== 'fpv') GB.ext = mode;
-    cam.mode = mode; camera.up.set(0, 1, 0); camModeChanged();
+    cam.mode = mode; camera.up.set(0, 1, 0);
+    if (mode === 'traj'){
+      cam.az = 0.82;
+      cam.el = 0.65;
+      cam.dist = 68.0;
+    }
+    camModeChanged();
     $$('#camSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cam === mode)));
-    if (mode === 'top' && cam.dist < 42) cam.dist = 48;
   }
   $$('#camSeg button').forEach(b => b.addEventListener('click', () => setCam(b.dataset.cam)));
   // Does the segment a→b (ENU) pass through the box? (slab test)
@@ -3775,6 +3817,22 @@ function init3D(){
       camera.position.copy(droneCam.position); camera.quaternion.copy(droneCam.quaternion);
       const f = camFov(camera.aspect, GB.zoom); if (Math.abs(camera.fov - f) > 1e-3){ camera.fov = f; camera.updateProjectionMatrix(); }
       cam.tgt.copy(dp);
+    } else if (cam.mode === 'traj'){
+      let midE = 0, midN = 0, span = 45;
+      if (Sim.mission && Sim.mission.length){
+        let minE = 0, maxE = 0, minN = 0, maxN = 0;
+        Sim.mission.forEach(w => {
+          minE = Math.min(minE, w.e); maxE = Math.max(maxE, w.e);
+          minN = Math.min(minN, w.n); maxN = Math.max(maxN, w.n);
+        });
+        midE = (minE + maxE) / 2; midN = (minN + maxN) / 2;
+        span = Math.max(maxE - minE, maxN - minN, 45);
+      }
+      const trajTgt = toV(midE, midN, 4.0);
+      cam.tgt.lerp(trajTgt, a);
+      const d = Math.max(span * 1.25, cam.dist);
+      const off = new THREE.Vector3(Math.cos(cam.el)*Math.cos(cam.az), Math.sin(cam.el), Math.cos(cam.el)*Math.sin(cam.az)).multiplyScalar(d);
+      camera.position.copy(cam.tgt).add(off); camera.up.set(0, 1, 0); camera.lookAt(cam.tgt);
     } else {
       cam.tgt.lerp(dp, a);
       camera.position.set(cam.tgt.x, cam.tgt.y + cam.dist*1.5 + 8, cam.tgt.z + 0.001);
@@ -3811,7 +3869,7 @@ function init3D(){
       if (moved > 6 && cam.mode === 'fpv') gimbalDrag(dx, dy);
       else if (moved > 6){
         if (cam.mode === 'follow'){ setCam('orbit'); const off = camera.position.clone().sub(cam.tgt); cam.az = Math.atan2(off.z, off.x); cam.el = Math.asin(clamp(off.y/off.length(), -1, 1)); }
-        if (cam.mode === 'orbit'){ cam.az += dx*0.008; cam.el = clamp(cam.el + dy*0.006, 0.05, 1.5); }
+        if (cam.mode === 'orbit' || cam.mode === 'traj'){ cam.az += dx*0.008; cam.el = clamp(cam.el + dy*0.006, 0.05, 1.5); }
       }
     } else if (pts.size === 2){
       const [a, b] = [...pts.values()]; const pd = Math.hypot(a.x-b.x, a.y-b.y);
@@ -3885,7 +3943,7 @@ function init3D(){
     shadow.position.set(p[0], 0.02, -p[1]);
     const sc = 1.0 + p[2]*0.06; shadow.scale.set(sc, sc, 1);
     shadow.material.opacity = Math.max(0.12, 1 - p[2]/40);
-    if ($('#optTrail').checked && !S.grounded && S.t - lastTrailT > 0.08){ pushTrail(p); lastTrailT = S.t; }
+    if ($('#optTrail').checked && !S.grounded && S.t - lastTrailT > 0.08){ pushTrail(p, S.lap || 1); lastTrailT = S.t; }
     trail.visible = $('#optTrail').checked;
     const sp = S.sp;
     if (sp && sp.xy && $('#optSp').checked){ spMark.visible = true; spMark.position.copy(toV(sp.xy[0], sp.xy[1], sp.z != null ? sp.z : p[2])); }
@@ -3896,19 +3954,19 @@ function init3D(){
     if (inRtl && S.rtlVer !== rtlVerDrawn){ rtlVerDrawn = S.rtlVer; drawRtl(); }
 
     const act = S.state === 'MISSION' ? S.wpIdx : -1;
-    const ca = new THREE.Color(TK.accent), ct = new THREE.Color(TK.tele), cf = new THREE.Color(TK.faint);
+    const ca = new THREE.Color(TK.accent), ct = new THREE.Color(TK.tele), cf = new THREE.Color(TK.faint), cr = new THREE.Color(0xff2222);
     wpBalls.forEach((item, i) => {
       const b = item.ball;
-      b.material.color.copy(i === act ? ct : (act >= 0 && i < act) ? cf : (item.isAvoid ? ct : ca));
-      b.scale.setScalar(i === act ? 1.35 + 0.15*Math.sin(t*6) : 1);
+      b.material.color.copy(item.isAvoid ? cr : (i === act ? ct : (act >= 0 && i < act) ? cf : ca));
+      b.scale.setScalar(i === act ? 1.35 + 0.15*Math.sin(t*6) : (item.isAvoid ? 1.15 : 1));
     });
 
     const w = S.windNow, ws = Math.hypot(w[0], w[1]);
     sockPivot.rotation.set(0, ws > 0.05 ? Math.atan2(w[1], w[0]) : sockPivot.rotation.y, -(1 - Math.min(1, ws/9))*1.25);
 
-    // Animate 3D wind streamlines and tree crowns swaying in the wind
-    const windVisible = Sim.params.windOn && ws > 0.05;
-    windStreamGroup.visible = windVisible;
+    // 3D wind streamlines hidden
+    const windVisible = false;
+    windStreamGroup.visible = false;
     if (windVisible){
       const wAng = Math.atan2(w[1], w[0]); // angle in ENU (0 = East, pi/2 = North)
       const streakScale = clamp(0.6 + ws * 0.14, 0.6, 2.2);
@@ -5587,6 +5645,12 @@ function svDrawMap(){
     const ms = Sim.missionStart || { e:0, n:0 };
     ctx.strokeStyle = TK.accent; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(ms.e), Y(ms.n));
     Sim.mission.forEach(m => ctx.lineTo(X(m.e), Y(m.n))); ctx.stroke();
+    Sim.mission.forEach(m => {
+      ctx.beginPath();
+      ctx.arc(X(m.e), Y(m.n), m.kind === 'avoid' ? 3.5 : 2.5, 0, 2 * Math.PI);
+      ctx.fillStyle = m.kind === 'avoid' ? '#ff2222' : TK.accent;
+      ctx.fill();
+    });
   }
   // camera footprint
   if (SV.foot){
