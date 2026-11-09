@@ -4529,9 +4529,10 @@ function init3D(){
       b.t += dtSim;
 
       // Vận tốc gió cục bộ (ENU)
-      const we = Sim.AIR ? Sim.AIR.w[0] : 0;
-      const wn = Sim.AIR ? Sim.AIR.w[1] : 0;
-      const wu = Sim.AIR ? Sim.AIR.w[2] : 0;
+      const windVec = (Sim.S && Sim.S.windNow) || [0, 0, 0];
+      const we = windVec[0] || 0;
+      const wn = windVec[1] || 0;
+      const wu = windVec[2] || 0;
 
       // Vận tốc tương đối với không khí
       const vre = b.ve - we;
@@ -6225,6 +6226,7 @@ function svDraw3D(){
     }
   }
 }
+window.svDraw3D = svDraw3D;
 
 /* --- form (FN panel) --- */
 const BOMBER_TARGETS = {
@@ -6256,8 +6258,9 @@ function buildBomberRoute(tgt, alt){
   const vCruise = (Sim.params && Sim.params.vMax) || 7.0;
   const dLead = vCruise * tFall * 0.90;
 
-  const wE = Sim.AIR ? Sim.AIR.w[0] : 0;
-  const wN = Sim.AIR ? Sim.AIR.w[1] : 0;
+  const windVec = (Sim.S && Sim.S.windNow) || [0, 0, 0];
+  const wE = windVec[0] || 0;
+  const wN = windVec[1] || 0;
   const dWindE = wE * tFall * 0.65;
   const dWindN = wN * tFall * 0.65;
 
