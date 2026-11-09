@@ -125,6 +125,16 @@ h3{font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.1
 .cmd:hover{border-color:var(--fg)}
 .cmd.off{opacity:.42;border-color:var(--line)}
 .cmd.off:hover{border-color:var(--line-2)}
+.cmd.cmd-mode{padding:4px 6px;justify-content:space-between;cursor:default}
+.mode-seg{display:flex;width:100%;background:var(--line);border-radius:4px;padding:2px;gap:2px}
+.mode-btn{flex:1;border:0;border-radius:3px;padding:4px 2px;font-family:var(--f-display);font-weight:700;font-size:12px;letter-spacing:.05em;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;text-align:center;line-height:1.2}
+.mode-btn:hover{color:var(--fg);background:rgba(255,255,255,0.08)}
+.mode-btn.active{background:var(--panel);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,0.18)}
+.mode-btn.active.is-auto{color:var(--tele);font-weight:700}
+.mode-btn.active.is-manual{color:var(--accent);font-weight:700}
+.task-type-btn{border:0;border-right:1px solid var(--line);background:var(--panel-2);padding:3px 8px;font-size:11.5px;font-weight:600}
+.task-type-btn:last-child{border-right:0}
+.task-type-btn.active{background:var(--fg);color:var(--panel)}
 .cmd.kill{grid-column:1/-1;background:var(--bad-soft);border-color:var(--bad);color:var(--bad);flex-direction:row;align-items:baseline;gap:10px}
 .cmd.kill small{color:inherit;opacity:.85}
 .cmd.kill.confirm{background:var(--bad);color:var(--on-bad)}
@@ -685,7 +695,13 @@ table.an-t tr.on td{background:var(--accent-soft)}
             <button class="cmd" data-cmd="TAKEOFF"><span class="cn">TAKEOFF</span><small>Cất cánh tại Nhà máy</small></button>
             <button class="cmd" data-cmd="LAND"><span class="cn">LAND</span><small>Hạ cánh tại chỗ</small></button>
             <button class="cmd" data-cmd="HOLD"><span class="cn">HOLD</span><small>Treo giữ vị trí</small></button>
-            <button class="cmd" data-cmd="MANUAL"><span class="cn">MANUAL</span><small>Lái tay (có APF bảo vệ)</small></button>
+            <div class="cmd cmd-mode" id="cmdModeBox" data-cmd="MANUAL" role="group" aria-label="Chọn chế độ bay: Tự động hoặc Lái tay">
+              <div class="mode-seg">
+                <button type="button" class="mode-btn" id="btnModeAuto" title="Bay Tự động (Mission / Giữ vị trí)">AUTO</button>
+                <button type="button" class="mode-btn active is-manual" id="btnModeManual" title="Lái tay tự do (APF bảo vệ)">MANUAL</button>
+              </div>
+              <small id="cmdModeSub">Lái tay (có APF bảo vệ)</small>
+            </div>
             <button class="cmd" data-cmd="MISSION"><span class="cn">MISSION</span><small>Bay nhiệm vụ tự động</small></button>
             <button class="cmd" data-cmd="RTL"><span class="cn">RTL</span><small>Về Nhà Máy (né tòa nhà)</small></button>
             <button class="cmd kill" data-cmd="KILL" id="killBtn"><span class="cn">KILL</span><small id="killTxt">Ngắt động cơ khẩn cấp</small></button>
@@ -694,13 +710,28 @@ table.an-t tr.on td{background:var(--accent-soft)}
         </div>
 
         <div class="sec" id="svSec">
-          <div class="sec-h"><h3>Nhiệm vụ giám sát</h3><span class="chip chip-avoid">CAMERA</span></div>
-          <div class="sv-opt" data-for="patrol">
+          <div class="sec-h">
+            <h3>Nhiệm vụ bay</h3>
+            <div class="seg" role="group" id="taskTypeSeg" aria-label="Loại nhiệm vụ">
+              <button type="button" class="task-type-btn active" id="tabTaskPatrol" data-task="patrol">Tuần tra</button>
+              <button type="button" class="task-type-btn" id="tabTaskBomber" data-task="bomber">💣 Bomber</button>
+            </div>
+          </div>
+          <div class="sv-opt" id="optPatrol" data-for="patrol">
             <div class="row"><label for="svPatrol">Tuyến</label><select id="svPatrol"><option value="fence">Hàng rào Nhà máy</option><option value="center">Trục phố trung tâm</option><option value="city">Vòng ngoài khu đô thị</option><option value="custom">Tự vẽ: click mặt đất 3D</option></select></div>
             <div class="field"><label for="svPu">Độ cao tuần tra</label><output id="oSvPu"></output><input type="range" id="svPu" min="10" max="40" step="1" value="16"></div>
             <p class="sv-info">Chế độ: <b>Auto bay 1 vòng</b> theo tuyến rồi tự động quay về Nhà máy (RTL). Camera tự quét hai bên ±55°.</p>
+            <div class="sv-go"><button class="btn primary" id="svStart">Auto bay 1 vòng</button><button class="btn" id="svStop" title="Dừng nhiệm vụ, bay về Nhà máy">Gọi về (RTL)</button></div>
           </div>
-          <div class="sv-go"><button class="btn primary" id="svStart">Auto bay 1 vòng</button><button class="btn" id="svStop" title="Dừng nhiệm vụ, bay về Nhà máy">Gọi về (RTL)</button></div>
+          <div class="sv-opt" id="optBomber" style="display:none" data-for="bomber">
+            <div class="row"><label for="bomberTarget">Mục tiêu</label><select id="bomberTarget"><option value="depot">Kho quân khí ngoại ô (52, 38)</option><option value="radar">Trạm radar phòng không (-42, 48)</option><option value="convoy">Đoàn xe cơ giới địch (18, -42)</option><option value="bunker">Boongke kiên cố (-48, -32)</option><option value="custom">Tự chọn mục tiêu (Click mặt đất 3D)</option></select></div>
+            <div class="field"><label for="bomberAlt">Độ cao ném bom</label><output id="oBomberAlt">20 m</output><input type="range" id="bomberAlt" min="14" max="38" step="1" value="20"></div>
+            <p class="sv-info">Chế độ <b>Bomber Oanh tạc</b>: Drone tự cất cánh né vật cản A*, ngắm và <b>cắt bom chính xác</b> nổ tung mục tiêu, sau đó tự động RTL về căn cứ.</p>
+            <div class="sv-go">
+              <button class="btn primary" id="btnBomberStart" style="background:#dc2626;border-color:#b91c1c;color:#fff;font-weight:700">💣 Xuất kích ném bom</button>
+              <button class="btn" id="btnManualDrop" title="Thả bom ngay tại chỗ (phím B)">Thả bom ngay (B)</button>
+            </div>
+          </div>
         </div>
 
         <div class="sec">
@@ -1740,7 +1771,7 @@ var Sim = (function(){
     E.IHat = P.I0x + Math.max(0, E.mHat - P.mBase) * P.rCargo * P.rCargo;
   }
 
-  const TASK_NAME = { delivery:'chuyến giao hàng', patrol:'tuần tra', orbit:'bay vòng', scan:'quét khu vực' };
+  const TASK_NAME = { delivery:'chuyến giao hàng', patrol:'tuần tra', orbit:'bay vòng', scan:'quét khu vực', bomber:'oanh tạc ném bom' };
   function finishTask(why){
     S.wpIdx = 0; S.destDone = 0;
     const end = params.missionEnd;
@@ -1884,6 +1915,11 @@ var Sim = (function(){
               syncMass(); S.cargoDelivered = params.cargoMass === 0;
               S.dwell = 1.8;
               emit({ type:'delivery', msg:'Đã thả ' + share.toFixed(2) + ' kg hàng tại ' + (w.label || 'Trạm đích') + (params.cargoMass > 0 ? ' · còn ' + params.cargoMass.toFixed(2) + ' kg' : '') });
+            }
+            if (w.role === 'bomb'){
+              S.dwell = 1.0;
+              if (window.dropBomb) window.dropBomb();
+              emit({ type:'bomb', msg:'💣 ĐÃ CẮT BOM OANH TẠC ' + (w.label || 'MỤC TIÊU') });
             }
             return { xy:[w.e, w.n], z:w.u, yaw:S.yawSp };
           }
@@ -2204,7 +2240,7 @@ const META = {
 
 let TK = {};
 let R3 = null;
-const TASK_LABEL = window.TASK_LABEL = { patrol:'Tuần tra' };
+const TASK_LABEL = window.TASK_LABEL = { patrol:'Tuần tra', bomber:'Oanh tạc Bomber' };
 const SV = window.SV = {
   task:'patrol', patrol:'fence', pu:16, loops:1,
   orbit:{ target:'F3', r:14, u:22, laps:1, dir:1, v:4 }, orbitPick:null,
@@ -2313,6 +2349,25 @@ function highlightDiagram(from, to){
   }
 }
 
+function updateFlightModeUI(){
+  const S = Sim.S, st = S.state;
+  const isMan = st === 'MANUAL';
+  const isFlying = ['TAKEOFF', 'HOVER', 'MISSION', 'RTL', 'LANDING', 'FAILSAFE'].includes(st);
+  const btnAuto = $('#btnModeAuto'), btnManual = $('#btnModeManual'), sub = $('#cmdModeSub');
+  if (!btnAuto || !btnManual) return;
+  btnManual.classList.toggle('active', isMan);
+  btnManual.classList.toggle('is-manual', isMan);
+  btnAuto.classList.toggle('active', !isMan);
+  btnAuto.classList.toggle('is-auto', !isMan);
+  if (sub){
+    if (isMan) sub.textContent = 'Đang lái tay (APF)';
+    else if (st === 'MISSION') sub.textContent = 'Tự động (Mission)';
+    else if (st === 'HOVER') sub.textContent = 'Tự động (Giữ vị trí)';
+    else if (isFlying) sub.textContent = 'Tự động (' + st + ')';
+    else sub.textContent = 'Lái tay (có APF bảo vệ)';
+  }
+}
+
 /* ---------- state display ---------- */
 function setPill(el, st){ el.textContent = st; el.className = 'pill s-' + META[st].cls; }
 function onStateChanged(){
@@ -2323,6 +2378,7 @@ function onStateChanged(){
   $('#smPrev').textContent = S.prevState ? 'Trước đó: ' + S.prevState + ' · lý do: ' + S.lastReason : 'Chưa có chuyển trạng thái.';
   highlightDiagram(S.prevState, st);
   refreshValidity(true);
+  updateFlightModeUI();
 }
 
 /* ---------- validity of commands ---------- */
@@ -2336,6 +2392,7 @@ function refreshValidity(force){
     b.title = why ? 'Không dùng được: ' + why : '';
     if (!why) valid.push(b.dataset.cmd);
   });
+  updateFlightModeUI();
   const key = valid.join(',');
   if (!force && key === lastValid) return;
   lastValid = key;
@@ -2398,7 +2455,41 @@ function demoTick(){
 /* ---------- commands ---------- */
 let killArm = false, killTimer = 0;
 function resetKill(){ killArm = false; clearTimeout(killTimer); $('#killBtn').classList.remove('confirm'); $('#killTxt').textContent = 'Ngắt động cơ khẩn cấp'; }
+
+function setFlightMode(mode){
+  const st = Sim.S.state;
+  demo.on = false;
+  if (mode === 'manual'){
+    if (st === 'DISARMED' || st === 'ARMED'){
+      addLog('warn', 'Hãy cất cánh (TAKEOFF) trước khi chuyển chế độ Lái tay', '', Sim.S.t);
+      return;
+    }
+    Sim.command('MANUAL');
+  } else if (mode === 'auto'){
+    if (st === 'DISARMED' || st === 'ARMED'){
+      if (SV.task === 'bomber') startBomberMission();
+      else svStart();
+      return;
+    }
+    if (st === 'MANUAL'){
+      if (Sim.destinations && Sim.destinations.length && Sim.check('MISSION') == null){
+        Sim.command('MISSION');
+      } else {
+        Sim.command('HOLD');
+      }
+    }
+  }
+}
+
+$('#btnModeAuto')?.addEventListener('click', e => { e.stopPropagation(); setFlightMode('auto'); });
+$('#btnModeManual')?.addEventListener('click', e => { e.stopPropagation(); setFlightMode('manual'); });
+$('#cmdModeBox')?.addEventListener('click', e => {
+  if (e.target.closest('.mode-btn')) return;
+  setFlightMode(Sim.S.state === 'MANUAL' ? 'auto' : 'manual');
+});
+
 $$('.cmd').forEach(b => b.addEventListener('click', () => {
+  if (b.id === 'cmdModeBox') return;
   const c = b.dataset.cmd;
   demo.on = false;
   if (atest.on) stopAdaptTest('người điều khiển ra lệnh ' + c);
@@ -2408,7 +2499,8 @@ $$('.cmd').forEach(b => b.addEventListener('click', () => {
     resetKill();
   }
   if (c === 'MISSION' && Sim.S.state === 'DISARMED'){
-    svStart();
+    if (SV.task === 'bomber') startBomberMission();
+    else svStart();
     return;
   }
   Sim.command(c);
@@ -3549,6 +3641,110 @@ function init3D(){
   const cargoGroup = new THREE.Group(); cargoGroup.position.set(0, 0.065*k, 0); drone.add(cargoGroup);
   cargoGroup.visible = false;
 
+  // Bomb Payload (Bomber Mission) under drone
+  function makeBombModel(){
+    const g = new THREE.Group();
+    const bombMat = new THREE.MeshLambertMaterial({ color: 0x1f2937 });
+    const finMat = new THREE.MeshLambertMaterial({ color: 0xd97706 });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.024*k, 0.038*k, 0.2*k, 12), bombMat);
+    body.rotation.z = Math.PI / 2;
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.038*k, 12, 10), bombMat);
+    nose.position.x = 0.1*k;
+    const fin1 = new THREE.Mesh(new THREE.BoxGeometry(0.06*k, 0.006*k, 0.08*k), finMat);
+    fin1.position.x = -0.08*k;
+    const fin2 = new THREE.Mesh(new THREE.BoxGeometry(0.06*k, 0.08*k, 0.006*k), finMat);
+    fin2.position.x = -0.08*k;
+    g.add(body, nose, fin1, fin2);
+    return g;
+  }
+  const bombUnderDrone = makeBombModel();
+  bombUnderDrone.position.set(0, yFrame - 0.035*k, 0);
+  drone.add(bombUnderDrone);
+  bombUnderDrone.visible = true;
+
+  const activeBombs = [];
+  const activeExplosions = [];
+  const bombWorldGroup = new THREE.Group(); scene.add(bombWorldGroup);
+  const explosionWorldGroup = new THREE.Group(); scene.add(explosionWorldGroup);
+  let camShakeT = 0;
+
+  function triggerExplosion(e, n, u){
+    const S = Sim.S;
+    const expl = new THREE.Group();
+    expl.position.copy(toV(e, n, Math.max(0.08, u)));
+    explosionWorldGroup.add(expl);
+
+    const fireMat = new THREE.MeshBasicMaterial({ color: 0xff5500, transparent: true, opacity: 0.95 });
+    const fireball = new THREE.Mesh(new THREE.SphereGeometry(0.8, 14, 10), fireMat);
+    expl.add(fireball);
+
+    const waveMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+    const wave = new THREE.Mesh(new THREE.RingGeometry(0.4, 1.2, 24), waveMat);
+    wave.rotation.x = -Math.PI / 2;
+    wave.position.y = 0.08;
+    expl.add(wave);
+
+    const scorchMat = new THREE.MeshBasicMaterial({ color: 0x18181b, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false });
+    const scorch = new THREE.Mesh(new THREE.CircleGeometry(2.5, 20), scorchMat);
+    scorch.rotation.x = -Math.PI / 2;
+    scorch.position.copy(toV(e, n, 0.03));
+    scene.add(scorch);
+
+    activeExplosions.push({
+      group: expl,
+      fireball,
+      wave,
+      fireMat,
+      waveMat,
+      age: 0,
+      maxAge: 0.9
+    });
+
+    const f = $('#camFlash');
+    if (f){ f.hidden = false; setTimeout(() => { f.hidden = true; }, 140); }
+    camShakeT = 0.38;
+
+    addLog('bad', '💥 BÙM! BOM ĐÃ PHÁT NỔ TẠI MỤC TIÊU!', 'Tọa độ: (' + e.toFixed(1) + ', ' + n.toFixed(1) + ') · Đã tiêu diệt mục tiêu thành công', S.t);
+
+    if (Sim.params.task === 'bomber'){
+      setTimeout(() => {
+        if (Sim.S.state === 'MISSION' || Sim.S.state === 'HOVER'){
+          addLog('good', 'Nhiệm vụ oanh tạc hoàn thành! Tự động quay về Nhà máy (RTL)...', '', Sim.S.t);
+          Sim.command('RTL', 'bomber');
+        }
+      }, 1800);
+    }
+  }
+
+  function dropBomb(){
+    const S = Sim.S;
+    if (S.grounded){
+      addLog('rej', 'Drone chưa cất cánh, không thể thả bom!', '', S.t);
+      return false;
+    }
+    const p = S.pos, v = S.vel;
+    const bMesh = makeBombModel();
+    bMesh.position.copy(toV(p[0], p[1], p[2] - 0.25));
+    bombWorldGroup.add(bMesh);
+    activeBombs.push({
+      mesh: bMesh,
+      e: p[0],
+      n: p[1],
+      u: p[2] - 0.25,
+      ve: v[0] || 0,
+      vn: v[1] || 0,
+      vu: (v[2] || 0) - 0.6,
+      t: 0
+    });
+    if (bombUnderDrone){
+      bombUnderDrone.visible = false;
+      setTimeout(() => { if (bombUnderDrone) bombUnderDrone.visible = true; }, 2000);
+    }
+    addLog('warn', '💣 ĐÃ CẮT BOM!', 'Tọa độ cắt: (' + p[0].toFixed(1) + ', ' + p[1].toFixed(1) + ') · cao ' + p[2].toFixed(1) + ' m', S.t);
+    return true;
+  }
+  window.dropBomb = dropBomb;
+
   // 4 Arms, Silver Brush Motors, Gold Decals, and Black Props with White Tips
   const props = [];
   Sim.MOT.forEach(M => {
@@ -4307,6 +4503,61 @@ function init3D(){
       treeCrowns.forEach(tc => { tc.pivot.rotation.set(0, 0, 0); });
     }
 
+    // Cập nhật các quả bom đang rơi
+    for (let i = activeBombs.length - 1; i >= 0; i--){
+      const b = activeBombs[i];
+      b.t += dtSim;
+      b.vu -= 9.81 * dtSim;
+      b.e += b.ve * dtSim;
+      b.n += b.vn * dtSim;
+      b.u += b.vu * dtSim;
+
+      b.mesh.position.copy(toV(b.e, b.n, b.u));
+      const horizSpd = Math.hypot(b.ve, b.vn);
+      const pitch = Math.atan2(b.vu, Math.max(0.1, horizSpd));
+      const yaw = Math.atan2(-b.vn, b.ve);
+      b.mesh.rotation.set(0, yaw, pitch);
+
+      let hitAlt = 0.05;
+      Sim.obstacles.forEach(o => {
+        if (Math.abs(b.e - o.e) < o.rx && Math.abs(b.n - o.n) < o.ry){
+          hitAlt = Math.max(hitAlt, o.h);
+        }
+      });
+
+      if (b.u <= hitAlt){
+        triggerExplosion(b.e, b.n, hitAlt);
+        bombWorldGroup.remove(b.mesh);
+        activeBombs.splice(i, 1);
+      }
+    }
+
+    // Cập nhật các vụ nổ
+    for (let i = activeExplosions.length - 1; i >= 0; i--){
+      const ex = activeExplosions[i];
+      ex.age += dt;
+      const progress = ex.age / ex.maxAge;
+      if (progress >= 1){
+        explosionWorldGroup.remove(ex.group);
+        activeExplosions.splice(i, 1);
+      } else {
+        const sc = 0.8 + progress * 5.5;
+        ex.fireball.scale.setScalar(sc);
+        ex.fireMat.opacity = Math.max(0, 0.95 * (1 - progress));
+        ex.wave.scale.setScalar(1.0 + progress * 6.5);
+        ex.waveMat.opacity = Math.max(0, 0.85 * (1 - progress));
+      }
+    }
+
+    // Camera shake do bom nổ
+    if (camShakeT > 0){
+      camShakeT -= dt;
+      const sh = (camShakeT / 0.38) * 0.45;
+      camera.position.x += (Math.random() - 0.5) * sh;
+      camera.position.y += (Math.random() - 0.5) * sh;
+      camera.position.z += (Math.random() - 0.5) * sh;
+    }
+
     camRender(dt);
   }
 
@@ -4603,7 +4854,7 @@ function init3D(){
   camModeChanged();
 
   applyTheme();
-  return { render, rebuildMission, clearTrail, advanceFlightRun, showClickRipple, applyTheme, trail,
+  return { render, rebuildMission, clearTrail, advanceFlightRun, showClickRipple, applyTheme, trail, dropBomb,
     cam: { scene, toV, droneCam, GB, camFov, camHide, camera, mode: () => cam.mode, setCam, ENV, arRoots, setNight, setSensor, takePhoto, cityEnvGroup, setCityVisible, camState: cam } };
 }
 try { R3 = init3D(); window.R3 = R3; window.addWaypointAt = addWaypointAt; }
@@ -5730,6 +5981,14 @@ function svAim(){
     if (P_.task === 'orbit' && P_.orbit) return svAimAt([P_.orbit.e, P_.orbit.n, P_.orbit.lookU]);
     if (P_.task === 'scan') return { tilt:-90, pan:0 };
     if (P_.task === 'patrol') return { tilt:-32, pan: 55 * Math.sin(S.t * 2 * Math.PI / 16) };
+    if (P_.task === 'bomber'){
+      const w = Sim.mission[S.wpIdx];
+      if (w && w.role === 'bomb'){
+        const dist = Math.hypot(w.e - S.pos[0], w.n - S.pos[1]);
+        if (dist < 32) return svAimAt([w.e, w.n, 0.5]);
+      }
+      return { tilt: -45, pan: 0 };
+    }
     if (P_.task === 'delivery'){
       const w = Sim.mission[S.wpIdx];
       if (w && w.kind === 'dest' && w.role === 'drop' && Math.hypot(w.e - S.pos[0], w.n - S.pos[1]) < 14) return { tilt:-90, pan:0 };
@@ -5812,6 +6071,14 @@ function svPick(kind){
   svDraw3D();
 }
 function svGroundClick(e, n){
+  if (SV.task === 'bomber' && $('#bomberTarget')?.value === 'custom'){
+    bomberCustomTarget = { e: Math.round(e), n: Math.round(n), name: 'Mục tiêu tự chọn (' + Math.round(e) + ', ' + Math.round(n) + ')' };
+    addLog('bad', '🎯 ĐÃ CHỌN TỌA ĐỘ MỤC TIÊU NÉM BOM:', bomberCustomTarget.name, Sim.S.t);
+    const alt = +($('#bomberAlt')?.value || 20);
+    Sim.setDestinations([{ e: bomberCustomTarget.e, n: bomberCustomTarget.n, u: alt, label: '🎯 ' + bomberCustomTarget.name, role: 'bomb' }], true);
+    renderMission();
+    return true;
+  }
   if (!SV.pick) return false;
   e = clamp(Math.round(e), -90, 165); n = clamp(Math.round(n), -90, 90);
   if (SV.pick === 'orbit'){
@@ -5860,8 +6127,43 @@ function svDraw3D(){
 }
 
 /* --- form (FN panel) --- */
+const BOMBER_TARGETS = {
+  depot:  { e: 52, n: 38, name: 'Kho quân khí ngoại ô' },
+  radar:  { e: -42, n: 48, name: 'Trạm radar phòng không' },
+  convoy: { e: 18, n: -42, name: 'Đoàn xe cơ giới địch' },
+  bunker: { e: -48, n: -32, name: 'Boongke kiên cố' },
+  custom: { e: 28, n: 28, name: 'Mục tiêu tự chọn' }
+};
+let bomberCustomTarget = { e: 28, n: 28, name: 'Mục tiêu tự chọn (28, 28)' };
+
+function startBomberMission(){
+  const key = $('#bomberTarget')?.value || 'depot';
+  let tgt = BOMBER_TARGETS[key] || BOMBER_TARGETS.depot;
+  if (key === 'custom') tgt = bomberCustomTarget;
+  const alt = +($('#bomberAlt')?.value || 20);
+
+  Sim.params.task = 'bomber';
+  Sim.params.loops = 1;
+  SV.task = 'bomber';
+
+  const dests = [
+    { e: tgt.e, n: tgt.n, u: alt, label: '🎯 ' + tgt.name, role: 'bomb' },
+    { e: Math.round(tgt.e * 0.4), n: Math.round(tgt.n * 0.4), u: alt + 4, label: 'Thoát ly', role: 'pass' }
+  ];
+  Sim.setDestinations(dests, true);
+  renderMission();
+  addLog('bad', '🚀 XUẤT KÍCH OANH TẠC (BOMBER)!', 'Mục tiêu: ' + tgt.name + ' (' + tgt.e + ', ' + tgt.n + ') · Cao ' + alt + ' m', Sim.S.t);
+
+  const st = Sim.S.state;
+  SV.launch = {
+    on: true,
+    step: st === 'DISARMED' ? 0 : st === 'ARMED' ? 1 : (st === 'HOVER' || st === 'MANUAL') ? 2 : 9
+  };
+}
+
 function svRenderForm(){
   $('#oSvPu').textContent = SV.pu + ' m';
+  if ($('#oBomberAlt') && $('#bomberAlt')) $('#oBomberAlt').textContent = $('#bomberAlt').value + ' m';
 }
 function svBindForm(){
   const re = () => { svApply(true); svRenderForm(); };
@@ -5884,6 +6186,64 @@ function svBindForm(){
   $('#svStop').addEventListener('click', () => { SV.launch.on = false; Sim.command('RTL', 'sv'); });
   $('#svClear').addEventListener('click', () => { SV.dets = []; SV.seen = {}; SV.uniq = { p:new Set(), v:new Set() }; SV.track = null; svCovReset(); SV.logDirty = true; });
   $('#svCovShow').addEventListener('change', e => { if (SV.cov) SV.cov.plane.visible = false; });
+
+  // Bomber Mission Form bindings
+  $('#bomberAlt')?.addEventListener('input', e => {
+    if ($('#oBomberAlt')) $('#oBomberAlt').textContent = e.target.value + ' m';
+  });
+  $('#bomberTarget')?.addEventListener('change', e => {
+    const stage = $('#stage');
+    if (e.target.value === 'custom'){
+      addLog('info', 'Click mặt đất 3D để chọn toạ độ mục tiêu ném bom!', '', Sim.S.t);
+      if (stage) stage.classList.add('custom-mode');
+    } else {
+      if (stage) stage.classList.remove('custom-mode');
+      const key = e.target.value;
+      const tgt = BOMBER_TARGETS[key];
+      if (tgt){
+        const alt = +($('#bomberAlt')?.value || 20);
+        Sim.setDestinations([{ e: tgt.e, n: tgt.n, u: alt, label: '🎯 ' + tgt.name, role: 'bomb' }], true);
+        renderMission();
+      }
+    }
+  });
+  $('#btnBomberStart')?.addEventListener('click', () => {
+    startBomberMission();
+  });
+  $('#btnManualDrop')?.addEventListener('click', () => {
+    if (window.dropBomb) window.dropBomb();
+  });
+
+  $('#tabTaskPatrol')?.addEventListener('click', () => {
+    $('#tabTaskPatrol').classList.add('active');
+    $('#tabTaskBomber').classList.remove('active');
+    $('#optPatrol').style.display = 'block';
+    $('#optBomber').style.display = 'none';
+    SV.task = 'patrol'; Sim.params.task = 'patrol';
+    svApply(true);
+  });
+  $('#tabTaskBomber')?.addEventListener('click', () => {
+    $('#tabTaskBomber').classList.add('active');
+    $('#tabTaskPatrol').classList.remove('active');
+    $('#optBomber').style.display = 'block';
+    $('#optPatrol').style.display = 'none';
+    SV.task = 'bomber'; Sim.params.task = 'bomber';
+    const key = $('#bomberTarget')?.value || 'depot';
+    const tgt = BOMBER_TARGETS[key];
+    if (tgt){
+      const alt = +($('#bomberAlt')?.value || 20);
+      Sim.setDestinations([{ e: tgt.e, n: tgt.n, u: alt, label: '🎯 ' + tgt.name, role: 'bomb' }], true);
+      renderMission();
+    }
+    addLog('warn', '💣 Đã chọn nhiệm vụ BOMBER (Oanh tạc mục tiêu)', 'Bấm "Xuất kích ném bom" để tự động xuất kích tiêu diệt mục tiêu!', Sim.S.t);
+  });
+
+  addEventListener('keydown', e => {
+    if (e.target.closest && e.target.closest('input,select,textarea')) return;
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && e.code === 'KeyB'){
+      if (window.dropBomb) window.dropBomb();
+    }
+  });
 }
 
 /* --- surveillance panel: stats, map, detection log --- */
