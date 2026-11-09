@@ -3367,65 +3367,128 @@ function init3D(){
   sockCone.rotation.z = Math.PI/2; sockCone.position.x = 0.6; sockPivot.add(sockCone);
 
   // High-Visibility Surveillance Drone 3D Model (with 360° Lidar turret & 3-axis Gimbal Camera)
-  const k = 3.6;
+  // High-Visibility DJI Mavic-Style Surveillance Drone 3D Model (Gunmetal Grey & Enlarged)
+  const k = 5.4;
   const drone = new THREE.Group(); scene.add(drone);
-  const darkM = new THREE.MeshStandardMaterial({ color:0xff4800, roughness:0.3, metalness:0.25, emissive:0x330f00 });
-  const plateM = new THREE.MeshStandardMaterial({ color:0xffffff, roughness:0.18, metalness:0.2, emissive:0x222222 });
-  const accM = new THREE.MeshStandardMaterial({ color:0xffd500, roughness:0.2, metalness:0.3, emissive:0x443500 });
-  const greyM = new THREE.MeshStandardMaterial({ color:0x00e5ff, roughness:0.25, metalness:0.2, emissive:0x002c38 });
+  const darkM = new THREE.MeshStandardMaterial({ color:0x6b7785, roughness:0.40, metalness:0.28 });
+  const plateM = new THREE.MeshStandardMaterial({ color:0x4b5563, roughness:0.42, metalness:0.25 });
+  const metalM = new THREE.MeshStandardMaterial({ color:0xc5ccd6, roughness:0.20, metalness:0.80 });
+  const goldM = new THREE.MeshStandardMaterial({ color:0xdfa328, roughness:0.30, metalness:0.55 });
+  const blackM = new THREE.MeshStandardMaterial({ color:0x1e242b, roughness:0.55, metalness:0.20 });
+  const tipM = new THREE.MeshStandardMaterial({ color:0xf3f6f9, roughness:0.20, metalness:0.30 });
   const boxM = new THREE.MeshStandardMaterial({ color:0xd4791c, roughness:0.65 });
   const strapM = new THREE.MeshStandardMaterial({ color:0x1b2228, roughness:0.8 });
 
-  // Main airframe body (elevated on tall landing skids)
+  // Main airframe body (sleek angular aerodynamic Mavic Pro silhouette)
   const yFrame = 0.135 * k;
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.24*k, 0.065*k, 0.16*k), darkM); body.position.y = yFrame; drone.add(body);
-  const top = new THREE.Mesh(new THREE.BoxGeometry(0.18*k, 0.022*k, 0.12*k), plateM); top.position.y = yFrame + 0.042*k; drone.add(top);
-  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.045*k, 0.036*k, 0.11*k), accM); nose.position.set(0.135*k, yFrame, 0); drone.add(nose);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.25*k, 0.065*k, 0.15*k), darkM); body.position.y = yFrame; drone.add(body);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.19*k, 0.024*k, 0.11*k), plateM); top.position.y = yFrame + 0.043*k; drone.add(top);
+  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.045*k, 0.038*k, 0.10*k), darkM); nose.position.set(0.138*k, yFrame, 0); drone.add(nose);
 
-  // 360° Lidar dome on top of drone
-  const lidarTurret = new THREE.Group(); lidarTurret.position.set(-0.02*k, yFrame + 0.075*k, 0); drone.add(lidarTurret);
-  const lidarCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.036*k, 0.038*k, 0.042*k, 18), darkM); lidarTurret.add(lidarCyl);
-  const lidarLens = new THREE.Mesh(new THREE.CylinderGeometry(0.038*k, 0.038*k, 0.016*k, 18), new THREE.MeshBasicMaterial({ color:0x00ffea }));
+  // Forward obstacle sensing stereo cameras (front eyes in dark recessed visor)
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.012*k, 0.022*k, 0.082*k), blackM);
+  visor.position.set(0.158*k, yFrame + 0.005*k, 0);
+  drone.add(visor);
+  [-0.028*k, 0.028*k].forEach(sz => {
+    const eye = new THREE.Mesh(new THREE.CircleGeometry(0.0065*k, 14), new THREE.MeshBasicMaterial({ color:0x050c12 }));
+    eye.rotation.y = Math.PI/2; eye.position.set(0.165*k, yFrame + 0.005*k, sz); drone.add(eye);
+  });
+
+  // 4 green LED battery dots along top spine (iconic DJI battery display)
+  const batLedM = new THREE.MeshBasicMaterial({ color:0x22c55e });
+  for (let b = 0; b < 4; b++){
+    const bLed = new THREE.Mesh(new THREE.BoxGeometry(0.006*k, 0.004*k, 0.012*k), batLedM);
+    bLed.position.set((-0.035 + b*0.022)*k, yFrame + 0.054*k, 0);
+    drone.add(bLed);
+  }
+
+  // 360° Compact Lidar / sensor pod integrated smoothly on top
+  const lidarTurret = new THREE.Group(); lidarTurret.position.set(-0.02*k, yFrame + 0.065*k, 0); drone.add(lidarTurret);
+  const lidarCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.032*k, 0.035*k, 0.035*k, 18), plateM); lidarTurret.add(lidarCyl);
+  const lidarLens = new THREE.Mesh(new THREE.CylinderGeometry(0.035*k, 0.035*k, 0.012*k, 18), new THREE.MeshBasicMaterial({ color:0x00ffea }));
   lidarTurret.add(lidarLens);
 
-  // Gimbal camera under the nose (lens looks along +x of the airframe)
+  // 3-axis Gimbal camera with clear protective bubble under the nose
   const CAM_MOUNT = new THREE.Vector3(0.15*k, 0.086*k, 0);
   const gimbalYoke = new THREE.Mesh(new THREE.BoxGeometry(0.014*k, 0.024*k, 0.03*k), darkM); gimbalYoke.position.set(0.15*k, 0.113*k, 0); drone.add(gimbalYoke);
   const gimbalBall = new THREE.Group(); gimbalBall.position.copy(CAM_MOUNT); drone.add(gimbalBall);
-  gimbalBall.add(new THREE.Mesh(new THREE.SphereGeometry(0.026*k, 18, 14), plateM));
-  const lensRing = new THREE.Mesh(new THREE.CylinderGeometry(0.014*k, 0.014*k, 0.012*k, 18), accM); lensRing.rotation.z = Math.PI/2; lensRing.position.x = 0.022*k; gimbalBall.add(lensRing);
+  gimbalBall.add(new THREE.Mesh(new THREE.SphereGeometry(0.026*k, 18, 14), metalM));
+  const lensRing = new THREE.Mesh(new THREE.CylinderGeometry(0.014*k, 0.014*k, 0.012*k, 18), darkM); lensRing.rotation.z = Math.PI/2; lensRing.position.x = 0.022*k; gimbalBall.add(lensRing);
   const lensGlass = new THREE.Mesh(new THREE.CircleGeometry(0.0105*k, 18), new THREE.MeshBasicMaterial({ color:0x0a1822 })); lensGlass.rotation.y = Math.PI/2; lensGlass.position.x = 0.0285*k; gimbalBall.add(lensGlass);
+
+  // Clear protective dome around camera
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(0.040*k, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.72),
+    new THREE.MeshBasicMaterial({ color: 0xcde5f7, transparent: true, opacity: 0.35, depthWrite: false })
+  );
+  dome.rotation.x = Math.PI / 2; dome.position.set(0.15*k, 0.086*k, 0); drone.add(dome);
+
+  // Status LED on nose
   const ledM = new THREE.MeshBasicMaterial({ color:0x7a8590 });
-  const led = new THREE.Mesh(new THREE.SphereGeometry(0.014*k, 10, 8), ledM); led.position.set(0.05*k, yFrame + 0.06*k, 0); drone.add(led);
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.012*k, 10, 8), ledM); led.position.set(0.05*k, yFrame + 0.06*k, 0); drone.add(led);
 
   // Surveillance Payload Group
   const cargoGroup = new THREE.Group(); cargoGroup.position.set(0, 0.065*k, 0); drone.add(cargoGroup);
   cargoGroup.visible = false;
 
+  // 4 Arms, Silver Brush Motors, Gold Decals, and Black Props with White Tips
   const props = [];
   Sim.MOT.forEach(M => {
     const x = M.x*k*0.62, z = -M.y*k*0.62, len = Math.hypot(x, z);
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(len, 0.02*k, 0.028*k), darkM);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(len, 0.022*k, 0.028*k), darkM);
     arm.position.set(x/2, yFrame, z/2); arm.rotation.y = Math.atan2(-z, x); drone.add(arm);
-    const mot = new THREE.Mesh(new THREE.CylinderGeometry(0.03*k, 0.034*k, 0.045*k, 16), plateM); mot.position.set(x, yFrame + 0.028*k, z); drone.add(mot);
+
     const front = M.x > 0;
+    // Iconic Mavic Gold Stripes on front arms
+    if (front){
+      const gStripe = new THREE.Mesh(new THREE.BoxGeometry(0.014*k, 0.026*k, 0.03*k), goldM);
+      gStripe.position.set(x * 0.58, yFrame, z * 0.58);
+      gStripe.rotation.y = Math.atan2(-z, x);
+      drone.add(gStripe);
+    }
+
+    // Silver brushed aluminum motor bells
+    const mot = new THREE.Mesh(new THREE.CylinderGeometry(0.032*k, 0.036*k, 0.045*k, 16), metalM);
+    mot.position.set(x, yFrame + 0.028*k, z); drone.add(mot);
+
+    // Aerodynamic foldable propeller blades: matte black with white aerodynamic tips
     const prop = new THREE.Group(); prop.position.set(x, yFrame + 0.056*k, z);
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.28*k, 0.005*k, 0.026*k), front ? accM : greyM); prop.add(blade);
-    const disc = new THREE.Mesh(new THREE.CircleGeometry(0.14*k, 36), new THREE.MeshBasicMaterial({ color: front ? 0xffd500 : 0x00e5ff, transparent:true, opacity:0, depthWrite:false, side:THREE.DoubleSide }));
+    const blade1 = new THREE.Mesh(new THREE.BoxGeometry(0.24*k, 0.005*k, 0.026*k), blackM);
+    prop.add(blade1);
+    [-0.13*k, 0.13*k].forEach(bx => {
+      const tip = new THREE.Mesh(new THREE.BoxGeometry(0.032*k, 0.006*k, 0.025*k), tipM);
+      tip.position.x = bx;
+      prop.add(tip);
+    });
+
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(0.14*k, 36), new THREE.MeshBasicMaterial({ color: 0x334155, transparent:true, opacity:0, depthWrite:false, side:THREE.DoubleSide }));
     disc.rotation.x = -Math.PI/2; prop.add(disc);
     drone.add(prop); props.push({ prop, disc, dir: -M.s, ang: Math.random()*6 });
-    const nav = new THREE.Mesh(new THREE.SphereGeometry(0.015*k, 10, 8), new THREE.MeshBasicMaterial({ color: M.pos === 'FL' ? 0xff2222 : M.pos === 'FR' ? 0x00ff55 : 0x00e5ff }));
+
+    // Front/Rear navigation lights
+    const nav = new THREE.Mesh(new THREE.SphereGeometry(0.015*k, 10, 8), new THREE.MeshBasicMaterial({ color: front ? (M.pos === 'FL' ? 0xff2222 : 0x00ff55) : 0x00e5ff }));
     nav.position.set(x, yFrame, z); drone.add(nav);
     if (M.x < 0) props[props.length-1].strobe = nav;
   });
 
-  // Tall Landing Gear Skids
+  // Mavic Landing Gear Legs (Front landing legs with integrated antenna feet + Rear pegs)
   [-1, 1].forEach(sd => {
-    const skid = new THREE.Mesh(new THREE.BoxGeometry(0.26*k, 0.012*k, 0.014*k), darkM); skid.position.set(0, 0.006*k, sd*0.095*k); drone.add(skid);
-    [-1, 1].forEach(fb => {
-      const st = new THREE.Mesh(new THREE.BoxGeometry(0.012*k, 0.13*k, 0.012*k), darkM);
-      st.position.set(fb*0.07*k, 0.068*k, sd*0.09*k); drone.add(st);
-    });
+    // Front angled landing leg
+    const fLeg = new THREE.Mesh(new THREE.BoxGeometry(0.014*k, 0.12*k, 0.014*k), darkM);
+    fLeg.position.set(0.14*k, 0.06*k, sd * 0.12*k);
+    fLeg.rotation.z = -0.15;
+    fLeg.rotation.x = sd * 0.18;
+    drone.add(fLeg);
+
+    // Rear landing foot peg
+    const rPeg = new THREE.Mesh(new THREE.BoxGeometry(0.014*k, 0.07*k, 0.014*k), darkM);
+    rPeg.position.set(-0.11*k, 0.035*k, sd * 0.075*k);
+    drone.add(rPeg);
+
+    // Lower skid pad
+    const skid = new THREE.Mesh(new THREE.BoxGeometry(0.28*k, 0.010*k, 0.014*k), darkM);
+    skid.position.set(0.01*k, 0.005*k, sd * 0.095*k);
+    drone.add(skid);
   });
 
   // 8-ray Lidar laser visualization group attached to drone position (non-tilting horizontal scan)
@@ -4361,7 +4424,7 @@ function init3D(){
 
   applyTheme();
   return { render, rebuildMission, clearTrail, advanceFlightRun, showClickRipple, applyTheme, trail,
-    cam: { scene, toV, droneCam, GB, camFov, camHide, camera, mode: () => cam.mode, setCam, ENV, arRoots, setNight, setSensor, takePhoto, cityEnvGroup, setCityVisible } };
+    cam: { scene, toV, droneCam, GB, camFov, camHide, camera, mode: () => cam.mode, setCam, ENV, arRoots, setNight, setSensor, takePhoto, cityEnvGroup, setCityVisible, camState: cam } };
 }
 try { R3 = init3D(); window.R3 = R3; window.addWaypointAt = addWaypointAt; }
 catch (err){ R3 = null; $('#glErr').hidden = false; $('#gl').style.display = 'none'; console.warn(err); }
