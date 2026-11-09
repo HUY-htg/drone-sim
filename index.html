@@ -5507,7 +5507,6 @@ function svBindForm(){
   $('#svClear').addEventListener('click', () => { SV.dets = []; SV.seen = {}; SV.uniq = { p:new Set(), v:new Set() }; SV.track = null; svCovReset(); SV.logDirty = true; });
   $('#svCovShow').addEventListener('change', e => { if (SV.cov) SV.cov.plane.visible = e.target.checked; });
 }
-}
 
 /* --- surveillance panel: stats, map, detection log --- */
 function svProgress(){
