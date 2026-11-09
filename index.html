@@ -27,7 +27,7 @@ img{max-width:100%}
   --warn:#a86b00; --warn-soft:rgba(200,130,0,.15);
   --bad:#c4302a; --bad-soft:rgba(196,48,42,.12); --on-bad:#ffffff;
   --ov:rgba(250,251,252,.88);
-  --scene-sky:#cfdbe6; --scene-ground:#b5bec4; --scene-grid:#8b969e; --scene-grid2:#a3adb5;
+  --scene-sky:#cfdbe6; --scene-ground:#a89680; --scene-grid:#8e7c66; --scene-grid2:#9d8b75;
   --pl-0:#86b6ef; --pl-1:#5598e7; --pl-2:#2a78d6; --pl-3:#1c5cab; --pl-4:#104281; --wd-0:#f2a07a; --wd-1:#e0602c; --wd-2:#9c3d17;
   --st-takeoff:#2a78d6; --st-hover:#eb6834; --st-mission:#1baf7a; --st-rtl:#6250d6; --st-landing:#008300; --st-manual:#e87ba4; --st-ground:#a3adb6; --st-armed:#6c7781;
   --osd-fg:#ffffff; --osd-bg:rgba(8,14,20,.55); --osd-rec:#ff5a52; --osd-warn:#ffc44d;
@@ -179,9 +179,10 @@ table.wp input:focus{border-color:var(--tele);outline:none;background:var(--pane
 .stage.traj-mode .ov-hud b{color:#0f172a!important}
 .ov-city-btn{position:absolute;left:10px;top:10px;z-index:9;background:rgba(255,255,255,0.92);color:#0f172a;border:1px solid #cbd5e1;padding:4px 11px;border-radius:4px;font-family:var(--f-display);font-weight:700;font-size:12px;letter-spacing:.04em;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all .15s}
 .ov-city-btn:hover{background:#f1f5f9;border-color:#94a3b8}
-#gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 #gl.drag{cursor:grabbing}
-.stage.traj-mode #gl{cursor:crosshair}
+.stage.custom-mode #gl{cursor:crosshair}
+.stage.traj-mode.custom-mode #gl{cursor:crosshair}
 .ov{position:absolute;background:var(--ov);border:1px solid var(--line);border-radius:4px;font-family:var(--f-mono);font-size:11px;color:var(--fg);padding:4px 8px;pointer-events:none;backdrop-filter:blur(3px)}
 .ov-hint, #hint{display:none!important}
 .ov-hud{right:10px;top:10px;display:grid;grid-template-columns:auto auto;gap:1px 10px;font-variant-numeric:tabular-nums}
@@ -2582,19 +2583,9 @@ $('#wpMode').addEventListener('change', e => {
     : 'Kéo: xoay · cuộn chuột, chụm 2 ngón hoặc +/−: thu phóng';
 });
 function addWaypointAt(e, n){
+  if (SV.patrol !== 'custom') return;
   e = clamp(Math.round(e*2)/2, -80, 165);
   n = clamp(Math.round(n*2)/2, -80, 80);
-  if (SV.task !== 'patrol'){
-    SV.task = 'patrol';
-    Sim.params.task = 'patrol';
-    SV.loops = 1;
-    Sim.params.loops = 1;
-  }
-  if (SV.patrol !== 'custom'){
-    SV.patrol = 'custom';
-    if ($('#svPatrol')) $('#svPatrol').value = 'custom';
-    Sim.setDestinations([], true);
-  }
   if (Sim.destinations.length >= 15){
     addLog('rej', 'Tối đa 15 điểm trên tuyến', '', Sim.S.t);
     return;
@@ -3066,54 +3057,17 @@ function init3D(){
   // Urban & Factory Environment Root Group (Tòa nhà, Nhà máy, Đường xá, Đèn đường, Cây cối)
   const cityEnvGroup = new THREE.Group(); scene.add(cityEnvGroup);
 
-  // Urban Road Network (Asphalt streets with lane dashes)
-  const roadGroup = new THREE.Group(); cityEnvGroup.add(roadGroup);
+  // Urban Road Network omitted (nền bằng đất tự nhiên, loại bỏ bê tông và đường xá)
+  const roadGroup = new THREE.Group(); roadGroup.visible = false;
   const roadMat = new THREE.MeshLambertMaterial({ color:0x333b42 });
   const swMat = new THREE.MeshLambertMaterial({ color:0x9aa4ad });
   const dashMat = new THREE.MeshBasicMaterial({ color:0xe8edf2 });
   const ewRoads = [-42, -6, 14, 44];
   const nsRoads = [-44, -20, 10, 46];
 
-  function addRoadEW(nPos, width, len){
-    const sw = new THREE.Mesh(new THREE.PlaneGeometry(len, width + 2.8), swMat);
-    sw.rotation.x = -Math.PI/2; sw.position.set(0, 0.009, -nPos); roadGroup.add(sw);
-    const r = new THREE.Mesh(new THREE.PlaneGeometry(len, width), roadMat);
-    r.rotation.x = -Math.PI/2; r.position.set(0, 0.014, -nPos); roadGroup.add(r);
-    for (let x = -len/2 + 4; x < len/2 - 4; x += 6){
-      const d = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.22), dashMat);
-      d.rotation.x = -Math.PI/2; d.position.set(x, 0.020, -nPos); roadGroup.add(d);
-    }
-  }
-  function addRoadNS(ePos, width, len){
-    const sw = new THREE.Mesh(new THREE.PlaneGeometry(width + 2.8, len), swMat);
-    sw.rotation.x = -Math.PI/2; sw.position.set(ePos, 0.010, 0); roadGroup.add(sw);
-    const r = new THREE.Mesh(new THREE.PlaneGeometry(width, len), roadMat);
-    r.rotation.x = -Math.PI/2; r.position.set(ePos, 0.016, 0); roadGroup.add(r);
-    for (let z = -len/2 + 4; z < len/2 - 4; z += 6){
-      const d = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 2.6), dashMat);
-      d.rotation.x = -Math.PI/2; d.position.set(ePos, 0.021, z); roadGroup.add(d);
-    }
-  }
-  ewRoads.forEach(n => addRoadEW(n, 7.5, 168));
-  nsRoads.forEach(e => addRoadNS(e, 7.5, 168));
-
-  // Crosswalk stripes at all road intersections
-  ewRoads.forEach(n => {
-    nsRoads.forEach(e => {
-      for (let s = -2.4; s <= 2.4; s += 0.8){
-        const cw1 = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 1.8), dashMat);
-        cw1.rotation.x = -Math.PI/2; cw1.position.set(e + s, 0.023, -(n + 4.8)); roadGroup.add(cw1);
-        const cw2 = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 1.8), dashMat);
-        cw2.rotation.x = -Math.PI/2; cw2.position.set(e + s, 0.023, -(n - 4.8)); roadGroup.add(cw2);
-      }
-    });
-  });
-
-  // Helper to check if a point (e, n) overlaps roads, factory apron, hubs, or high-rise footprints
+  // Helper to check if a point (e, n) overlaps factory compound, hubs, or obstacles
   function isZoneFree(e, n, padR){
-    for (let i = 0; i < ewRoads.length; i++) if (Math.abs(n - ewRoads[i]) < 4.8 + padR) return false;
-    for (let i = 0; i < nsRoads.length; i++) if (Math.abs(e - nsRoads[i]) < 4.8 + padR) return false;
-    if (e > -21 - padR && e < 7 + padR && n > -16 - padR && n < 12 + padR) return false; // Factory compound
+    if (e > -21 - padR && e < 7 + padR && n > -16 - padR && n < 12 + padR) return false;
     const hubs = Object.values(Sim.HUBS);
     for (let i = 0; i < hubs.length; i++) if (Math.hypot(e - hubs[i].e, n - hubs[i].n) < 5.5 + padR) return false;
     for (let i = 0; i < Sim.obstacles.length; i++){
@@ -3123,184 +3077,17 @@ function init3D(){
     return true;
   }
 
-  // Green Park Lawns in several urban blocks
+  // Green Park Lawns, Low-Rise Houses, Trees & Streetlights omitted for clean natural dirt ground
   const parkMat = new THREE.MeshLambertMaterial({ color:0x688f64 });
-  const parkZones = [
-    { e: -32, n: 29, w: 18, d: 22 },
-    { e: 28,  n: -24, w: 26, d: 26 },
-    { e: -4,  n: 56, w: 20, d: 16 },
-    { e: -58, n: 4,  w: 20, d: 14 },
-    { e: 60,  n: -24, w: 22, d: 26 }
-  ];
-  parkZones.forEach(pk => {
-    const pMesh = new THREE.Mesh(new THREE.PlaneGeometry(pk.w, pk.d), parkMat);
-    pMesh.rotation.x = -Math.PI/2; pMesh.position.copy(toV(pk.e, pk.n, 0.008));
-    cityEnvGroup.add(pMesh);
-  });
-
-  // Detailed Residential Neighborhoods & Shophouse Clusters ("Các khu nhà phố / biệt thự thấp tầng")
-  const houseGroup = new THREE.Group(); cityEnvGroup.add(houseGroup);
-  const housePalette = [0xd8cfc4, 0xc7d3dd, 0xe3d5b8, 0xbec9be, 0xd9c2ba, 0xcbd0d6];
-  const roofPalette = [0x9e4736, 0x3f5364, 0x6b4c3b, 0x485c54];
-  const winStripMat = new THREE.MeshBasicMaterial({ color:0x263542 });
-  function addLowRiseHouse(e, n, w, d, h, rotY, palIdx){
-    if (!isZoneFree(e, n, Math.max(w, d)*0.55)) return;
-    const g = new THREE.Group();
-    g.position.copy(toV(e, n, 0));
-    g.rotation.y = rotY;
-    const wallM = new THREE.MeshLambertMaterial({ color: housePalette[palIdx % housePalette.length] });
-    const roofM = new THREE.MeshLambertMaterial({ color: roofPalette[palIdx % roofPalette.length] });
-    const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallM);
-    bodyMesh.position.y = h / 2;
-    g.add(bodyMesh);
-    // Pitched or terraced roof
-    if (palIdx % 2 === 0){
-      const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d)*0.68, 1.35, 4), roofM);
-      roof.position.y = h + 0.67;
-      roof.rotation.y = Math.PI / 4;
-      g.add(roof);
-    } else {
-      const parapet = new THREE.Mesh(new THREE.BoxGeometry(w + 0.25, 0.45, d + 0.25), roofM);
-      parapet.position.y = h + 0.22;
-      g.add(parapet);
-    }
-    // Windows band
-    const win1 = new THREE.Mesh(new THREE.BoxGeometry(w + 0.06, 0.65, d * 0.65), winStripMat);
-    win1.position.y = h * 0.65;
-    g.add(win1);
-    houseGroup.add(g);
-  }
-
-  // Place clusters of neighborhood houses across city blocks
-  const neighborhoodRows = [
-    // Far North-West residential corner
-    { e0:-46, n0: 36, dx: 5.2, dn: 0, count: 2, w:3.8, d:4.4, h:4.5 },
-    // Far East residential corner
-    { e0: 56, n0: -18, dx: 0, dn: -5.6, count: 2, w:4.6, d:4.0, h:4.6 },
-    // Far South-East residential corner
-    { e0: 28, n0: -50, dx: 5.4, dn: 0, count: 2, w:4.0, d:4.6, h:4.6 },
-    // Far West block
-    { e0:-58, n0: -18, dx: 0, dn:-5.4, count: 2, w:4.8, d:4.0, h:4.6 }
-  ];
-  let hSeed = 1;
-  neighborhoodRows.forEach(row => {
-    for (let i = 0; i < row.count; i++){
-      addLowRiseHouse(
-        row.e0 + i * row.dx,
-        row.n0 + i * row.dn,
-        row.w, row.d,
-        row.h + ((hSeed * 7) % 3) * 0.45,
-        row.dx !== 0 ? 0 : Math.PI/2,
-        hSeed++
-      );
-    }
-  });
-
-  // Urban Trees ("Cây cối"): Avenue trees & Park trees (sway gently with wind!)
+  const parkZones = [];
+  const houseGroup = new THREE.Group(); houseGroup.visible = false;
   const treeCrowns = [];
-  const trunkMat = new THREE.MeshLambertMaterial({ color:0x634832 });
-  const leafMat1 = new THREE.MeshLambertMaterial({ color:0x3b7a47 });
-  const leafMat2 = new THREE.MeshLambertMaterial({ color:0x4c8c52 });
-  const trunkGeo = new THREE.CylinderGeometry(0.18, 0.26, 1.8, 7);
-  const crownGeoSphere = new THREE.DodecahedronGeometry(1.35, 1);
-  const crownGeoCone = new THREE.ConeGeometry(1.25, 3.2, 8);
+  const streetLightGroup = new THREE.Group(); streetLightGroup.visible = false;
+  const poolMat = new THREE.MeshBasicMaterial({ transparent:true, opacity:0 });
 
-  function addTree(e, n, scale, style){
-    if (!isZoneFree(e, n, 0.8)) return;
-    const g = new THREE.Group();
-    g.position.copy(toV(e, n, 0));
-    const tr = new THREE.Mesh(trunkGeo, trunkMat);
-    tr.position.y = 0.9 * scale;
-    tr.scale.setScalar(scale);
-    g.add(tr);
-
-    const crownPivot = new THREE.Group();
-    crownPivot.position.y = 1.6 * scale;
-    if (style % 2 === 0){
-      const c1 = new THREE.Mesh(crownGeoSphere, leafMat1);
-      c1.position.y = 0.8 * scale;
-      c1.scale.set(scale, scale * 1.15, scale);
-      crownPivot.add(c1);
-    } else {
-      const c2 = new THREE.Mesh(crownGeoCone, leafMat2);
-      c2.position.y = 1.2 * scale;
-      c2.scale.setScalar(scale);
-      crownPivot.add(c2);
-    }
-    g.add(crownPivot);
-    cityEnvGroup.add(g);
-    treeCrowns.push({ pivot: crownPivot, phase: (e * 0.17 + n * 0.23) });
-  }
-
-  // Avenue trees along sidewalks
-  let tIdx = 0;
-  ewRoads.forEach(nR => {
-    for (let e = -72; e <= 72; e += 11){
-      addTree(e, nR + 5.6, 0.85 + (tIdx % 3)*0.12, tIdx++);
-      addTree(e + 4, nR - 5.6, 0.85 + (tIdx % 3)*0.12, tIdx++);
-    }
-  });
-  nsRoads.forEach(eR => {
-    for (let n = -72; n <= 72; n += 11){
-      addTree(eR + 5.6, n, 0.85 + (tIdx % 3)*0.12, tIdx++);
-      addTree(eR - 5.6, n + 4, 0.85 + (tIdx % 3)*0.12, tIdx++);
-    }
-  });
-  // Extra park tree clusters
-  parkZones.forEach(pk => {
-    for (let dx = -pk.w*0.35; dx <= pk.w*0.35; dx += 5.2){
-      for (let dn = -pk.d*0.35; dn <= pk.d*0.35; dn += 5.2){
-        addTree(pk.e + dx, pk.n + dn, 0.95 + ((tIdx++) % 3)*0.15, tIdx);
-      }
-    }
-  });
-
-  // Streetlights ("Đèn đường") along avenues with lamp heads & ground light pools
-  const streetLightGroup = new THREE.Group(); cityEnvGroup.add(streetLightGroup);
-  const poleMat = new THREE.MeshLambertMaterial({ color:0x525e68 });
-  const bulbMat = new THREE.MeshBasicMaterial({ color:0xffe29a });
-  const poolTex = canvasTex(64, (x, s) => {
-    const grd = x.createRadialGradient(s/2, s/2, 2, s/2, s/2, s/2);
-    grd.addColorStop(0, 'rgba(255,216,130,0.42)');
-    grd.addColorStop(1, 'rgba(255,216,130,0)');
-    x.fillStyle = grd; x.fillRect(0, 0, s, s);
-  });
-  const poolMat = new THREE.MeshBasicMaterial({ map:poolTex, transparent:true, depthWrite:false });
-  const poleGeo = new THREE.CylinderGeometry(0.07, 0.10, 4.6, 6);
-  const armGeo = new THREE.BoxGeometry(1.25, 0.08, 0.08);
-  const headGeo = new THREE.BoxGeometry(0.38, 0.12, 0.22);
-  const poolGeo = new THREE.PlaneGeometry(4.2, 4.2);
-
-  function addStreetLight(e, n, dirAngle){
-    // Skip if right inside a road intersection
-    for (let i = 0; i < ewRoads.length; i++) if (Math.abs(n - ewRoads[i]) < 3.9) return;
-    for (let i = 0; i < nsRoads.length; i++) if (Math.abs(e - nsRoads[i]) < 3.9) return;
-    const g = new THREE.Group();
-    g.position.copy(toV(e, n, 0));
-    g.rotation.y = dirAngle;
-    const p = new THREE.Mesh(poleGeo, poleMat); p.position.y = 2.3; g.add(p);
-    const arm = new THREE.Mesh(armGeo, poleMat); arm.position.set(0.55, 4.55, 0); g.add(arm);
-    const hd = new THREE.Mesh(headGeo, bulbMat); hd.position.set(1.08, 4.48, 0); g.add(hd);
-    const pl = new THREE.Mesh(poolGeo, poolMat); pl.rotation.x = -Math.PI/2; pl.position.set(1.1, 0.024, 0); g.add(pl);
-    streetLightGroup.add(g);
-  }
-
-  ewRoads.forEach(nR => {
-    for (let e = -68; e <= 68; e += 16){
-      addStreetLight(e, nR + 4.35, -Math.PI/2);
-      addStreetLight(e + 8, nR - 4.35, Math.PI/2);
-    }
-  });
-  nsRoads.forEach(eR => {
-    for (let n = -68; n <= 68; n += 16){
-      addStreetLight(eR + 4.35, n, Math.PI);
-      addStreetLight(eR - 4.35, n + 8, 0);
-    }
-  });
-
-  // Compact Manufacturing Factory Compound Apron & Launch Pad H at (0,0,0)
+  // Launch Pad H at (0,0,0) (no concrete apron - dirt ground)
   const apron = new THREE.Mesh(new THREE.PlaneGeometry(13, 13), new THREE.MeshLambertMaterial({ color:0x525c66 }));
-  apron.rotation.x = -Math.PI/2; apron.position.set(-4, 0.016, -1); cityEnvGroup.add(apron);
+  apron.visible = false;
 
   const padTex = canvasTex(256, (x, s) => {
     x.fillStyle = 'rgba(26,35,44,0.95)'; x.beginPath(); x.arc(s/2, s/2, s/2 - 4, 0, Math.PI*2); x.fill();
@@ -3541,16 +3328,16 @@ function init3D(){
   // Multi-lap Colorful Flight Trajectories: distinct, high-contrast, vivid colors
   const trail = new THREE.Group(); scene.add(trail);
   const LAP_COLORS = [
-    0x0284c7, // Lượt 1: Xanh dương Ocean (sắc nét trên nền trắng)
-    0xe65100, // Lượt 2: Cam sáng rực
-    0x10b981, // Lượt 3: Xanh lục bảo
-    0xd946ef, // Lượt 4: Tím hồng / Fuchsia
-    0xf59e0b, // Lượt 5: Vàng hổ phách
-    0x06b6d4, // Lượt 6: Xanh Cyan
-    0xef4444, // Lượt 7: Đỏ tươi
-    0x8b5cf6  // Lượt 8: Tím đậm
+    0x0284c7, // Lượt 1: Xanh dương Ocean
+    0x10b981, // Lượt 2: Xanh lục bảo
+    0xd946ef, // Lượt 3: Tím hồng / Fuchsia
+    0x06b6d4, // Lượt 4: Xanh Cyan
+    0x8b5cf6, // Lượt 5: Tím đậm
+    0xd32f2f, // Lượt 6: Đỏ tươi
+    0x0ea5e9, // Lượt 7: Xanh Sky
+    0xec4899  // Lượt 8: Hồng Neon
   ];
-  const LAP_NAMES = ['Xanh Ocean', 'Cam', 'Xanh Lục', 'Hồng Tím', 'Vàng Hổ Phách', 'Cyan', 'Đỏ', 'Tím'];
+  const LAP_NAMES = ['Xanh Ocean', 'Xanh Lục', 'Tím Hồng', 'Cyan', 'Tím Đậm', 'Đỏ', 'Sky', 'Hồng Neon'];
   const trailSegments = [];
   let activeSeg = null;
   let flightRunId = 1;
@@ -3673,15 +3460,15 @@ function init3D(){
       wpGroup.add(ln);
     });
 
-    // Draw waypoints (Destination vs Avoidance Node in RED) - crystal clear in Trajectory mode
+    // Draw waypoints (Destination in Amber vs Avoidance Node in Red) - crystal clear in all modes
     M.forEach((w, i) => {
       const isAvoid = w.kind === 'avoid';
       const top = toV(w.e, w.n, w.u);
-      const col = isAvoid ? new THREE.Color(0xef2222) : (isTraj ? new THREE.Color(0x0284c7) : acc);
-      const plCol = isAvoid ? new THREE.Color(0xef4444) : (isTraj ? new THREE.Color(0x0284c7) : lineC);
+      const col = isAvoid ? new THREE.Color(0xef2222) : new THREE.Color(0xf59e0b);
+      const plCol = isAvoid ? new THREE.Color(0xef4444) : new THREE.Color(0xd97706);
       const pl = new THREE.Line(
         new THREE.BufferGeometry().setFromPoints([toV(w.e, w.n, 0.02), top]),
-        new THREE.LineBasicMaterial({ color: plCol, transparent: true, opacity: isTraj ? 0.85 : 0.45, linewidth: 2 })
+        new THREE.LineBasicMaterial({ color: plCol, transparent: true, opacity: isTraj ? 0.85 : 0.55, linewidth: 2 })
       );
       const rBall = isTraj ? (isAvoid ? 0.45 : 0.40) : (isAvoid ? 0.28 : 0.24);
       const ball = new THREE.Mesh(
@@ -3691,12 +3478,12 @@ function init3D(){
           transparent: !isTraj,
           opacity: isTraj ? 1.0 : 0.85,
           roughness: 0.35,
-          emissive: isAvoid ? 0x660000 : (isTraj ? 0x002244 : 0x000000)
+          emissive: isAvoid ? 0x660000 : 0x332200
         })
       );
       ball.position.copy(top);
       const labTxt = isAvoid ? ('NÉ ' + (i+1)) : (w.label || ('#' + (i+1)));
-      const labBg = isAvoid ? '#dc2626' : (isTraj ? '#0284c7' : TK.accent);
+      const labBg = isAvoid ? '#dc2626' : '#d97706';
       const labScale = isTraj ? 0.038 : 0.028;
       const lab = textSprite(labTxt, '#ffffff', labBg, labScale);
       lab.material.transparent = true;
@@ -3707,16 +3494,21 @@ function init3D(){
       wpBalls.push({ ball, isAvoid });
     });
 
-    // Draw full trajectory path starting from Factory launch altitude through all mission points
+    // Draw planned route path as dashed amber line so it never clashes with solid flight trajectory trails
     if (M.length >= 1){
       const ms = Sim.missionStart || { e:0, n:0, u:Math.max(Sim.params.takeoffAlt, M[0].u) };
       const startPt = toV(ms.e, ms.n, ms.u);
       const pts = [startPt].concat(M.map(w => toV(w.e, w.n, w.u)));
-      const pathCol = isTraj ? new THREE.Color(0x0284c7) : acc;
-      const path = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(pts),
-        new THREE.LineBasicMaterial({ color: pathCol, transparent: true, opacity: isTraj ? 0.85 : 0.55, linewidth: 2 })
-      );
+      const pathMat = new THREE.LineDashedMaterial({
+        color: 0xf59e0b,
+        dashSize: 1.8,
+        gapSize: 1.0,
+        transparent: true,
+        opacity: isTraj ? 0.95 : 0.75,
+        linewidth: 2
+      });
+      const path = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), pathMat);
+      path.computeLineDistances();
       wpGroup.add(path);
     }
   }
@@ -4017,8 +3809,10 @@ function init3D(){
     if (single && moved < 10 && downAt && e.type === 'pointerup'){
       const g = groundAt(e.clientX, e.clientY);
       if (g && !svGroundClick(g.e, g.n)){
-        showClickRipple(g.e, g.n);
-        addWaypointAt(g.e, g.n);
+        if (window.SV && SV.patrol === 'custom'){
+          showClickRipple(g.e, g.n);
+          addWaypointAt(g.e, g.n);
+        }
       }
     }
     if (!pts.size){ canvas.classList.remove('drag'); downAt = null; }
@@ -4093,7 +3887,7 @@ function init3D(){
 
     const act = S.state === 'MISSION' ? S.wpIdx : -1;
     const isTraj = cam && cam.mode === 'traj';
-    const ca = isTraj ? new THREE.Color(0x0284c7) : new THREE.Color(TK.accent);
+    const ca = new THREE.Color(0xf59e0b);
     const ct = new THREE.Color(0x10b981);
     const cf = isTraj ? new THREE.Color(0x64748b) : new THREE.Color(TK.faint);
     const cr = new THREE.Color(0xef2222);
@@ -5331,18 +5125,7 @@ const D2R_ = Math.PI / 180;
 /* --- people and vehicles (deterministic, so every run looks the same) --- */
 function svRand(seed){ let x = seed >>> 0; return () => { x = (x * 1664525 + 1013904223) >>> 0; return x / 4294967296; }; }
 function svMakeAgents(){
-  const r = svRand(20261106), A = [];
-  for (let i = 0; i < 3; i++){
-    const ew = i % 2 === 0, road = (ew ? ROAD_EW : ROAD_NS)[Math.floor(r() * 4)], dir = r() < 0.5 ? -1 : 1;
-    A.push({ id:'X' + String(i + 1).padStart(2, '0'), type:'v', ew, road, dir, s: -76 + r() * 152, v: 5 + r() * 4, lane: 1.9, h: 1.5, size: 4.3, e:0, n:0, yaw:0, col: ['#d8dde3','#2f3a44','#b23a32','#2a5ea8','#e0b43a','#5b6b3a'][i % 6] });
-  }
-  for (let i = 0; i < 4; i++){
-    const ew = r() < 0.5, road = (ew ? ROAD_EW : ROAD_NS)[Math.floor(r() * 4)], side = r() < 0.5 ? -1 : 1;
-    const a = -70 + r() * 110, len = 14 + r() * 30;
-    A.push({ id:'P' + String(i + 1).padStart(2, '0'), type:'p', ew, road, side, a, b: Math.min(76, a + len), s: a + r() * len, dir: r() < 0.5 ? -1 : 1, v: 1.0 + r() * 0.6, h: 1.75, size: 1.75, e:0, n:0, yaw:0,
-      col: ['#3b6fb6','#c0503a','#3f8f5a','#d1a23a','#7a4fb0','#2b2b2b','#e07a2f','#4aa3a8'][i % 8] });
-  }
-  return A;
+  return [];
 }
 function svMoveAgents(dt){
   SV.agents.forEach(a => {
@@ -5391,6 +5174,7 @@ function svInitCoverage(C){
   const mat = new THREE.MeshBasicMaterial({ map:tex, transparent:true, depthWrite:false });
   const plane = new THREE.Mesh(new THREE.PlaneGeometry(N * COV.cell, N * COV.cell), mat);
   plane.rotation.x = -Math.PI / 2; plane.position.set(COV.x0 + N * COV.cell / 2, 0.06, -(COV.y0 + N * COV.cell / 2)); plane.renderOrder = 2;
+  plane.visible = false;
   C.scene.add(plane); C.camHide.push(plane);
   SV.cov = { grid:new Uint8Array(N * N), scan:new Uint8Array(N * N), data, tex, plane, total:0, col:[0, 0, 0] };
   svCovColor();
@@ -5704,11 +5488,14 @@ function svBindForm(){
   const re = () => { svApply(true); svRenderForm(); };
   $('#svPatrol').addEventListener('change', e => {
     SV.patrol = e.target.value;
+    const stage = $('#stage');
     if (SV.patrol === 'custom'){
+      if (stage) stage.classList.add('custom-mode');
       Sim.setDestinations([], true);
-      addLog('info', 'Tuần tra tự vẽ: click mặt đất 3D để thêm điểm', 'tối đa 10 điểm', Sim.S.t);
+      addLog('info', 'Tuần tra tự vẽ: click mặt đất 3D để thêm điểm', 'tối đa 15 điểm', Sim.S.t);
       renderMission();
     } else {
+      if (stage) stage.classList.remove('custom-mode');
       svApply(false);
     }
   });
@@ -5717,7 +5504,7 @@ function svBindForm(){
   $('#svStart').addEventListener('click', svStart);
   $('#svStop').addEventListener('click', () => { SV.launch.on = false; Sim.command('RTL', 'sv'); });
   $('#svClear').addEventListener('click', () => { SV.dets = []; SV.seen = {}; SV.uniq = { p:new Set(), v:new Set() }; SV.track = null; svCovReset(); SV.logDirty = true; });
-  $('#svCovShow').addEventListener('change', e => { if (SV.cov) SV.cov.plane.visible = e.target.checked; });
+  $('#svCovShow').addEventListener('change', e => { if (SV.cov) SV.cov.plane.visible = false; });
 }
 
 /* --- surveillance panel: stats, map, detection log --- */
