@@ -2,7 +2,7 @@
 
 Mô phỏng drone giám sát đô thị, chạy hoàn toàn trên trình duyệt. Drone cất cánh từ bãi đáp của Nhà Máy Sản Xuất, mang camera gimbal để tuần tra theo tuyến, bay vòng quanh một mục tiêu hoặc quét một khu vực. Camera nhận diện người và xe trong thành phố. Drone vẫn giữ chức năng chở hàng: mang kiện hàng tới các trạm Hub A, B, C và tự thả. Bạn điều khiển drone bằng lệnh, bàn phím hoặc cần ảo, và theo dõi mọi thứ qua dashboard và cảnh 3D.
 
-**Chạy thử:** https://huy-htg.github.io/Drone/
+**Chạy thử:** https://huy-htg.github.io/drone-sim/
 
 ![Giao diện mô phỏng](docs/screenshot.png)
 
