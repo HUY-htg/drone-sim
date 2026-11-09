@@ -177,6 +177,8 @@ table.wp input:focus{border-color:var(--tele);outline:none;background:var(--pane
 .stage.traj-mode .ov-hud{background:rgba(255,255,255,0.88)!important;color:#0f172a!important;border:1px solid #cbd5e1!important;box-shadow:0 4px 12px rgba(0,0,0,0.06)!important}
 .stage.traj-mode .ov-hud span{color:#64748b!important}
 .stage.traj-mode .ov-hud b{color:#0f172a!important}
+.ov-city-btn{position:absolute;left:10px;top:10px;z-index:9;background:rgba(255,255,255,0.92);color:#0f172a;border:1px solid #cbd5e1;padding:4px 11px;border-radius:4px;font-family:var(--f-display);font-weight:700;font-size:12px;letter-spacing:.04em;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all .15s}
+.ov-city-btn:hover{background:#f1f5f9;border-color:#94a3b8}
 #gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 #gl.drag{cursor:grabbing}
 .ov{position:absolute;background:var(--ov);border:1px solid var(--line);border-radius:4px;font-family:var(--f-mono);font-size:11px;color:var(--fg);padding:4px 8px;pointer-events:none;backdrop-filter:blur(3px)}
@@ -703,6 +705,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
       </div>
       <div class="stage" id="stage">
         <canvas id="gl" aria-label="Cảnh 3D đô thị và nhà máy của drone chở hàng"></canvas>
+        <button id="btnToggleCity" class="ov-city-btn" type="button" style="display:none" title="Bật/tắt hiển thị tòa nhà và nhà máy">🏢 Hiện tòa nhà &amp; nhà máy</button>
         <div class="ov ov-hint" id="hint" style="display:none!important"></div>
         <div class="ov ov-hud" id="hud">
           <span>ALT</span><b id="hudAlt">0.0 m</b>
@@ -733,6 +736,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
         <label class="chk"><input type="checkbox" id="optTrail" checked> Vệt bay</label>
         <label class="chk"><input type="checkbox" id="optLidar" checked> Tia Lidar &amp; Vùng đệm</label>
         <label class="chk"><input type="checkbox" id="optSp" checked> Điểm đặt</label>
+        <label class="chk"><input type="checkbox" id="optCity" checked> Tòa nhà &amp; Nhà máy</label>
         <button class="linkbtn" id="clearTrail">Xoá vệt</button>
         <span class="sub">Home (0,0) = NHÀ MÁY · Hub A/B/C = Trạm nhận hàng</span>
       </div>
@@ -3056,8 +3060,11 @@ function init3D(){
     sp.scale.set(scale * 1.65, scale, 1); sp.renderOrder = 12; return sp;
   }
 
+  // Urban & Factory Environment Root Group (Tòa nhà, Nhà máy, Đường xá, Đèn đường, Cây cối)
+  const cityEnvGroup = new THREE.Group(); scene.add(cityEnvGroup);
+
   // Urban Road Network (Asphalt streets with lane dashes)
-  const roadGroup = new THREE.Group(); scene.add(roadGroup);
+  const roadGroup = new THREE.Group(); cityEnvGroup.add(roadGroup);
   const roadMat = new THREE.MeshLambertMaterial({ color:0x333b42 });
   const swMat = new THREE.MeshLambertMaterial({ color:0x9aa4ad });
   const dashMat = new THREE.MeshBasicMaterial({ color:0xe8edf2 });
@@ -3125,11 +3132,11 @@ function init3D(){
   parkZones.forEach(pk => {
     const pMesh = new THREE.Mesh(new THREE.PlaneGeometry(pk.w, pk.d), parkMat);
     pMesh.rotation.x = -Math.PI/2; pMesh.position.copy(toV(pk.e, pk.n, 0.008));
-    scene.add(pMesh);
+    cityEnvGroup.add(pMesh);
   });
 
   // Detailed Residential Neighborhoods & Shophouse Clusters ("Các khu nhà phố / biệt thự thấp tầng")
-  const houseGroup = new THREE.Group(); scene.add(houseGroup);
+  const houseGroup = new THREE.Group(); cityEnvGroup.add(houseGroup);
   const housePalette = [0xd8cfc4, 0xc7d3dd, 0xe3d5b8, 0xbec9be, 0xd9c2ba, 0xcbd0d6];
   const roofPalette = [0x9e4736, 0x3f5364, 0x6b4c3b, 0x485c54];
   const winStripMat = new THREE.MeshBasicMaterial({ color:0x263542 });
@@ -3229,7 +3236,7 @@ function init3D(){
       crownPivot.add(c2);
     }
     g.add(crownPivot);
-    scene.add(g);
+    cityEnvGroup.add(g);
     treeCrowns.push({ pivot: crownPivot, phase: (e * 0.17 + n * 0.23) });
   }
 
@@ -3257,7 +3264,7 @@ function init3D(){
   });
 
   // Streetlights ("Đèn đường") along avenues with lamp heads & ground light pools
-  const streetLightGroup = new THREE.Group(); scene.add(streetLightGroup);
+  const streetLightGroup = new THREE.Group(); cityEnvGroup.add(streetLightGroup);
   const poleMat = new THREE.MeshLambertMaterial({ color:0x525e68 });
   const bulbMat = new THREE.MeshBasicMaterial({ color:0xffe29a });
   const poolTex = canvasTex(64, (x, s) => {
@@ -3301,7 +3308,7 @@ function init3D(){
 
   // Manufacturing Factory Compound Apron & Launch Pad H at (0,0,0)
   const apron = new THREE.Mesh(new THREE.PlaneGeometry(26, 26), new THREE.MeshLambertMaterial({ color:0x525c66 }));
-  apron.rotation.x = -Math.PI/2; apron.position.set(-7, 0.016, -2); scene.add(apron);
+  apron.rotation.x = -Math.PI/2; apron.position.set(-7, 0.016, -2); cityEnvGroup.add(apron);
 
   const padTex = canvasTex(256, (x, s) => {
     x.fillStyle = 'rgba(26,35,44,0.95)'; x.beginPath(); x.arc(s/2, s/2, s/2 - 4, 0, Math.PI*2); x.fill();
@@ -3310,23 +3317,23 @@ function init3D(){
     x.font = '700 28px "JetBrains Mono", monospace'; x.fillStyle = '#ffffff'; x.fillText('FACTORY', s/2, s/2 + 64);
   });
   const pad = new THREE.Mesh(new THREE.CircleGeometry(2.1, 48), new THREE.MeshBasicMaterial({ map:padTex, transparent:true, depthWrite:false }));
-  pad.rotation.x = -Math.PI/2; pad.position.y = 0.025; scene.add(pad);
+  pad.rotation.x = -Math.PI/2; pad.position.y = 0.025; cityEnvGroup.add(pad);
   const facLabel = textSprite('NHÀ MÁY SX', '#1d1306', '#f2a33a', 0.052);
-  facLabel.position.copy(toV(-12, 2, 14.5)); scene.add(facLabel);
+  facLabel.position.copy(toV(-12, 2, 14.5)); cityEnvGroup.add(facLabel);
 
   // Conveyor loading dock extending from Main Factory Hall toward Launch Pad (0,0)
   const dock = new THREE.Mesh(new THREE.BoxGeometry(5.2, 1.2, 2.8), new THREE.MeshLambertMaterial({ color:0x68737e }));
-  dock.position.copy(toV(-5.2, 0, 0.6)); scene.add(dock);
+  dock.position.copy(toV(-5.2, 0, 0.6)); cityEnvGroup.add(dock);
   for (let i = 0; i < 3; i++){
     const pkg = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 0.7), new THREE.MeshLambertMaterial({ color:0xd97b16 }));
-    pkg.position.copy(toV(-6.4 + i*1.1, 0, 1.48)); scene.add(pkg);
+    pkg.position.copy(toV(-6.4 + i*1.1, 0, 1.48)); cityEnvGroup.add(pkg);
   }
   // Shipping containers & logistics trucks at the Manufacturing Factory yard
   const contColors = [0x1f5f8b, 0xb83b2b, 0x2e7d47, 0xd98218];
   for (let i = 0; i < 4; i++){
     const cMesh = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.9, 1.8), new THREE.MeshLambertMaterial({ color:contColors[i] }));
     cMesh.position.copy(toV(-17.5, -9.5 + i*2.2, 0.95));
-    scene.add(cMesh);
+    cityEnvGroup.add(cMesh);
   }
 
   // Delivery Hubs (Hub A, Hub B, Hub C)
@@ -3340,12 +3347,12 @@ function init3D(){
       x.fillText('HUB ' + h.code, s/2, s/2 + 4);
     });
     const hp = new THREE.Mesh(new THREE.CircleGeometry(2.4, 40), new THREE.MeshBasicMaterial({ map:hTex, transparent:true, depthWrite:false }));
-    hp.rotation.x = -Math.PI/2; hp.position.copy(toV(h.e, h.n, 0.025)); scene.add(hp);
+    hp.rotation.x = -Math.PI/2; hp.position.copy(toV(h.e, h.n, 0.025)); cityEnvGroup.add(hp);
     const sp = textSprite('HUB ' + h.code, '#ffffff', col, 0.048);
-    sp.position.copy(toV(h.e, h.n, 4.2)); scene.add(sp);
+    sp.position.copy(toV(h.e, h.n, 4.2)); cityEnvGroup.add(sp);
   });
 
-  const north = textSprite('BẮC (N)', '#ffffff', 'rgba(20,32,42,0.82)', 0.045); north.position.copy(toV(0, 74, 2.5)); scene.add(north);
+  const north = textSprite('BẮC (N)', '#ffffff', 'rgba(20,32,42,0.82)', 0.045); north.position.copy(toV(0, 74, 2.5)); cityEnvGroup.add(north);
 
   // Build procedural window facade textures for urban skyscrapers
   const winTexLight = canvasTex(256, (x, s) => {
@@ -3373,38 +3380,38 @@ function init3D(){
 
   // Construct 3D meshes for all `Sim.obstacles` (Factory halls, Silo, and Urban High-Rises) + safety buffer rings
   const cityMeshes = [];
-  const bufferGroup = new THREE.Group(); scene.add(bufferGroup);
+  const bufferGroup = new THREE.Group(); cityEnvGroup.add(bufferGroup);
 
   const obsGroups = [];
   Sim.obstacles.forEach((o, idx) => {
-    const firstChild = scene.children.length;
+    const firstChild = cityEnvGroup.children.length;
     const w = o.rx * 2, d = o.ry * 2, h = o.h;
     if (o.kind === 'factory'){
       const m = new THREE.MeshLambertMaterial({ color:0x607080 });
       const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-      b.position.copy(toV(o.e, o.n, h/2)); scene.add(b);
+      b.position.copy(toV(o.e, o.n, h/2)); cityEnvGroup.add(b);
       // Orange industrial stripe + rooftop skylights
       const stripe = new THREE.Mesh(new THREE.BoxGeometry(w + 0.1, 1.1, d + 0.1), new THREE.MeshBasicMaterial({ color:0xe2891a }));
-      stripe.position.copy(toV(o.e, o.n, h - 1.4)); scene.add(stripe);
+      stripe.position.copy(toV(o.e, o.n, h - 1.4)); cityEnvGroup.add(stripe);
       cityMeshes.push({ mesh:b, kind:'factory' });
     } else if (o.kind === 'silo'){
       const cyl = new THREE.Mesh(new THREE.CylinderGeometry(o.rx*0.8, o.rx*0.95, h, 18), new THREE.MeshLambertMaterial({ color:0x8a949e }));
-      cyl.position.copy(toV(o.e, o.n, h/2)); scene.add(cyl);
+      cyl.position.copy(toV(o.e, o.n, h/2)); cityEnvGroup.add(cyl);
       const band = new THREE.Mesh(new THREE.CylinderGeometry(o.rx*0.83, o.rx*0.85, 1.8, 18), new THREE.MeshBasicMaterial({ color:0xc4302a }));
-      band.position.copy(toV(o.e, o.n, h - 2.2)); scene.add(band);
+      band.position.copy(toV(o.e, o.n, h - 2.2)); cityEnvGroup.add(band);
       cityMeshes.push({ mesh:cyl, kind:'silo' });
     } else {
       const mat = new THREE.MeshLambertMaterial({ map: winTexLight });
       const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-      b.position.copy(toV(o.e, o.n, h/2)); scene.add(b);
+      b.position.copy(toV(o.e, o.n, h/2)); cityEnvGroup.add(b);
       // Rooftop cap + HVAC unit
       const cap = new THREE.Mesh(new THREE.BoxGeometry(w + 0.3, 0.6, d + 0.3), new THREE.MeshLambertMaterial({ color:0x434e58 }));
-      cap.position.copy(toV(o.e, o.n, h + 0.3)); scene.add(cap);
+      cap.position.copy(toV(o.e, o.n, h + 0.3)); cityEnvGroup.add(cap);
       const hvac = new THREE.Mesh(new THREE.BoxGeometry(w*0.35, 1.4, d*0.35), new THREE.MeshLambertMaterial({ color:0x5b6773 }));
-      hvac.position.copy(toV(o.e + (idx%2?1:-1)*1.2, o.n, h + 1.0)); scene.add(hvac);
+      hvac.position.copy(toV(o.e + (idx%2?1:-1)*1.2, o.n, h + 1.0)); cityEnvGroup.add(hvac);
       cityMeshes.push({ mesh:b, kind:'building', mat });
     }
-    obsGroups[idx] = scene.children.slice(firstChild);
+    obsGroups[idx] = cityEnvGroup.children.slice(firstChild);
   });
 
   function rebuildSafetyBuffers(){
@@ -3427,7 +3434,7 @@ function init3D(){
   }
 
   // Windsock at Factory edge
-  const sock = new THREE.Group(); sock.position.copy(toV(4.2, 4.2, 0)); scene.add(sock);
+  const sock = new THREE.Group(); sock.position.copy(toV(4.2, 4.2, 0)); cityEnvGroup.add(sock);
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 3.0, 8), new THREE.MeshLambertMaterial({ color:0xb8bec4 })); pole.position.y = 1.5; sock.add(pole);
   const sockPivot = new THREE.Group(); sockPivot.position.y = 2.95; sock.add(sockPivot);
   const sockCone = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.2, 14, 1, true), new THREE.MeshLambertMaterial({ color:0xe2891a, side:THREE.DoubleSide }));
@@ -3807,6 +3814,24 @@ function init3D(){
     rebuildMission();
   }
 
+  let cityVisible = true;
+  function setCityVisible(vis){
+    cityVisible = !!vis;
+    cityEnvGroup.visible = cityVisible;
+    if ($('#optCity')) $('#optCity').checked = cityVisible;
+    const btn = $('#btnToggleCity');
+    if (btn){
+      btn.textContent = cityVisible ? '🏢 Ẩn tòa nhà & nhà máy' : '🏢 Hiện tòa nhà & nhà máy';
+      btn.setAttribute('aria-pressed', String(cityVisible));
+    }
+    if (window.SV && SV.agents){
+      SV.agents.forEach(a => { if (a.mesh) a.mesh.visible = cityVisible; });
+    }
+  }
+  $('#optCity').addEventListener('change', e => setCityVisible(e.target.checked));
+  const btnToggleCity = $('#btnToggleCity');
+  if (btnToggleCity) btnToggleCity.addEventListener('click', () => setCityVisible(!cityVisible));
+
   function setCam(mode){
     if (mode !== 'fpv' && cam.mode === 'fpv'){ camera.fov = 50; camera.updateProjectionMatrix(); }
     if (mode !== 'fpv') GB.ext = mode;
@@ -3815,6 +3840,11 @@ function init3D(){
       cam.az = 0.82;
       cam.el = 0.65;
       cam.dist = 68.0;
+      setCityVisible(false);
+      if ($('#btnToggleCity')) $('#btnToggleCity').style.display = 'block';
+    } else {
+      setCityVisible(true);
+      if ($('#btnToggleCity')) $('#btnToggleCity').style.display = 'none';
     }
     updateCamBackground(mode);
     camModeChanged();
@@ -3837,6 +3867,7 @@ function init3D(){
   // Towers that sit between the camera and the drone turn see-through, so zoom is never limited
   const faded = [];
   function fadeOccluders(){
+    if (!cityEnvGroup.visible) return;
     const c = camera.position, t = cam.tgt;
     const A = [t.x, -t.z, t.y], Bc = [c.x, -c.z, c.y];
     Sim.obstacles.forEach((o, i) => {
@@ -4335,7 +4366,7 @@ function init3D(){
 
   applyTheme();
   return { render, rebuildMission, clearTrail, applyTheme,
-    cam: { scene, toV, droneCam, GB, camFov, camHide, camera, mode: () => cam.mode, setCam, ENV, arRoots, setNight, setSensor, takePhoto } };
+    cam: { scene, toV, droneCam, GB, camFov, camHide, camera, mode: () => cam.mode, setCam, ENV, arRoots, setNight, setSensor, takePhoto, cityEnvGroup, setCityVisible } };
 }
 try { R3 = init3D(); }
 catch (err){ R3 = null; $('#glErr').hidden = false; $('#gl').style.display = 'none'; console.warn(err); }
@@ -5290,7 +5321,7 @@ function svBuildMeshes(C){
     // apparent temperatures for the thermal camera: skin and clothes ~34–37 °C, engine bay and tyres hot
     g.children.forEach((m, i) => { m.userData.temp = a.type === 'p' ? [0.84, 0.9, 0.97][i] : i === 0 ? 0.62 : i === 1 ? 0.48 : 0.74; });
     a.tC = a.type === 'p' ? 34 + (a.id.charCodeAt(2) % 4) : 48 + (a.id.charCodeAt(2) % 7) * 3;
-    a.mesh = g; C.scene.add(g);
+    a.mesh = g; (C.cityEnvGroup || C.scene).add(g);
   });
 }
 
