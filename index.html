@@ -173,8 +173,8 @@ table.wp input:focus{border-color:var(--tele);outline:none;background:var(--pane
 
 /* 3D view */
 .stage{position:relative;flex:1;min-height:0;overflow:hidden;background:var(--scene-sky)}
-.stage.traj-mode{background:#ffffff!important}
-.stage.traj-mode .ov-hud{background:rgba(255,255,255,0.88)!important;color:#0f172a!important;border:1px solid #cbd5e1!important;box-shadow:0 4px 12px rgba(0,0,0,0.06)!important}
+.stage.traj-mode{background:#f1f5f9!important}
+.stage.traj-mode .ov-hud{background:rgba(241,245,249,0.92)!important;color:#0f172a!important;border:1px solid #cbd5e1!important;box-shadow:0 4px 12px rgba(0,0,0,0.06)!important}
 .stage.traj-mode .ov-hud span{color:#64748b!important}
 .stage.traj-mode .ov-hud b{color:#0f172a!important}
 .ov-city-btn{position:absolute;left:10px;top:10px;z-index:9;background:rgba(255,255,255,0.92);color:#0f172a;border:1px solid #cbd5e1;padding:4px 11px;border-radius:4px;font-family:var(--f-display);font-weight:700;font-size:12px;letter-spacing:.04em;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all .15s}
@@ -1182,31 +1182,20 @@ var Sim = (function(){
   // Urban + Factory Obstacles: { id, name, e (center East), n (center North), rx (half-width E), ry (half-depth N), h (height Up), kind }
   // Carefully laid out around Factory (0,0) and along corridors to Hubs A, B, C so straight paths intersect buildings!
   const obstacles = [
-    // Manufacturing Factory structures near Home (0,0) - leaving (0,0) launch pad wide open
-    { id:'F1', name:'Xưởng Lắp Ráp Chính', e:-13, n: 2,   rx:5.5, ry:8.5, h:11, kind:'factory' },
-    { id:'F2', name:'Kho Linh Kiện Bắc',   e:-12, n: 15,  rx:5.0, ry:3.5, h:8.5, kind:'factory' },
-    { id:'F3', name:'Trạm Năng Lượng & Silo', e: -4, n:-12, rx:3.5, ry:3.5, h:19, kind:'silo' },
+    // Compact Manufacturing Factory structures near Home (0,0) - leaving (0,0) launch pad wide open
+    { id:'F1', name:'Xưởng Lắp Ráp Chính', e:-8,  n: 2,   rx:3.2, ry:4.2, h:6.8, kind:'factory' },
+    { id:'F2', name:'Kho Linh Kiện Bắc',   e:-8,  n: 10,  rx:2.8, ry:2.2, h:5.2, kind:'factory' },
+    { id:'F3', name:'Trạm Năng Lượng & Silo', e:-3.5, n:-8, rx:1.8, ry:1.8, h:9.5, kind:'silo' },
 
-    // Inner ring urban buildings (blocking direct straight lines from (0,0) to Hub A, Hub B, Hub C)
-    { id:'B1', name:'Tháp Văn Phòng Bắc 1', e: 3,   n: 21,  rx:5.0, ry:4.5, h:28, kind:'tower' },
-    { id:'B2', name:'Cao Ốc Thương Mại B2', e: 16,  n: 25,  rx:4.5, ry:4.5, h:22, kind:'office' },
-    { id:'B3', name:'Tòa Nhà Viễn Thông',   e:-9,   n: 32,  rx:4.5, ry:4.5, h:31, kind:'tower' },
-    { id:'B4', name:'Chung Cư Xanh B4',     e: 8,   n: 38,  rx:5.5, ry:4.0, h:25, kind:'apart' },
-    { id:'B5', name:'Cao Ốc Đông B5',       e: 22,  n: 4,   rx:4.5, ry:5.5, h:27, kind:'tower' },
-    { id:'B6', name:'Tòa Nhà Tài Chính B6', e: 37,  n: 9,   rx:5.0, ry:4.5, h:34, kind:'tower' },
-    { id:'B7', name:'Khu Phức Hợp Đông Bắc',e: 34,  n: 26,  rx:5.5, ry:5.0, h:24, kind:'office' },
-    { id:'B8', name:'Khách Sạn Đô Thị B8',  e: 48,  n:-6,   rx:4.5, ry:4.5, h:26, kind:'apart' },
-    { id:'B9', name:'Cao Ốc Nam B9',        e:-18,  n:-19,  rx:5.0, ry:4.5, h:26, kind:'tower' },
-    { id:'B10',name:'Trung Tâm Dữ Liệu B10',e:-31,  n:-33,  rx:5.5, ry:4.5, h:30, kind:'office' },
-    { id:'B11',name:'Chung Cư Nam B11',     e:-8,   n:-36,  rx:4.5, ry:5.0, h:23, kind:'apart' },
-    { id:'B12',name:'Tháp Đôi Tây Nam',     e:-34,  n:-12,  rx:4.5, ry:5.5, h:29, kind:'tower' },
-    { id:'B13',name:'Cao Ốc Tây Bắc B13',   e:-28,  n: 18,  rx:5.0, ry:5.0, h:24, kind:'apart' },
-    { id:'B14',name:'Tòa Nhà Công Nghệ B14',e: 18,  n:-20,  rx:5.5, ry:4.5, h:28, kind:'office' },
-    { id:'B15',name:'Tháp Nam Sài Gòn B15', e: 36,  n:-32,  rx:5.0, ry:5.0, h:32, kind:'tower' },
-    { id:'B16',name:'Chung Cư Bắc B16',     e:-16,  n: 50,  rx:4.5, ry:4.5, h:22, kind:'apart' },
-    { id:'B17',name:'Cao Ốc Đông Bắc B17',  e: 24,  n: 48,  rx:4.5, ry:4.5, h:26, kind:'office' },
-    { id:'B18',name:'Tháp Thương Mại B18',  e: 56,  n: 30,  rx:5.0, ry:4.5, h:30, kind:'tower' },
-    { id:'B19',name:'Khu Y Tế Cao Tầng B19',e:-24,  n:-52,  rx:4.5, ry:4.5, h:21, kind:'apart' }
+    // Well-spaced urban high-rise towers (reduced count and slimmer footprints for open spacious view)
+    { id:'B1', name:'Tháp Văn Phòng Bắc',  e: 8,   n: 28,  rx:3.6, ry:3.6, h:24, kind:'tower' },
+    { id:'B3', name:'Tòa Nhà Viễn Thông',  e:-16,  n: 36,  rx:3.6, ry:3.6, h:26, kind:'tower' },
+    { id:'B5', name:'Cao Ốc Đông',         e: 28,  n: 6,   rx:3.6, ry:3.8, h:24, kind:'tower' },
+    { id:'B6', name:'Tòa Nhà Tài Chính',   e: 42,  n: 18,  rx:3.8, ry:3.8, h:28, kind:'tower' },
+    { id:'B9', name:'Cao Ốc Nam',          e:-20,  n:-24,  rx:3.6, ry:3.6, h:24, kind:'tower' },
+    { id:'B12',name:'Tháp Tây',            e:-36,  n:-10,  rx:3.6, ry:3.8, h:25, kind:'tower' },
+    { id:'B14',name:'Tòa Nhà Công Nghệ',   e: 24,  n:-26,  rx:3.8, ry:3.6, h:25, kind:'office' },
+    { id:'B15',name:'Tháp Nam Sài Gòn',    e: 38,  n:-36,  rx:3.8, ry:3.8, h:26, kind:'tower' }
   ];
 
   // No-fly zones (disabled)
@@ -3170,25 +3159,14 @@ function init3D(){
 
   // Place clusters of neighborhood houses across city blocks
   const neighborhoodRows = [
-    // North-West residential quarter
-    { e0:-36, n0: 26, dx: 4.6, dn: 0, count: 3, w:3.8, d:4.6, h:4.5 },
-    { e0:-36, n0: 34, dx: 4.6, dn: 0, count: 3, w:3.8, d:4.4, h:5.2 },
-    // Mid-North shophouses
-    { e0: -3, n0:  4, dx: 4.2, dn: 0, count: 2, w:3.6, d:4.2, h:4.8 },
-    // Far-North neighborhood near Hub A
-    { e0:-34, n0: 52, dx: 5.0, dn: 0, count: 3, w:4.0, d:4.8, h:5.0 },
-    { e0: 36, n0: 52, dx: 0, dn: 5.0, count: 3, w:4.8, d:4.0, h:5.4 },
-    // East commercial shophouses
-    { e0: 56, n0: -18, dx: 0, dn: -5.2, count: 4, w:5.0, d:4.2, h:5.5 },
-    { e0: 64, n0: -18, dx: 0, dn: -5.2, count: 4, w:4.8, d:4.2, h:4.6 },
-    { e0: 26, n0: -12, dx: 4.8, dn: 0, count: 3, w:4.0, d:4.4, h:4.8 },
-    // South-East residential block
-    { e0:  2, n0: -26, dx: 4.8, dn: 0, count: 3, w:4.0, d:4.6, h:5.0 },
-    { e0:  2, n0: -34, dx: 4.8, dn: 0, count: 3, w:4.0, d:4.6, h:4.4 },
-    { e0: 22, n0: -50, dx: 5.0, dn: 0, count: 4, w:4.2, d:5.0, h:5.2 },
-    // West industrial/residential blocks
-    { e0:-56, n0: 24, dx: 0, dn: 5.2, count: 4, w:5.0, d:4.2, h:5.0 },
-    { e0:-56, n0:-18, dx: 0, dn:-5.2, count: 4, w:5.0, d:4.2, h:4.8 }
+    // Far North-West residential corner
+    { e0:-46, n0: 36, dx: 5.2, dn: 0, count: 2, w:3.8, d:4.4, h:4.5 },
+    // Far East residential corner
+    { e0: 56, n0: -18, dx: 0, dn: -5.6, count: 2, w:4.6, d:4.0, h:4.6 },
+    // Far South-East residential corner
+    { e0: 28, n0: -50, dx: 5.4, dn: 0, count: 2, w:4.0, d:4.6, h:4.6 },
+    // Far West block
+    { e0:-58, n0: -18, dx: 0, dn:-5.4, count: 2, w:4.8, d:4.0, h:4.6 }
   ];
   let hSeed = 1;
   neighborhoodRows.forEach(row => {
@@ -3306,9 +3284,9 @@ function init3D(){
     }
   });
 
-  // Manufacturing Factory Compound Apron & Launch Pad H at (0,0,0)
-  const apron = new THREE.Mesh(new THREE.PlaneGeometry(26, 26), new THREE.MeshLambertMaterial({ color:0x525c66 }));
-  apron.rotation.x = -Math.PI/2; apron.position.set(-7, 0.016, -2); cityEnvGroup.add(apron);
+  // Compact Manufacturing Factory Compound Apron & Launch Pad H at (0,0,0)
+  const apron = new THREE.Mesh(new THREE.PlaneGeometry(13, 13), new THREE.MeshLambertMaterial({ color:0x525c66 }));
+  apron.rotation.x = -Math.PI/2; apron.position.set(-4, 0.016, -1); cityEnvGroup.add(apron);
 
   const padTex = canvasTex(256, (x, s) => {
     x.fillStyle = 'rgba(26,35,44,0.95)'; x.beginPath(); x.arc(s/2, s/2, s/2 - 4, 0, Math.PI*2); x.fill();
@@ -3316,23 +3294,24 @@ function init3D(){
     x.fillStyle = '#e2891a'; x.font = '700 116px "Barlow Condensed", Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('H', s/2, s/2 - 10);
     x.font = '700 28px "JetBrains Mono", monospace'; x.fillStyle = '#ffffff'; x.fillText('FACTORY', s/2, s/2 + 64);
   });
-  const pad = new THREE.Mesh(new THREE.CircleGeometry(2.1, 48), new THREE.MeshBasicMaterial({ map:padTex, transparent:true, depthWrite:false }));
+  const pad = new THREE.Mesh(new THREE.CircleGeometry(1.4, 40), new THREE.MeshBasicMaterial({ map:padTex, transparent:true, depthWrite:false }));
   pad.rotation.x = -Math.PI/2; pad.position.y = 0.025; cityEnvGroup.add(pad);
-  const facLabel = textSprite('NHÀ MÁY SX', '#1d1306', '#f2a33a', 0.052);
-  facLabel.position.copy(toV(-12, 2, 14.5)); cityEnvGroup.add(facLabel);
+  const facLabel = textSprite('NHÀ MÁY SX', '#1d1306', '#f2a33a', 0.026);
+  facLabel.material.opacity = 0.65;
+  facLabel.position.copy(toV(-7, 1.2, 8.5)); cityEnvGroup.add(facLabel);
 
-  // Conveyor loading dock extending from Main Factory Hall toward Launch Pad (0,0)
-  const dock = new THREE.Mesh(new THREE.BoxGeometry(5.2, 1.2, 2.8), new THREE.MeshLambertMaterial({ color:0x68737e }));
-  dock.position.copy(toV(-5.2, 0, 0.6)); cityEnvGroup.add(dock);
-  for (let i = 0; i < 3; i++){
-    const pkg = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 0.7), new THREE.MeshLambertMaterial({ color:0xd97b16 }));
-    pkg.position.copy(toV(-6.4 + i*1.1, 0, 1.48)); cityEnvGroup.add(pkg);
+  // Compact Conveyor loading dock extending from Main Factory Hall toward Launch Pad (0,0)
+  const dock = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.65, 1.5), new THREE.MeshLambertMaterial({ color:0x68737e }));
+  dock.position.copy(toV(-3.2, 0, 0.4)); cityEnvGroup.add(dock);
+  for (let i = 0; i < 2; i++){
+    const pkg = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, 0.45), new THREE.MeshLambertMaterial({ color:0xd97b16 }));
+    pkg.position.copy(toV(-3.8 + i*0.8, 0, 0.8)); cityEnvGroup.add(pkg);
   }
-  // Shipping containers & logistics trucks at the Manufacturing Factory yard
-  const contColors = [0x1f5f8b, 0xb83b2b, 0x2e7d47, 0xd98218];
-  for (let i = 0; i < 4; i++){
-    const cMesh = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.9, 1.8), new THREE.MeshLambertMaterial({ color:contColors[i] }));
-    cMesh.position.copy(toV(-17.5, -9.5 + i*2.2, 0.95));
+  // Shipping containers at the Factory yard
+  const contColors = [0x1f5f8b, 0xb83b2b];
+  for (let i = 0; i < 2; i++){
+    const cMesh = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.2, 1.1), new THREE.MeshLambertMaterial({ color:contColors[i] }));
+    cMesh.position.copy(toV(-9.5, -5.5 + i*1.6, 0.6));
     cityEnvGroup.add(cMesh);
   }
 
@@ -3346,13 +3325,14 @@ function init3D(){
       x.fillStyle = '#ffffff'; x.font = '700 84px "Barlow Condensed", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
       x.fillText('HUB ' + h.code, s/2, s/2 + 4);
     });
-    const hp = new THREE.Mesh(new THREE.CircleGeometry(2.4, 40), new THREE.MeshBasicMaterial({ map:hTex, transparent:true, depthWrite:false }));
+    const hp = new THREE.Mesh(new THREE.CircleGeometry(1.6, 36), new THREE.MeshBasicMaterial({ map:hTex, transparent:true, opacity:0.55, depthWrite:false }));
     hp.rotation.x = -Math.PI/2; hp.position.copy(toV(h.e, h.n, 0.025)); cityEnvGroup.add(hp);
-    const sp = textSprite('HUB ' + h.code, '#ffffff', col, 0.048);
-    sp.position.copy(toV(h.e, h.n, 4.2)); cityEnvGroup.add(sp);
+    const sp = textSprite('HUB ' + h.code, '#ffffff', col, 0.026);
+    sp.material.opacity = 0.6;
+    sp.position.copy(toV(h.e, h.n, 2.6)); cityEnvGroup.add(sp);
   });
 
-  const north = textSprite('BẮC (N)', '#ffffff', 'rgba(20,32,42,0.82)', 0.045); north.position.copy(toV(0, 74, 2.5)); cityEnvGroup.add(north);
+  const north = textSprite('BẮC (N)', '#ffffff', 'rgba(20,32,42,0.82)', 0.028); north.material.opacity = 0.6; north.position.copy(toV(0, 74, 2.5)); cityEnvGroup.add(north);
 
   // Build procedural window facade textures for urban skyscrapers
   const winTexLight = canvasTex(256, (x, s) => {
@@ -3634,25 +3614,27 @@ function init3D(){
       const p1 = toV(b.from[0], b.from[1], b.from[2]);
       const p2 = toV(b.to[0], b.to[1], b.to[2]);
       const g = new THREE.BufferGeometry().setFromPoints([p1, p2]);
-      const ln = new THREE.Line(g, new THREE.LineDashedMaterial({ color:bad, dashSize:1.2, gapSize:0.8, transparent:true, opacity:0.75 }));
+      const ln = new THREE.Line(g, new THREE.LineDashedMaterial({ color:bad, dashSize:1.2, gapSize:0.8, transparent:true, opacity:0.32 }));
       ln.computeLineDistances();
       wpGroup.add(ln);
     });
 
-    // Draw waypoints (Destination vs Avoidance Node in RED)
+    // Draw waypoints (Destination vs Avoidance Node in RED) - subtle & translucent to avoid visual clutter
     M.forEach((w, i) => {
       const isAvoid = w.kind === 'avoid';
       const top = toV(w.e, w.n, w.u);
-      const col = isAvoid ? new THREE.Color(0xff2222) : acc;
-      const pl = new THREE.Line(new THREE.BufferGeometry().setFromPoints([toV(w.e, w.n, 0.02), top]), new THREE.LineBasicMaterial({ color:isAvoid ? new THREE.Color(0xff3333) : lineC, transparent:true, opacity:isAvoid ? 0.85 : 0.85 }));
+      const col = isAvoid ? new THREE.Color(0xff3333) : acc;
+      const pl = new THREE.Line(new THREE.BufferGeometry().setFromPoints([toV(w.e, w.n, 0.02), top]), new THREE.LineBasicMaterial({ color:isAvoid ? new THREE.Color(0xff5555) : lineC, transparent:true, opacity:0.28 }));
       const ball = new THREE.Mesh(
-        isAvoid ? new THREE.SphereGeometry(0.48, 16, 12) : new THREE.SphereGeometry(0.42, 16, 12),
-        new THREE.MeshStandardMaterial({ color:col, emissive:isAvoid ? 0x660000 : 0x000000, roughness:0.25 })
+        isAvoid ? new THREE.SphereGeometry(0.24, 12, 10) : new THREE.SphereGeometry(0.20, 12, 10),
+        new THREE.MeshStandardMaterial({ color:col, transparent:true, opacity:0.48, roughness:0.5 })
       );
       ball.position.copy(top);
       const labTxt = isAvoid ? ('NÉ ' + (i+1)) : ('#' + (i+1));
-      const lab = textSprite(labTxt, '#ffffff', isAvoid ? '#d92525' : TK.accent, isAvoid ? 0.038 : 0.042);
-      lab.position.copy(toV(w.e, w.n, w.u + 1.1));
+      const lab = textSprite(labTxt, '#ffffff', isAvoid ? '#d92525' : TK.accent, isAvoid ? 0.024 : 0.026);
+      lab.material.transparent = true;
+      lab.material.opacity = 0.52;
+      lab.position.copy(toV(w.e, w.n, w.u + 0.65));
       wpGroup.add(pl, ball, lab);
       wpBalls.push({ ball, isAvoid });
     });
@@ -3662,7 +3644,7 @@ function init3D(){
       const ms = Sim.missionStart || { e:0, n:0, u:Math.max(Sim.params.takeoffAlt, M[0].u) };
       const startPt = toV(ms.e, ms.n, ms.u);
       const pts = [startPt].concat(M.map(w => toV(w.e, w.n, w.u)));
-      const path = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color:acc, linewidth:2 }));
+      const path = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color:acc, transparent:true, opacity:0.45, linewidth:1 }));
       wpGroup.add(path);
     }
   }
@@ -3760,22 +3742,23 @@ function init3D(){
   function updateCamBackground(mode){
     if (mode === 'traj'){
       stage.classList.add('traj-mode');
-      const white = new THREE.Color(0xffffff);
-      renderer.setClearColor(white);
-      scene.fog.color.copy(white);
+      const softBg = new THREE.Color(0xf1f5f9);
+      renderer.setClearColor(softBg);
+      scene.fog.color.copy(softBg);
       scene.fog.near = 140;
       scene.fog.far = 480;
-      groundMat.color.set(0xffffff);
-      if (grid){
-        grid.material.transparent = true;
-        grid.material.opacity = 0.32;
-        if (grid.material.color) grid.material.color.setHex(0xd0d7de);
-      }
+      groundMat.color.set(0xe8edf2);
+      if (grid){ scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
+      grid = new THREE.GridHelper(240, 24, new THREE.Color(0x94a3b8), new THREE.Color(0xcbd5e1));
+      grid.position.y = 0.006;
+      grid.material.transparent = true;
+      grid.material.opacity = 0.22;
+      scene.add(grid);
       sun.color.set('#ffffff');
-      sun.intensity = 0.82;
+      sun.intensity = 0.52;
       hemi.color.set('#ffffff');
-      hemi.groundColor.set('#ffffff');
-      hemi.intensity = 0.96;
+      hemi.groundColor.set('#e2e8f0');
+      hemi.intensity = 0.68;
       cityMeshes.forEach(c => {
         if (c.kind !== 'building') return;
         c.mat.map = winTexLight;
@@ -3804,7 +3787,7 @@ function init3D(){
     renderer.setClearColor(sky); scene.fog.color.copy(sky);
     groundMat.color.set(TK['scene-ground']);
     if (grid){ scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
-    grid = new THREE.GridHelper(240, 120, new THREE.Color(TK['scene-grid']), new THREE.Color(TK['scene-grid2'])); grid.position.y = 0.006; scene.add(grid);
+    grid = new THREE.GridHelper(240, 48, new THREE.Color(TK['scene-grid']), new THREE.Color(TK['scene-grid2'])); grid.position.y = 0.006; scene.add(grid);
     hemi.color.set('#ffffff');
     hemi.groundColor.set(0x556270);
     hemi.intensity = TK.dark ? 0.65 : 0.9; sun.intensity = TK.dark ? 0.58 : 0.78;
@@ -4038,7 +4021,8 @@ function init3D(){
     wpBalls.forEach((item, i) => {
       const b = item.ball;
       b.material.color.copy(item.isAvoid ? cr : (i === act ? ct : (act >= 0 && i < act) ? cf : ca));
-      b.scale.setScalar(i === act ? 1.35 + 0.15*Math.sin(t*6) : (item.isAvoid ? 1.15 : 1));
+      b.material.opacity = (i === act) ? 0.75 : 0.45;
+      b.scale.setScalar(i === act ? 1.25 + 0.12*Math.sin(t*6) : 1);
     });
 
     const w = S.windNow, ws = Math.hypot(w[0], w[1]);
