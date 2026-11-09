@@ -27,7 +27,7 @@ img{max-width:100%}
   --warn:#a86b00; --warn-soft:rgba(200,130,0,.15);
   --bad:#c4302a; --bad-soft:rgba(196,48,42,.12); --on-bad:#ffffff;
   --ov:rgba(250,251,252,.88);
-  --scene-sky:#cfdbe6; --scene-ground:#a89680; --scene-grid:#8e7c66; --scene-grid2:#9d8b75;
+  --scene-sky:#cfdbe6; --scene-ground:#528048; --scene-grid:#446e38; --scene-grid2:#4b763e;
   --pl-0:#86b6ef; --pl-1:#5598e7; --pl-2:#2a78d6; --pl-3:#1c5cab; --pl-4:#104281; --wd-0:#f2a07a; --wd-1:#e0602c; --wd-2:#9c3d17;
   --st-takeoff:#2a78d6; --st-hover:#eb6834; --st-mission:#1baf7a; --st-rtl:#6250d6; --st-landing:#008300; --st-manual:#e87ba4; --st-ground:#a3adb6; --st-armed:#6c7781;
   --osd-fg:#ffffff; --osd-bg:rgba(8,14,20,.55); --osd-rec:#ff5a52; --osd-warn:#ffc44d;
@@ -45,7 +45,7 @@ img{max-width:100%}
     --warn:#e6aa33; --warn-soft:rgba(230,170,51,.15);
     --bad:#f0605a; --bad-soft:rgba(240,96,90,.15); --on-bad:#1a0605;
     --ov:rgba(20,28,35,.88);
-    --scene-sky:#0d151d; --scene-ground:#161d24; --scene-grid:#2d3b47; --scene-grid2:#1f2933;
+    --scene-sky:#0d151d; --scene-ground:#1b2e1e; --scene-grid:#223c21; --scene-grid2:#1d331c;
     --pl-0:#1c5cab; --pl-1:#2a78d6; --pl-2:#5598e7; --pl-3:#86b6ef; --pl-4:#b7d3f6; --wd-0:#9c3d17; --wd-1:#d95926; --wd-2:#f2a07a;
     --st-takeoff:#3987e5; --st-hover:#d95926; --st-mission:#199e70; --st-rtl:#9085e9; --st-landing:#008300; --st-manual:#d55181; --st-ground:#47525c; --st-armed:#7d8893;
     color-scheme:dark;
@@ -60,7 +60,7 @@ img{max-width:100%}
   --warn:#e6aa33; --warn-soft:rgba(230,170,51,.15);
   --bad:#f0605a; --bad-soft:rgba(240,96,90,.15); --on-bad:#1a0605;
   --ov:rgba(20,28,35,.88);
-  --scene-sky:#0d151d; --scene-ground:#161d24; --scene-grid:#2d3b47; --scene-grid2:#1f2933;
+  --scene-sky:#0d151d; --scene-ground:#1b2e1e; --scene-grid:#223c21; --scene-grid2:#1d331c;
   --pl-0:#1c5cab; --pl-1:#2a78d6; --pl-2:#5598e7; --pl-3:#86b6ef; --pl-4:#b7d3f6; --wd-0:#9c3d17; --wd-1:#d95926; --wd-2:#f2a07a;
   --st-takeoff:#3987e5; --st-hover:#d95926; --st-mission:#199e70; --st-rtl:#9085e9; --st-landing:#008300; --st-manual:#d55181; --st-ground:#47525c; --st-armed:#7d8893;
   color-scheme:dark;
@@ -3030,7 +3030,7 @@ function init3D(){
   const sun = new THREE.DirectionalLight(0xffffff, 0.78); sun.position.set(45, 85, 35); scene.add(sun);
   scene.fog = new THREE.Fog(0xffffff, 95, 320);
 
-  const groundMat = new THREE.MeshLambertMaterial({ color:0xcccccc });
+  const groundMat = new THREE.MeshLambertMaterial({ color:0x528048 });
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), groundMat); ground.rotation.x = -Math.PI/2; scene.add(ground);
   let grid = null;
 
@@ -3077,13 +3077,158 @@ function init3D(){
     return true;
   }
 
-  // Green Park Lawns, Low-Rise Houses, Trees & Streetlights omitted for clean natural dirt ground
   const parkMat = new THREE.MeshLambertMaterial({ color:0x688f64 });
   const parkZones = [];
-  const houseGroup = new THREE.Group(); houseGroup.visible = false;
-  const treeCrowns = [];
   const streetLightGroup = new THREE.Group(); streetLightGroup.visible = false;
   const poolMat = new THREE.MeshBasicMaterial({ transparent:true, opacity:0 });
+
+  // Residential Neighborhood: Exactly 34 houses across the countryside
+  const houseGroup = new THREE.Group(); cityEnvGroup.add(houseGroup);
+  const housePalette = [0xd8cfc4, 0xc7d3dd, 0xe3d5b8, 0xbec9be, 0xd9c2ba, 0xcbd0d6, 0xe8dfd5, 0xd2dcd2];
+  const roofPalette = [0x9e4736, 0x3f5364, 0x6b4c3b, 0x485c54, 0x8b3a2b, 0x415a6b];
+  const winStripMat = new THREE.MeshBasicMaterial({ color:0x263542 });
+  const doorMat = new THREE.MeshLambertMaterial({ color:0x4a3220 });
+
+  function addLowRiseHouse(e, n, w, d, h, rotY, palIdx){
+    const g = new THREE.Group();
+    g.position.copy(toV(e, n, 0));
+    g.rotation.y = rotY || 0;
+    const wallM = new THREE.MeshLambertMaterial({ color: housePalette[palIdx % housePalette.length] });
+    const roofM = new THREE.MeshLambertMaterial({ color: roofPalette[palIdx % roofPalette.length] });
+    const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallM);
+    bodyMesh.position.y = h / 2;
+    g.add(bodyMesh);
+
+    // Pitched roof or terrace parapet
+    if (palIdx % 2 === 0){
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d)*0.68, 1.4, 4), roofM);
+      roof.position.y = h + 0.7;
+      roof.rotation.y = Math.PI / 4;
+      g.add(roof);
+    } else {
+      const parapet = new THREE.Mesh(new THREE.BoxGeometry(w + 0.25, 0.45, d + 0.25), roofM);
+      parapet.position.y = h + 0.22;
+      g.add(parapet);
+    }
+
+    // Windows band
+    const win1 = new THREE.Mesh(new THREE.BoxGeometry(w + 0.06, 0.65, d * 0.65), winStripMat);
+    win1.position.y = h * 0.65;
+    g.add(win1);
+
+    // Front door
+    const door = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.5, 0.1), doorMat);
+    door.position.set(0, 0.75, d / 2 + 0.04);
+    g.add(door);
+
+    houseGroup.add(g);
+  }
+
+  const HOUSES_34 = [
+    // Cluster A: West Hamlet (10 houses)
+    { e: -58, n: 16, w: 4.8, d: 4.2, h: 4.5, rotY: 0 },
+    { e: -50, n: 16, w: 4.4, d: 4.6, h: 4.2, rotY: 0.1 },
+    { e: -42, n: 16, w: 5.0, d: 4.0, h: 4.6, rotY: -0.1 },
+    { e: -58, n: 4,  w: 4.5, d: 4.5, h: 4.3, rotY: 0 },
+    { e: -50, n: 4,  w: 5.2, d: 4.2, h: 4.7, rotY: 0.15 },
+    { e: -42, n: 4,  w: 4.6, d: 4.4, h: 4.4, rotY: 0 },
+    { e: -58, n: -10, w: 4.8, d: 4.0, h: 4.5, rotY: -0.2 },
+    { e: -50, n: -10, w: 4.4, d: 4.6, h: 4.2, rotY: 0 },
+    { e: -55, n: -24, w: 5.0, d: 4.2, h: 4.6, rotY: 0.1 },
+    { e: -46, n: -24, w: 4.6, d: 4.5, h: 4.3, rotY: 0 },
+
+    // Cluster B: North Meadow Hamlet (10 houses)
+    { e: -24, n: 54, w: 4.6, d: 4.4, h: 4.5, rotY: 0 },
+    { e: -16, n: 54, w: 5.0, d: 4.0, h: 4.2, rotY: 0.1 },
+    { e: -8,  n: 54, w: 4.5, d: 4.6, h: 4.7, rotY: -0.1 },
+    { e: 2,   n: 55, w: 5.2, d: 4.2, h: 4.4, rotY: 0 },
+    { e: 10,  n: 55, w: 4.4, d: 4.5, h: 4.3, rotY: 0.2 },
+    { e: 18,  n: 55, w: 4.8, d: 4.2, h: 4.6, rotY: 0 },
+    { e: -20, n: 42, w: 5.0, d: 4.4, h: 4.5, rotY: -0.15 },
+    { e: -12, n: 42, w: 4.5, d: 4.5, h: 4.2, rotY: 0 },
+    { e: 12,  n: 42, w: 4.8, d: 4.2, h: 4.6, rotY: 0.1 },
+    { e: 20,  n: 42, w: 5.2, d: 4.0, h: 4.4, rotY: 0 },
+
+    // Cluster C: East Garden Hamlet (10 houses)
+    { e: 52,  n: 24, w: 4.6, d: 4.5, h: 4.5, rotY: 0 },
+    { e: 60,  n: 24, w: 5.0, d: 4.2, h: 4.3, rotY: 0.15 },
+    { e: 52,  n: 12, w: 4.5, d: 4.6, h: 4.6, rotY: -0.1 },
+    { e: 60,  n: 12, w: 5.2, d: 4.0, h: 4.2, rotY: 0 },
+    { e: 50,  n: 0,  w: 4.8, d: 4.4, h: 4.5, rotY: 0.2 },
+    { e: 58,  n: 0,  w: 4.4, d: 4.6, h: 4.4, rotY: 0 },
+    { e: 50,  n: -12, w: 5.2, d: 4.2, h: 4.7, rotY: -0.1 },
+    { e: 58,  n: -12, w: 4.6, d: 4.5, h: 4.3, rotY: 0 },
+    { e: 52,  n: -24, w: 4.8, d: 4.2, h: 4.5, rotY: 0.1 },
+    { e: 60,  n: -24, w: 5.0, d: 4.4, h: 4.6, rotY: 0 },
+
+    // Cluster D: South Homesteads (4 houses)
+    { e: -14, n: -48, w: 4.8, d: 4.4, h: 4.5, rotY: 0 },
+    { e: -6,  n: -48, w: 5.2, d: 4.2, h: 4.3, rotY: 0.1 },
+    { e: 6,   n: -48, w: 4.5, d: 4.6, h: 4.6, rotY: -0.1 },
+    { e: 14,  n: -48, w: 5.0, d: 4.2, h: 4.4, rotY: 0 }
+  ];
+
+  HOUSES_34.forEach((h, idx) => {
+    addLowRiseHouse(h.e, h.n, h.w, h.d, h.h, h.rotY, idx);
+  });
+
+  // Natural Trees across the grass terrain
+  const treeCrowns = [];
+  const trunkMat = new THREE.MeshLambertMaterial({ color:0x533d28 });
+  const leafMat1 = new THREE.MeshLambertMaterial({ color:0x2d6e35 });
+  const leafMat2 = new THREE.MeshLambertMaterial({ color:0x397e41 });
+  const trunkGeo = new THREE.CylinderGeometry(0.18, 0.26, 1.8, 7);
+  const crownGeoSphere = new THREE.DodecahedronGeometry(1.4, 1);
+  const crownGeoCone = new THREE.ConeGeometry(1.3, 3.4, 8);
+
+  function addTree(e, n, scale, style){
+    const g = new THREE.Group();
+    g.position.copy(toV(e, n, 0));
+    const tr = new THREE.Mesh(trunkGeo, trunkMat);
+    tr.position.y = 0.9 * scale;
+    tr.scale.setScalar(scale);
+    g.add(tr);
+
+    const crownPivot = new THREE.Group();
+    crownPivot.position.y = 1.6 * scale;
+    if (style % 2 === 0){
+      const c1 = new THREE.Mesh(crownGeoSphere, leafMat1);
+      c1.position.y = 0.8 * scale;
+      c1.scale.set(scale, scale * 1.15, scale);
+      crownPivot.add(c1);
+    } else {
+      const c2 = new THREE.Mesh(crownGeoCone, leafMat2);
+      c2.position.y = 1.2 * scale;
+      c2.scale.setScalar(scale);
+      crownPivot.add(c2);
+    }
+    g.add(crownPivot);
+    cityEnvGroup.add(g);
+    treeCrowns.push({ pivot: crownPivot, phase: (e * 0.17 + n * 0.23) });
+  }
+
+  // Scatter trees naturally near houses and across open meadows
+  const TREE_POS = [
+    // Near Cluster A (West)
+    [-64, 20], [-63, 10], [-64, -2], [-62, -16], [-61, -28],
+    [-36, 18], [-36, 6], [-36, -8], [-48, -32], [-38, -26],
+    // Near Cluster B (North)
+    [-30, 58], [-20, 62], [-4, 62], [14, 62], [26, 58],
+    [-28, 44], [-4, 44], [4, 44], [28, 44], [0, 36],
+    // Near Cluster C (East)
+    [44, 28], [66, 28], [44, 14], [66, 14], [44, -2],
+    [66, -2], [44, -18], [66, -18], [44, -30], [66, -30],
+    // Near Cluster D (South)
+    [-22, -52], [-2, -54], [10, -54], [22, -52],
+    [-18, -40], [18, -40], [0, -40],
+    // Scattered scenic trees in meadows
+    [-22, 18], [-18, -16], [22, 18], [24, -14],
+    [-32, -2], [32, 2], [-14, 28], [14, 28]
+  ];
+
+  TREE_POS.forEach(([te, tn], i) => {
+    addTree(te, tn, 0.85 + (i % 3) * 0.15, i);
+  });
 
   // Launch Pad H at (0,0,0) (no concrete apron - dirt ground)
   const apron = new THREE.Mesh(new THREE.PlaneGeometry(13, 13), new THREE.MeshLambertMaterial({ color:0x525c66 }));
@@ -3906,19 +4051,10 @@ function init3D(){
     // 3D wind streamlines hidden
     const windVisible = false;
     windStreamGroup.visible = false;
-    if (windVisible){
-      const wAng = Math.atan2(w[1], w[0]); // angle in ENU (0 = East, pi/2 = North)
-      const streakScale = clamp(0.6 + ws * 0.14, 0.6, 2.2);
-      windParticles.forEach(wp => {
-        wp.e += w[0] * dtSim * wp.spdMul * 1.4;
-        wp.n += w[1] * dtSim * wp.spdMul * 1.4;
-        if (wp.e > 72) wp.e -= 144; else if (wp.e < -72) wp.e += 144;
-        if (wp.n > 72) wp.n -= 144; else if (wp.n < -72) wp.n += 144;
-        wp.grp.position.copy(toV(wp.e, wp.n, wp.u));
-        wp.grp.rotation.y = wAng;
-        wp.grp.scale.set(streakScale, 1, 1);
-      });
-      const swayAmp = Math.min(0.14, ws * 0.012);
+    // Trees gently sway with ambient wind
+    if (treeCrowns.length && ws > 0.05){
+      const wAng = Math.atan2(w[1], w[0]);
+      const swayAmp = Math.min(0.12, ws * 0.010);
       treeCrowns.forEach(tc => {
         const s = swayAmp * (0.7 + 0.3 * Math.sin(t * 2.6 + tc.phase));
         tc.pivot.rotation.z = -Math.cos(wAng) * s;
@@ -3999,7 +4135,7 @@ function init3D(){
     if (on){
       const sky = new THREE.Color('#060b15');
       renderer.setClearColor(sky); scene.fog.color.copy(sky);
-      groundMat.color.set('#161c22');
+      groundMat.color.set('#1b2e1e');
       hemi.intensity = 0.34; sun.intensity = 0.22; sun.color.set('#9fb3ff');
     } else {
       sun.color.set('#ffffff');
