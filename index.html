@@ -694,7 +694,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
       <div class="ph"><span class="code">3D</span><h2 id="h3d">Đô thị &amp; Nhà máy sản xuất</h2>
         <div class="seg" role="group" aria-label="Thu phóng" id="zoomSeg" style="margin-left:auto"><button data-zoom="in" aria-label="Phóng to" title="Phóng to (phím +)">+</button><button data-zoom="out" aria-label="Thu nhỏ" title="Thu nhỏ (phím −)">−</button></div>
         <div class="seg" role="group" aria-label="Góc camera" id="camSeg">
-          <button data-cam="orbit" aria-pressed="true">Quỹ đạo</button><button data-cam="follow">Bám đuôi</button><button data-cam="top">Bản đồ<span class="wide-only"> quy hoạch</span></button><button data-cam="fpv" title="Góc nhìn camera gắn trên drone (phím C)">Camera<span class="wide-only"> drone</span></button>
+          <button data-cam="orbit" aria-pressed="true">Quỹ đạo</button><button data-cam="follow">Bám đuôi</button><button data-cam="fpv" title="Góc nhìn camera gắn trên drone (phím C)">Camera<span class="wide-only"> drone</span></button>
         </div>
       </div>
       <div class="stage" id="stage">
@@ -755,7 +755,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
       <div class="cam-foot" role="group" aria-label="Camera drone">
         <span class="cam-t">Camera</span>
         <div class="seg" role="group" aria-label="Cảm biến camera (phím T)" id="sensSeg"><button data-sens="eo" aria-pressed="true" title="Camera quang học (ảnh màu)">Quang học</button><button data-sens="ir" title="Camera nhiệt hồng ngoại (phím T)">Nhiệt</button></div>
-        <select id="palSel" class="sens-pal" aria-label="Bảng màu ảnh nhiệt" hidden><option value="wh">Trắng nóng</option><option value="iron">Ironbow</option></select>
+        <select id="palSel" class="sens-pal" aria-label="Bảng màu ảnh nhiệt" hidden><option value="iron" selected>Ironbow</option><option value="wh">Trắng nóng</option></select>
         <div class="seg" role="group" aria-label="Thời gian trong ngày (phím N)" id="todSeg"><button data-tod="day" aria-pressed="true">Ngày</button><button data-tod="night" title="Ban đêm (phím N)">Đêm</button></div>
         <button class="btn mini" id="btnPhoto" title="Chụp ảnh tĩnh 20MP (phím P)">Chụp ảnh</button>
         <label class="chk"><input type="checkbox" id="optPip" checked> Cửa sổ nhỏ</label>
@@ -3985,7 +3985,7 @@ function init3D(){
   const mapArrow = new THREE.Group(); mapArrow.visible = false; scene.add(mapArrow);
   /* ---------- night scene + thermal camera ---------- */
   const ENV = { night:false };
-  GB.sensor = 'eo'; GB.pal = 'wh';
+  GB.sensor = 'eo'; GB.pal = 'iron';
   const arRoots = [wpGroup, rtlGroup, trail, mapArrow];   // AR graphics keep their own colours in the thermal picture
   const winTexGlow = canvasTex(256, (x, s) => {
     x.fillStyle = '#000000'; x.fillRect(0, 0, s, s);
@@ -4014,12 +4014,24 @@ function init3D(){
   function setNight(on){
     ENV.night = on; applyTheme();
     $$('#todSeg button').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.tod === 'night') === on)));
-    setSensor(on ? 'ir' : 'eo');
+    if (on){
+      GB.pal = 'iron';
+      if ($('#palSel')) $('#palSel').value = 'iron';
+      thermCache.clear();
+      setSensor('ir');
+    } else {
+      setSensor('eo');
+    }
   }
   function setSensor(k){
     GB.sensor = k;
     $$('#sensSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sens === k)));
     $('#palSel').hidden = k !== 'ir';
+    if (k === 'ir' && ENV.night){
+      GB.pal = 'iron';
+      if ($('#palSel')) $('#palSel').value = 'iron';
+      thermCache.clear();
+    }
     camModeChanged();
   }
   $$('#todSeg button').forEach(b => b.addEventListener('click', () => setNight(b.dataset.tod === 'night')));
@@ -4083,9 +4095,9 @@ function init3D(){
   function camModeChanged(){
     const fpv = cam.mode === 'fpv';
     stage.classList.toggle('fpv', fpv); osdEl.hidden = !fpv; $('#camHelp').hidden = !fpv;
-    $('#pipLab').innerHTML = fpv ? 'BẢN ĐỒ<span class="wide-only"> · BẮC LÊN TRÊN</span>' : 'CAMERA ' + (GB.sensor === 'ir' ? 'NHIỆT' : 'DRONE');
+    $('#pipLab').innerHTML = fpv ? 'QUỸ ĐẠO<span class="wide-only"> · GÓC NGOÀI</span>' : 'CAMERA ' + (GB.sensor === 'ir' ? 'NHIỆT' : 'DRONE');
     $('#pipSw').textContent = fpv ? '⤢ góc ngoài' : '⤢ phóng to';
-    pipEl.setAttribute('aria-label', fpv ? 'Bản đồ thu nhỏ: bấm để quay lại góc nhìn ngoài' : 'Camera drone thu nhỏ: bấm để xem toàn khung');
+    pipEl.setAttribute('aria-label', fpv ? 'Góc nhìn thu nhỏ: bấm để quay lại góc nhìn ngoài' : 'Camera drone thu nhỏ: bấm để xem toàn khung');
   }
   function setZoom(z){
     GB.zoom = clamp(z, 1, 6);
