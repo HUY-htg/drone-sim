@@ -3549,6 +3549,7 @@ function init3D(){
   let activeSeg = null;
   let flightRunId = 1;
   let wasGrounded = true;
+  let lastTrailT = -1;
 
   function startNewTrailSegment(lapKey, colIdx){
     const MAX_PTS = 2500;
