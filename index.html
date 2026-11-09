@@ -2498,7 +2498,7 @@ $$('.cmd').forEach(b => b.addEventListener('click', () => {
     if (!killArm){ killArm = true; b.classList.add('confirm'); $('#killTxt').textContent = 'Bấm lần nữa trong 3 s để xác nhận'; killTimer = setTimeout(resetKill, 3000); return; }
     resetKill();
   }
-  if (c === 'MISSION' && Sim.S.state === 'DISARMED'){
+  if (c === 'MISSION' && (Sim.S.state === 'DISARMED' || Sim.S.state === 'ARMED')){
     if (SV.task === 'bomber') startBomberMission();
     else svStart();
     return;
