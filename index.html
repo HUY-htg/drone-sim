@@ -2211,7 +2211,7 @@ var Sim = (function(){
 <script>
 (function(){
 'use strict';
-const $ = (s, r) => (r || document).querySelector(s);
+const $ = (s, r) => (r || document).querySelector(s) || document.createElement('div');
 const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const clamp = (x,a,b) => x<a?a:x>b?b:x;
 const DEG = 180/Math.PI;
@@ -2460,11 +2460,13 @@ function updateWindHudUI(){
 }
 function updateCargoSpecUI(){
   const cm = Sim.params.cargoMass;
-  $('#metaCargo').textContent = cm.toFixed(2) + ' kg';
-  $('#brandSpec').textContent = 'X4 giám sát · camera gimbal 3 trục · khung 800 mm · tự trọng 2,4 kg' + (cm > 0 ? ' + hàng ' + cm.toFixed(2) + ' kg' : ', không chở hàng') + ' · pin 6S 12000 mAh · Lidar 360°';
+  const m = document.getElementById('metaCargo'); if (m) m.textContent = cm.toFixed(2) + ' kg';
+  const bs = document.getElementById('brandSpec');
+  if (bs) bs.textContent = 'X4 giám sát · camera gimbal 3 trục · khung 800 mm · tự trọng 2,4 kg · pin 6S 12000 mAh · Lidar 360°';
 }
 function bindRange(id, outId, fmt, apply){
-  const i = $('#' + id), o = $('#' + outId);
+  const i = document.getElementById(id), o = document.getElementById(outId);
+  if (!i || !o) return;
   const up = () => { const v = parseFloat(i.value); o.textContent = fmt(v); apply(v); };
   i.addEventListener('input', up); up();
 }
@@ -5110,34 +5112,36 @@ function anOpen(e){
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   $('#report').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block:'start' });
 }
-$('#anTbl').addEventListener('click', anOpen);
-$('#anResp').addEventListener('click', anOpen);
-['anLean','anEnd','anDrop'].forEach(id => {
-  const c = $('#' + id);
-  c.addEventListener('pointermove', e => { AN.hover[id] = e.clientX - c.getBoundingClientRect().left; anRender(true); });
-  c.addEventListener('pointerleave', () => { AN.hover[id] = null; anRender(true); });
-});
-$('#anStep').addEventListener('pointermove', e => { AN.hover.anStep = { y: e.clientY - $('#anStep').getBoundingClientRect().top }; anRender(true); });
-$('#anStep').addEventListener('pointerleave', () => { AN.hover.anStep = null; anRender(true); });
+if (document.getElementById('analysis')){
+  $('#anTbl').addEventListener('click', anOpen);
+  $('#anResp').addEventListener('click', anOpen);
+  ['anLean','anEnd','anDrop'].forEach(id => {
+    const c = $('#' + id);
+    c.addEventListener('pointermove', e => { AN.hover[id] = e.clientX - c.getBoundingClientRect().left; anRender(true); });
+    c.addEventListener('pointerleave', () => { AN.hover[id] = null; anRender(true); });
+  });
+  $('#anStep').addEventListener('pointermove', e => { AN.hover.anStep = { y: e.clientY - $('#anStep').getBoundingClientRect().top }; anRender(true); });
+  $('#anStep').addEventListener('pointerleave', () => { AN.hover.anStep = null; anRender(true); });
+  $('#anRun').addEventListener('click', () => {
+    startAdaptTest();
+    if (atest.on){
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document.querySelector('.view').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block:'start' });
+    }
+  });
+  $('#anPlan').innerHTML = TESTPLAN.payloads.map((p, i) => '<li><b>Chuyến ' + (i + 1) + '</b> tải ' + kgTxt(p) + ': ' + testSteps(p).map(s => s.label).join(' → ') + '</li>').join('');
+  new ResizeObserver(() => { if (AN.data) anRender(true); }).observe($('#anBody'));
+  anRender();
+}
 function anRunBtn(){
   const b = $('#anRun');
   b.disabled = atest.on; b.textContent = atest.on ? 'Đang bay thử: ' + atest.label : 'Chạy chương trình bay thử (' + TESTPLAN.payloads.length + ' chuyến)';
 }
-$('#anRun').addEventListener('click', () => {
-  startAdaptTest();
-  if (atest.on){
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    document.querySelector('.view').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block:'start' });
-  }
-});
-$('#anPlan').innerHTML = TESTPLAN.payloads.map((p, i) => '<li><b>Chuyến ' + (i + 1) + '</b> tải ' + kgTxt(p) + ': ' + testSteps(p).map(s => s.label).join(' → ') + '</li>').join('');
 function anVisible(){ const r = $('#analysis').getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; }
-new ResizeObserver(() => { if (AN.data) anRender(true); }).observe($('#anBody'));
-anRender();
 
 
 /* ---------- surveillance: tasks, people & vehicles in the streets, camera detection, ground coverage ---------- */
-const TASK_LABEL = { patrol:'Tuần tra', orbit:'Bay vòng', scan:'Quét vùng', delivery:'Giao hàng' };
+const TASK_LABEL = { patrol:'Tuần tra', orbit:'Bay vòng', scan:'Quét vùng' };
 const SV = {
   task:'patrol', patrol:'fence', pu:16, loops:1,
   orbit:{ target:'F3', r:14, u:22, laps:1, dir:1, v:4 }, orbitPick:null,
@@ -5609,7 +5613,7 @@ function svProgress(){
     const n = Sim.destinations.length;
     return flying ? 'làn ' + Math.min(n / 2, Math.floor(S.destDone / 2) + 1) + '/' + n / 2 : (n / 2) + ' làn';
   }
-  return Sim.destinations.length + ' trạm · ' + P_.cargoMass.toFixed(2) + ' kg hàng';
+  return Sim.destinations.length + ' điểm';
 }
 function svRenderPanel(){
   const panel = $('#surv'); if (!panel || panel.hidden) return;
@@ -5889,7 +5893,7 @@ addEventListener('keydown', e => {
 rqGallery();
 
 /* ---------- panel visibility: every dashboard can be hidden, the 3D view always stays ---------- */
-const LAY_KEYS = ['fn', 'dash', 'sv', 'rq', 'sm', 'an', 'rp'];
+const LAY_KEYS = ['fn', 'dash', 'sv', 'rq', 'sm', 'rp'];
 const LAY = { hidden:new Set(), before:null };
 try { (JSON.parse(localStorage.getItem('ucds-hidden') || '[]') || []).forEach(k => { if (LAY_KEYS.includes(k)) LAY.hidden.add(k); }); } catch (e){}
 const layEl = k => $('.grid > .panel.' + k);
@@ -5901,11 +5905,11 @@ function layApply(){
   if (!mqMid.matches){
     const top = [vis('fn') && 'fn', 'view', vis('dash') && 'dash'].filter(Boolean);
     cols = top.map(a => a === 'fn' ? '320px' : a === 'dash' ? '340px' : 'minmax(0,1fr)');
-    rows = [top].concat(['sv', 'rq', 'sm', 'an', 'rp'].filter(vis).map(a => top.map(() => a)));
+    rows = [top].concat(['sv', 'rq', 'sm', 'rp'].filter(vis).map(a => top.map(() => a)));
   } else if (!mqNarrow.matches){
     cols = ['minmax(0,1fr)', 'minmax(0,1fr)'];
     const pair = ['fn', 'dash'].filter(vis);
-    rows = [['view', 'view']].concat(pair.length === 2 ? [pair] : pair.map(a => [a, a]), ['sv', 'rq', 'sm', 'an', 'rp'].filter(vis).map(a => [a, a]));
+    rows = [['view', 'view']].concat(pair.length === 2 ? [pair] : pair.map(a => [a, a]), ['sv', 'rq', 'sm', 'rp'].filter(vis).map(a => [a, a]));
   } else {
     cols = ['minmax(0,1fr)'];
     rows = [['view']].concat(LAY_KEYS.filter(vis).map(a => [a]));
