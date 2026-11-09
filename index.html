@@ -173,6 +173,10 @@ table.wp input:focus{border-color:var(--tele);outline:none;background:var(--pane
 
 /* 3D view */
 .stage{position:relative;flex:1;min-height:0;overflow:hidden;background:var(--scene-sky)}
+.stage.traj-mode{background:#ffffff!important}
+.stage.traj-mode .ov-hud{background:rgba(255,255,255,0.88)!important;color:#0f172a!important;border:1px solid #cbd5e1!important;box-shadow:0 4px 12px rgba(0,0,0,0.06)!important}
+.stage.traj-mode .ov-hud span{color:#64748b!important}
+.stage.traj-mode .ov-hud b{color:#0f172a!important}
 #gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 #gl.drag{cursor:grabbing}
 .ov{position:absolute;background:var(--ov);border:1px solid var(--line);border-radius:4px;font-family:var(--f-mono);font-size:11px;color:var(--fg);padding:4px 8px;pointer-events:none;backdrop-filter:blur(3px)}
@@ -735,7 +739,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
       <div class="cam-foot" role="group" aria-label="Camera drone">
         <span class="cam-t">Camera</span>
         <div class="seg" role="group" aria-label="Cảm biến camera (phím T)" id="sensSeg"><button data-sens="eo" aria-pressed="true" title="Camera quang học (ảnh màu)">Quang học</button><button data-sens="ir" title="Camera nhiệt hồng ngoại (phím T)">Nhiệt</button></div>
-        <select id="palSel" class="sens-pal" aria-label="Bảng màu ảnh nhiệt" hidden><option value="iron" selected>Ironbow</option><option value="wh">Trắng nóng</option></select>
+        <select id="palSel" class="sens-pal" aria-label="Bảng màu ảnh nhiệt" hidden><option value="iron" selected>Ironbow</option></select>
         <div class="seg" role="group" aria-label="Thời gian trong ngày (phím N)" id="todSeg"><button data-tod="day" aria-pressed="true">Ngày</button><button data-tod="night" title="Ban đêm (phím N)">Đêm</button></div>
         <button class="btn mini" id="btnPhoto" title="Chụp ảnh tĩnh 20MP (phím P)">Chụp ảnh</button>
         <label class="chk"><input type="checkbox" id="optPip" checked> Cửa sổ nhỏ</label>
@@ -3536,14 +3540,14 @@ function init3D(){
   // Multi-lap Colorful Flight Trajectories
   const trail = new THREE.Group(); scene.add(trail);
   const LAP_COLORS = [
-    0x00e5ff, // Lượt 1: Xanh Cyan neon
-    0xff9100, // Lượt 2: Cam sáng neon
-    0xff007f, // Lượt 3: Hồng neon
-    0x00ff66, // Lượt 4: Xanh lá chuối neon
-    0xb026ff, // Lượt 5: Tím neon
-    0xffea00, // Lượt 6: Vàng neon
-    0x00bfff, // Lượt 7: Deep Sky Blue
-    0xff3333  // Lượt 8: Đỏ tươi
+    0x0284c7, // Lượt 1: Xanh Ocean (tương phản cao và sắc nét trên nền trắng)
+    0xe65100, // Lượt 2: Cam đậm
+    0xc2185b, // Lượt 3: Hồng sẫm
+    0x00897b, // Lượt 4: Xanh lục bảo
+    0x7b1fa2, // Lượt 5: Tím đậm
+    0xd97706, // Lượt 6: Hổ phách
+    0x0097a7, // Lượt 7: Cyan đậm
+    0xd32f2f  // Lượt 8: Đỏ tươi
   ];
   const trailSegments = [];
   let activeSeg = null;
@@ -3743,14 +3747,59 @@ function init3D(){
     if (MIL.beacon) MIL.beacon.visible = S.jammed ? (t * 6 % 1) < 0.6 : (t % 1.2) < 0.25;
     if (MIL.walls) MIL.walls.opacity = S.nfzIn ? 0.07 + 0.07 * Math.abs(Math.sin(t * 5)) : S.nfzNear ? 0.1 : 0.06;
   }
+  // Camera modes: Orbit, Follow, Trajectory Overview
+  const cam = { mode:'orbit', az:0.85, el:0.44, dist:22.0, tgt:new THREE.Vector3(0, 2.5, 0), pos:new THREE.Vector3() };
+
+  function updateCamBackground(mode){
+    if (mode === 'traj'){
+      stage.classList.add('traj-mode');
+      const white = new THREE.Color(0xffffff);
+      renderer.setClearColor(white);
+      scene.fog.color.copy(white);
+      scene.fog.near = 140;
+      scene.fog.far = 480;
+      groundMat.color.set(0xffffff);
+      if (grid){
+        grid.material.transparent = true;
+        grid.material.opacity = 0.32;
+        if (grid.material.color) grid.material.color.setHex(0xd0d7de);
+      }
+      sun.color.set('#ffffff');
+      sun.intensity = 0.82;
+      hemi.color.set('#ffffff');
+      hemi.groundColor.set('#ffffff');
+      hemi.intensity = 0.96;
+      cityMeshes.forEach(c => {
+        if (c.kind !== 'building') return;
+        c.mat.map = winTexLight;
+        c.mat.emissive.set(0x000000);
+        c.mat.emissiveMap = null;
+        c.mat.needsUpdate = true;
+      });
+    } else {
+      stage.classList.remove('traj-mode');
+      scene.fog.near = 95;
+      scene.fog.far = 320;
+      hemi.groundColor.set(0x556270);
+      applyTheme();
+    }
+  }
+
   function applyTheme(){
     readTokens();
     rtlVerDrawn = -1;
+    if (cam && cam.mode === 'traj'){
+      updateCamBackground('traj');
+      rebuildMission();
+      return;
+    }
     const sky = new THREE.Color(TK['scene-sky']);
     renderer.setClearColor(sky); scene.fog.color.copy(sky);
     groundMat.color.set(TK['scene-ground']);
     if (grid){ scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
     grid = new THREE.GridHelper(240, 120, new THREE.Color(TK['scene-grid']), new THREE.Color(TK['scene-grid2'])); grid.position.y = 0.006; scene.add(grid);
+    hemi.color.set('#ffffff');
+    hemi.groundColor.set(0x556270);
     hemi.intensity = TK.dark ? 0.65 : 0.9; sun.intensity = TK.dark ? 0.58 : 0.78;
     cityMeshes.forEach(c => { if (c.kind === 'building'){ c.mat.map = TK.dark ? winTexDark : winTexLight; c.mat.needsUpdate = true; } });
     spMat.color.set(TK.accent);
@@ -3758,8 +3807,6 @@ function init3D(){
     rebuildMission();
   }
 
-  // Camera modes: Orbit, Follow, Trajectory Overview
-  const cam = { mode:'orbit', az:0.85, el:0.44, dist:22.0, tgt:new THREE.Vector3(0, 2.5, 0), pos:new THREE.Vector3() };
   function setCam(mode){
     if (mode !== 'fpv' && cam.mode === 'fpv'){ camera.fov = 50; camera.updateProjectionMatrix(); }
     if (mode !== 'fpv') GB.ext = mode;
@@ -3769,6 +3816,7 @@ function init3D(){
       cam.el = 0.65;
       cam.dist = 68.0;
     }
+    updateCamBackground(mode);
     camModeChanged();
     $$('#camSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cam === mode)));
   }
@@ -4053,6 +4101,10 @@ function init3D(){
   winTexGlow.wrapS = winTexGlow.wrapT = THREE.RepeatWrapping;
   const poolOpacity = poolMat.opacity;
   function applyNight(){
+    if (cam && cam.mode === 'traj'){
+      updateCamBackground('traj');
+      return;
+    }
     const on = ENV.night;
     if (on){
       const sky = new THREE.Color('#060b15');
@@ -4106,7 +4158,6 @@ function init3D(){
   const IRON = [[0, '#000004'], [0.22, '#2c0b5c'], [0.42, '#7b1c7a'], [0.58, '#c4344f'], [0.72, '#f0682a'], [0.86, '#fbb52b'], [1, '#fffbe6']].map(([t, c]) => [t, new THREE.Color(c)]);
   function thermCol(t){
     t = clamp(t, 0, 1);
-    if (GB.pal === 'wh'){ const g = Math.pow(t, 1.1); return new THREE.Color(g, g, g); }
     for (let i = 1; i < IRON.length; i++) if (t <= IRON[i][0]){ const a = IRON[i - 1], b = IRON[i]; return a[1].clone().lerp(b[1], (t - a[0]) / (b[0] - a[0])); }
     return IRON[IRON.length - 1][1].clone();
   }
@@ -4203,7 +4254,7 @@ function init3D(){
     const rec = REC.cur ? '● REC ' + mmss(S.t - REC.cur.t0) : '○ CHỜ GHI';
     osdSet('osdRec', rec, REC.cur ? 'osd-rec' : '');
     osdSet('osdState', S.state);
-    osdSet('osdSens', (GB.sensor === 'ir' ? 'NHIỆT · ' + (GB.pal === 'wh' ? 'TRẮNG NÓNG' : 'IRONBOW') : 'QUANG HỌC') + (ENV.night ? ' · ĐÊM' : '') + ' · 1080p30');
+    osdSet('osdSens', (GB.sensor === 'ir' ? 'NHIỆT · IRONBOW' : 'QUANG HỌC') + (ENV.night ? ' · ĐÊM' : '') + ' · 1080p30');
     osdSet('osdBat', 'PIN ' + Math.round(soc) + '%', soc < 25 ? 'osd-warn' : '');
     const hd = bearing(S.att[2]), cb = bearing(S.att[2] + GB.pan * D2R);
     osdSet('osdHdg', 'MŨI ' + pad3(Math.round(hd) % 360) + '° ' + dirVN(hd) + (Math.abs(GB.pan) > 0.5 ? ' · CAMERA ' + pad3(Math.round(cb) % 360) + '°' : ''));
