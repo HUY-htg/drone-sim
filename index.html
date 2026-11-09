@@ -3894,7 +3894,14 @@ function init3D(){
     if (mode === 'traj'){
       cam.az = 0.82;
       cam.el = 0.65;
-      cam.dist = 68.0;
+      // Khởi tạo khoảng cách vừa đủ để nhìn toàn bộ quỹ đạo
+      let initSpan = 45;
+      if (Sim && Sim.mission && Sim.mission.length){
+        let minE = 0, maxE = 0, minN = 0, maxN = 0;
+        Sim.mission.forEach(w => { minE = Math.min(minE, w.e); maxE = Math.max(maxE, w.e); minN = Math.min(minN, w.n); maxN = Math.max(maxN, w.n); });
+        initSpan = Math.max(maxE - minE, maxN - minN, 45);
+      }
+      cam.dist = Math.max(initSpan * 1.25, 68.0);
       setCityVisible(false);
       if ($('#btnToggleCity')) $('#btnToggleCity').style.display = 'block';
     } else {
@@ -3965,7 +3972,7 @@ function init3D(){
       }
       const trajTgt = toV(midE, midN, 4.0);
       cam.tgt.lerp(trajTgt, a);
-      const d = Math.max(span * 1.25, cam.dist);
+      const d = cam.dist;
       const off = new THREE.Vector3(Math.cos(cam.el)*Math.cos(cam.az), Math.sin(cam.el), Math.cos(cam.el)*Math.sin(cam.az)).multiplyScalar(d);
       camera.position.copy(cam.tgt).add(off); camera.up.set(0, 1, 0); camera.lookAt(cam.tgt);
     } else {
