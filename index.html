@@ -179,8 +179,9 @@ table.wp input:focus{border-color:var(--tele);outline:none;background:var(--pane
 .stage.traj-mode .ov-hud b{color:#0f172a!important}
 .ov-city-btn{position:absolute;left:10px;top:10px;z-index:9;background:rgba(255,255,255,0.92);color:#0f172a;border:1px solid #cbd5e1;padding:4px 11px;border-radius:4px;font-family:var(--f-display);font-weight:700;font-size:12px;letter-spacing:.04em;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all .15s}
 .ov-city-btn:hover{background:#f1f5f9;border-color:#94a3b8}
-#gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 #gl.drag{cursor:grabbing}
+.stage.traj-mode #gl{cursor:crosshair}
 .ov{position:absolute;background:var(--ov);border:1px solid var(--line);border-radius:4px;font-family:var(--f-mono);font-size:11px;color:var(--fg);padding:4px 8px;pointer-events:none;backdrop-filter:blur(3px)}
 .ov-hint, #hint{display:none!important}
 .ov-hud{right:10px;top:10px;display:grid;grid-template-columns:auto auto;gap:1px 10px;font-variant-numeric:tabular-nums}
@@ -1183,19 +1184,9 @@ var Sim = (function(){
   // Carefully laid out around Factory (0,0) and along corridors to Hubs A, B, C so straight paths intersect buildings!
   const obstacles = [
     // Compact Manufacturing Factory structures near Home (0,0) - leaving (0,0) launch pad wide open
-    { id:'F1', name:'Xưởng Lắp Ráp Chính', e:-8,  n: 2,   rx:3.2, ry:4.2, h:6.8, kind:'factory' },
-    { id:'F2', name:'Kho Linh Kiện Bắc',   e:-8,  n: 10,  rx:2.8, ry:2.2, h:5.2, kind:'factory' },
-    { id:'F3', name:'Trạm Năng Lượng & Silo', e:-3.5, n:-8, rx:1.8, ry:1.8, h:9.5, kind:'silo' },
-
-    // Well-spaced urban high-rise towers (reduced count and slimmer footprints for open spacious view)
-    { id:'B1', name:'Tháp Văn Phòng Bắc',  e: 8,   n: 28,  rx:3.6, ry:3.6, h:24, kind:'tower' },
-    { id:'B3', name:'Tòa Nhà Viễn Thông',  e:-16,  n: 36,  rx:3.6, ry:3.6, h:26, kind:'tower' },
-    { id:'B5', name:'Cao Ốc Đông',         e: 28,  n: 6,   rx:3.6, ry:3.8, h:24, kind:'tower' },
-    { id:'B6', name:'Tòa Nhà Tài Chính',   e: 42,  n: 18,  rx:3.8, ry:3.8, h:28, kind:'tower' },
-    { id:'B9', name:'Cao Ốc Nam',          e:-20,  n:-24,  rx:3.6, ry:3.6, h:24, kind:'tower' },
-    { id:'B12',name:'Tháp Tây',            e:-36,  n:-10,  rx:3.6, ry:3.8, h:25, kind:'tower' },
-    { id:'B14',name:'Tòa Nhà Công Nghệ',   e: 24,  n:-26,  rx:3.8, ry:3.6, h:25, kind:'office' },
-    { id:'B15',name:'Tháp Nam Sài Gòn',    e: 38,  n:-36,  rx:3.8, ry:3.8, h:26, kind:'tower' }
+    { id:'F1', name:'Xưởng Lắp Ráp Chính', e:-8,  n: 2,   rx:2.6, ry:3.2, h:4.8, kind:'factory' },
+    { id:'F2', name:'Kho Linh Kiện Bắc',   e:-8,  n: 9,   rx:2.2, ry:1.8, h:3.8, kind:'factory' },
+    { id:'F3', name:'Trạm Năng Lượng & Silo', e:-3.5, n:-7.5, rx:1.4, ry:1.4, h:6.5, kind:'silo' }
   ];
 
   // No-fly zones (disabled)
@@ -2183,6 +2174,14 @@ const META = {
 
 let TK = {};
 let R3 = null;
+const TASK_LABEL = window.TASK_LABEL = { patrol:'Tuần tra' };
+const SV = window.SV = {
+  task:'patrol', patrol:'fence', pu:16, loops:1,
+  orbit:{ target:'F3', r:14, u:22, laps:1, dir:1, v:4 }, orbitPick:null,
+  area:'factory', su:31, areaPick:null, pick:null, pickA:null,
+  agents:[], dets:[], seen:{}, uniq:{ p:new Set(), v:new Set() }, track:null, now:0,
+  cov:null, launch:{ on:false, step:0 }, ready:false, tDet:0, tMap:0, foot:null, g3:null
+};
 let lastActiveWp = -2;
 let replanTimer = 0;
 let cargoLocked = null;
@@ -2378,6 +2377,10 @@ $$('.cmd').forEach(b => b.addEventListener('click', () => {
     if (!killArm){ killArm = true; b.classList.add('confirm'); $('#killTxt').textContent = 'Bấm lần nữa trong 3 s để xác nhận'; killTimer = setTimeout(resetKill, 3000); return; }
     resetKill();
   }
+  if (c === 'MISSION' && Sim.S.state === 'DISARMED'){
+    svStart();
+    return;
+  }
   Sim.command(c);
 }));
 
@@ -2478,7 +2481,7 @@ $('#btnReset').addEventListener('click', () => {
   demo.on = false; resetKill();
   P.cargoMass = 1.5; $('#pCargo').value = '1.5'; $('#oCargo').textContent = '1.50 kg'; updateCargoSpecUI();
   Sim.reset(); syncLinkBtn(); clearHistory();
-  if (R3) R3.clearTrail();
+  if (R3 && R3.advanceFlightRun) R3.advanceFlightRun();
   renderMission();
   onStateChanged();
   $$('#smSvg .nd').forEach(n => n.classList.remove('prev'));
@@ -2579,16 +2582,27 @@ $('#wpMode').addEventListener('change', e => {
     : 'Kéo: xoay · cuộn chuột, chụm 2 ngón hoặc +/−: thu phóng';
 });
 function addWaypointAt(e, n){
-  if (SV.task === 'orbit' || SV.task === 'scan'){ addLog('rej', 'Đang ở nhiệm vụ ' + TASK_LABEL[SV.task], 'chuyển sang Tuần tra (tự vẽ) hoặc Giao hàng để thêm điểm bằng click', Sim.S.t); return; }
-  if (Sim.destinations.length >= 10){ addLog('rej', 'Tối đa 10 điểm trên tuyến', '', Sim.S.t); return; }
   e = clamp(Math.round(e*2)/2, -80, 165);
   n = clamp(Math.round(n*2)/2, -80, 80);
-  if (SV.task === 'patrol'){
-    if (SV.patrol !== 'custom'){ SV.patrol = 'custom'; $('#svPatrol').value = 'custom'; Sim.setDestinations([], true); }
-    Sim.addDestination({ e, n, u: SV.pu, label: 'Điểm tuần tra ' + (Sim.destinations.length + 1), role: 'pass' });
-    renderMission(); return;
+  if (SV.task !== 'patrol'){
+    SV.task = 'patrol';
+    Sim.params.task = 'patrol';
+    SV.loops = 1;
+    Sim.params.loops = 1;
   }
-  Sim.addDestination({ e, n, u: P.missionAlt, label: 'Điểm giao ' + (Sim.destinations.length + 1) });
+  if (SV.patrol !== 'custom'){
+    SV.patrol = 'custom';
+    if ($('#svPatrol')) $('#svPatrol').value = 'custom';
+    Sim.setDestinations([], true);
+  }
+  if (Sim.destinations.length >= 15){
+    addLog('rej', 'Tối đa 15 điểm trên tuyến', '', Sim.S.t);
+    return;
+  }
+  const alt = (SV && SV.pu) ? SV.pu : 16;
+  const newIdx = Sim.destinations.length + 1;
+  Sim.addDestination({ e, n, u: alt, label: 'Điểm ' + newIdx, role: 'pass' });
+  addLog('info', 'Đã thêm điểm #' + newIdx + ' tại (' + e + ', ' + n + ', ' + alt + 'm)', 'Bấm "Auto bay 1 vòng" để drone cất cánh bay!', Sim.S.t);
   renderMission();
 }
 
@@ -3524,32 +3538,41 @@ function init3D(){
     windParticles.push({ grp: item, e: e0, n: n0, u: u0, spdMul: 0.8 + Math.random() * 0.5 });
   }
 
-  // Multi-lap Colorful Flight Trajectories
+  // Multi-lap Colorful Flight Trajectories: distinct, high-contrast, vivid colors
   const trail = new THREE.Group(); scene.add(trail);
   const LAP_COLORS = [
-    0x0284c7, // Lượt 1: Xanh Ocean (tương phản cao và sắc nét trên nền trắng)
-    0xe65100, // Lượt 2: Cam đậm
-    0xc2185b, // Lượt 3: Hồng sẫm
-    0x00897b, // Lượt 4: Xanh lục bảo
-    0x7b1fa2, // Lượt 5: Tím đậm
-    0xd97706, // Lượt 6: Hổ phách
-    0x0097a7, // Lượt 7: Cyan đậm
-    0xd32f2f  // Lượt 8: Đỏ tươi
+    0x0284c7, // Lượt 1: Xanh dương Ocean (sắc nét trên nền trắng)
+    0xe65100, // Lượt 2: Cam sáng rực
+    0x10b981, // Lượt 3: Xanh lục bảo
+    0xd946ef, // Lượt 4: Tím hồng / Fuchsia
+    0xf59e0b, // Lượt 5: Vàng hổ phách
+    0x06b6d4, // Lượt 6: Xanh Cyan
+    0xef4444, // Lượt 7: Đỏ tươi
+    0x8b5cf6  // Lượt 8: Tím đậm
   ];
+  const LAP_NAMES = ['Xanh Ocean', 'Cam', 'Xanh Lục', 'Hồng Tím', 'Vàng Hổ Phách', 'Cyan', 'Đỏ', 'Tím'];
   const trailSegments = [];
   let activeSeg = null;
   let flightRunId = 1;
   let wasGrounded = true;
+  let lastLap = -1;
   let lastTrailT = -1;
 
+  function advanceFlightRun(){
+    if (activeSeg && activeSeg.count > 5){
+      flightRunId++;
+      activeSeg = null;
+    }
+  }
+
   function startNewTrailSegment(lapKey, colIdx){
-    const MAX_PTS = 2500;
+    const MAX_PTS = 3500;
     const pos = new Float32Array(MAX_PTS * 3);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setDrawRange(0, 0);
     const colorHex = LAP_COLORS[colIdx % LAP_COLORS.length];
-    const mat = new THREE.LineBasicMaterial({ color: colorHex, transparent: true, opacity: 0.95, linewidth: 2 });
+    const mat = new THREE.LineBasicMaterial({ color: colorHex, transparent: true, opacity: 0.95, linewidth: 3 });
     const line = new THREE.Line(geo, mat);
     line.frustumCulled = false;
     trail.add(line);
@@ -3561,13 +3584,19 @@ function init3D(){
   function pushTrail(p, lapNumber){
     const S = Sim.S;
     if (wasGrounded && !S.grounded){
-      if (activeSeg && activeSeg.count > 10) flightRunId++;
+      if (activeSeg && activeSeg.count > 5) flightRunId++;
     }
     wasGrounded = S.grounded;
 
-    const lapKey = flightRunId + '_' + (lapNumber || 1);
+    const curLap = lapNumber || S.lap || 1;
+    if (lastLap !== -1 && curLap !== lastLap){
+      if (activeSeg && activeSeg.count > 5) flightRunId++;
+    }
+    lastLap = curLap;
+
+    const lapKey = flightRunId + '_' + curLap;
     if (!activeSeg || activeSeg.lapKey !== lapKey){
-      const colIdx = (flightRunId - 1) * 3 + ((lapNumber || 1) - 1);
+      const colIdx = (flightRunId - 1 + (curLap - 1)) % LAP_COLORS.length;
       startNewTrailSegment(lapKey, colIdx);
     }
 
@@ -3592,6 +3621,30 @@ function init3D(){
     trailSegments.length = 0;
     activeSeg = null;
     flightRunId = 1;
+    lastLap = -1;
+  }
+
+  function showClickRipple(e, n){
+    const ringGeo = new THREE.RingGeometry(0.35, 0.75, 24);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x0284c7, side: THREE.DoubleSide, transparent: true, opacity: 0.95, depthTest: false });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.copy(toV(e, n, 0.04));
+    scene.add(ring);
+    const startT = performance.now();
+    const anim = () => {
+      const elapsed = (performance.now() - startT) / 450;
+      if (elapsed >= 1){
+        scene.remove(ring);
+        ringGeo.dispose();
+        ringMat.dispose();
+      } else {
+        ring.scale.setScalar(1 + elapsed * 2.8);
+        ringMat.opacity = (1 - elapsed) * 0.95;
+        requestAnimationFrame(anim);
+      }
+    };
+    requestAnimationFrame(anim);
   }
 
   // Setpoint marker
@@ -3607,34 +3660,49 @@ function init3D(){
     rebuildSafetyBuffers();
 
     const M = Sim.mission;
-    const acc = new THREE.Color(TK.accent), tele = new THREE.Color(TK.tele), bad = new THREE.Color(TK.bad), lineC = new THREE.Color(TK['line-2']);
+    const isTraj = cam && cam.mode === 'traj';
+    const acc = new THREE.Color(TK.accent), bad = new THREE.Color(0xef2222), lineC = new THREE.Color(TK['line-2']);
 
     // Draw blocked direct lines in dashed red so user clearly sees obstacles blocking the straight path
     Sim.blockedSegments.forEach(b => {
       const p1 = toV(b.from[0], b.from[1], b.from[2]);
       const p2 = toV(b.to[0], b.to[1], b.to[2]);
       const g = new THREE.BufferGeometry().setFromPoints([p1, p2]);
-      const ln = new THREE.Line(g, new THREE.LineDashedMaterial({ color:bad, dashSize:1.2, gapSize:0.8, transparent:true, opacity:0.32 }));
+      const ln = new THREE.Line(g, new THREE.LineDashedMaterial({ color:bad, dashSize:1.2, gapSize:0.8, transparent:true, opacity: isTraj ? 0.75 : 0.35 }));
       ln.computeLineDistances();
       wpGroup.add(ln);
     });
 
-    // Draw waypoints (Destination vs Avoidance Node in RED) - subtle & translucent to avoid visual clutter
+    // Draw waypoints (Destination vs Avoidance Node in RED) - crystal clear in Trajectory mode
     M.forEach((w, i) => {
       const isAvoid = w.kind === 'avoid';
       const top = toV(w.e, w.n, w.u);
-      const col = isAvoid ? new THREE.Color(0xff3333) : acc;
-      const pl = new THREE.Line(new THREE.BufferGeometry().setFromPoints([toV(w.e, w.n, 0.02), top]), new THREE.LineBasicMaterial({ color:isAvoid ? new THREE.Color(0xff5555) : lineC, transparent:true, opacity:0.28 }));
+      const col = isAvoid ? new THREE.Color(0xef2222) : (isTraj ? new THREE.Color(0x0284c7) : acc);
+      const plCol = isAvoid ? new THREE.Color(0xef4444) : (isTraj ? new THREE.Color(0x0284c7) : lineC);
+      const pl = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([toV(w.e, w.n, 0.02), top]),
+        new THREE.LineBasicMaterial({ color: plCol, transparent: true, opacity: isTraj ? 0.85 : 0.45, linewidth: 2 })
+      );
+      const rBall = isTraj ? (isAvoid ? 0.45 : 0.40) : (isAvoid ? 0.28 : 0.24);
       const ball = new THREE.Mesh(
-        isAvoid ? new THREE.SphereGeometry(0.24, 12, 10) : new THREE.SphereGeometry(0.20, 12, 10),
-        new THREE.MeshStandardMaterial({ color:col, transparent:true, opacity:0.48, roughness:0.5 })
+        new THREE.SphereGeometry(rBall, 16, 12),
+        new THREE.MeshStandardMaterial({
+          color: col,
+          transparent: !isTraj,
+          opacity: isTraj ? 1.0 : 0.85,
+          roughness: 0.35,
+          emissive: isAvoid ? 0x660000 : (isTraj ? 0x002244 : 0x000000)
+        })
       );
       ball.position.copy(top);
-      const labTxt = isAvoid ? ('NÉ ' + (i+1)) : ('#' + (i+1));
-      const lab = textSprite(labTxt, '#ffffff', isAvoid ? '#d92525' : TK.accent, isAvoid ? 0.024 : 0.026);
+      const labTxt = isAvoid ? ('NÉ ' + (i+1)) : (w.label || ('#' + (i+1)));
+      const labBg = isAvoid ? '#dc2626' : (isTraj ? '#0284c7' : TK.accent);
+      const labScale = isTraj ? 0.038 : 0.028;
+      const lab = textSprite(labTxt, '#ffffff', labBg, labScale);
       lab.material.transparent = true;
-      lab.material.opacity = 0.52;
-      lab.position.copy(toV(w.e, w.n, w.u + 0.65));
+      lab.material.opacity = isTraj ? 1.0 : 0.85;
+      lab.renderOrder = 10;
+      lab.position.copy(toV(w.e, w.n, w.u + (isTraj ? 1.0 : 0.75)));
       wpGroup.add(pl, ball, lab);
       wpBalls.push({ ball, isAvoid });
     });
@@ -3644,7 +3712,11 @@ function init3D(){
       const ms = Sim.missionStart || { e:0, n:0, u:Math.max(Sim.params.takeoffAlt, M[0].u) };
       const startPt = toV(ms.e, ms.n, ms.u);
       const pts = [startPt].concat(M.map(w => toV(w.e, w.n, w.u)));
-      const path = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color:acc, transparent:true, opacity:0.45, linewidth:1 }));
+      const pathCol = isTraj ? new THREE.Color(0x0284c7) : acc;
+      const path = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color: pathCol, transparent: true, opacity: isTraj ? 0.85 : 0.55, linewidth: 2 })
+      );
       wpGroup.add(path);
     }
   }
@@ -3942,9 +4014,12 @@ function init3D(){
   const endPtr = e => {
     if (!pts.has(e.pointerId)) return;
     const single = pts.size === 1; pts.delete(e.pointerId);
-    if (single && moved < 6 && downAt && e.type === 'pointerup'){
+    if (single && moved < 10 && downAt && e.type === 'pointerup'){
       const g = groundAt(e.clientX, e.clientY);
-      if (g && !svGroundClick(g.e, g.n) && $('#wpMode').checked) addWaypointAt(g.e, g.n);
+      if (g && !svGroundClick(g.e, g.n)){
+        showClickRipple(g.e, g.n);
+        addWaypointAt(g.e, g.n);
+      }
     }
     if (!pts.size){ canvas.classList.remove('drag'); downAt = null; }
   };
@@ -4017,12 +4092,18 @@ function init3D(){
     if (inRtl && S.rtlVer !== rtlVerDrawn){ rtlVerDrawn = S.rtlVer; drawRtl(); }
 
     const act = S.state === 'MISSION' ? S.wpIdx : -1;
-    const ca = new THREE.Color(TK.accent), ct = new THREE.Color(TK.tele), cf = new THREE.Color(TK.faint), cr = new THREE.Color(0xff2222);
+    const isTraj = cam && cam.mode === 'traj';
+    const ca = isTraj ? new THREE.Color(0x0284c7) : new THREE.Color(TK.accent);
+    const ct = new THREE.Color(0x10b981);
+    const cf = isTraj ? new THREE.Color(0x64748b) : new THREE.Color(TK.faint);
+    const cr = new THREE.Color(0xef2222);
     wpBalls.forEach((item, i) => {
       const b = item.ball;
-      b.material.color.copy(item.isAvoid ? cr : (i === act ? ct : (act >= 0 && i < act) ? cf : ca));
-      b.material.opacity = (i === act) ? 0.75 : 0.45;
-      b.scale.setScalar(i === act ? 1.25 + 0.12*Math.sin(t*6) : 1);
+      const isAct = (i === act);
+      const isPast = (act >= 0 && i < act);
+      b.material.color.copy(item.isAvoid ? cr : (isAct ? ct : isPast ? cf : ca));
+      b.material.opacity = isTraj ? 1.0 : (isAct ? 0.95 : 0.85);
+      b.scale.setScalar(isTraj ? (isAct ? 1.45 + 0.12*Math.sin(t*6) : 1.25) : (isAct ? 1.25 + 0.12*Math.sin(t*6) : 1.0));
     });
 
     const w = S.windNow, ws = Math.hypot(w[0], w[1]);
@@ -4349,10 +4430,10 @@ function init3D(){
   camModeChanged();
 
   applyTheme();
-  return { render, rebuildMission, clearTrail, applyTheme,
+  return { render, rebuildMission, clearTrail, advanceFlightRun, showClickRipple, applyTheme, trail,
     cam: { scene, toV, droneCam, GB, camFov, camHide, camera, mode: () => cam.mode, setCam, ENV, arRoots, setNight, setSensor, takePhoto, cityEnvGroup, setCityVisible } };
 }
-try { R3 = init3D(); }
+try { R3 = init3D(); window.R3 = R3; window.addWaypointAt = addWaypointAt; }
 catch (err){ R3 = null; $('#glErr').hidden = false; $('#gl').style.display = 'none'; console.warn(err); }
 
 $('#clearTrail').addEventListener('click', () => { if (R3) R3.clearTrail(); });
@@ -5244,14 +5325,6 @@ function anVisible(){ const r = $('#analysis').getBoundingClientRect(); return r
 
 
 /* ---------- surveillance: tasks, people & vehicles in the streets, camera detection, ground coverage ---------- */
-const TASK_LABEL = { patrol:'Tuần tra' };
-const SV = {
-  task:'patrol', patrol:'fence', pu:16, loops:1,
-  orbit:{ target:'F3', r:14, u:22, laps:1, dir:1, v:4 }, orbitPick:null,
-  area:'factory', su:31, areaPick:null, pick:null, pickA:null,
-  agents:[], dets:[], seen:{}, uniq:{ p:new Set(), v:new Set() }, track:null, now:0,
-  cov:null, launch:{ on:false, step:0 }, ready:false, tDet:0, tMap:0, foot:null, g3:null
-};
 const ROAD_EW = [-42, -6, 14, 44], ROAD_NS = [-44, -20, 10, 46];
 const D2R_ = Math.PI / 180;
 
@@ -5524,7 +5597,13 @@ function svApply(silent){
   P_.task = 'patrol';
   P_.loops = 1;
   if (SV.patrol !== 'custom') Sim.setDestinations(SURV.patrolPts(SV.patrol, SV.pu), true);
-  else Sim.setDestinations(Sim.destinations.map(d => Object.assign({}, d, { role:'pass', u:SV.pu })), true);
+  else {
+    if (!Sim.destinations.length){
+      addLog('warn', 'Chưa có điểm nào trên tuyến tự vẽ! Hãy click mặt đất 3D để tạo điểm.', '', Sim.S.t);
+      return false;
+    }
+    Sim.setDestinations(Sim.destinations.map(d => Object.assign({}, d, { role:'pass', u:SV.pu })), true);
+  }
   if (!silent) addLog('info', 'Đã nạp tuyến tuần tra: ' + (SV.patrol === 'custom' ? 'tự vẽ' : SURV.PATROLS[SV.patrol].name), Sim.destinations.length + ' điểm · cao ' + SV.pu + ' m · Auto bay 1 vòng', Sim.S.t);
   renderMission(); svDraw3D(); svRenderForm();
   return true;
@@ -5541,6 +5620,7 @@ function svSetTask(task, opts){
 /* --- launching: from the pad all the way into the mission --- */
 function svStart(){
   if (!svApply(false)) return;
+  if (R3 && R3.advanceFlightRun) R3.advanceFlightRun();
   if (SV.task === 'scan' && SV.cov) SV.cov.scan.fill(0);
   demo.on = false; if (atest.on) stopAdaptTest('bắt đầu nhiệm vụ ' + TASK_LABEL[SV.task]);
   const st = Sim.S.state;
@@ -5548,6 +5628,7 @@ function svStart(){
   if (SV.launch.step < 0){ SV.launch.on = false; addLog('rej', 'Không bắt đầu được nhiệm vụ ở ' + st, '', Sim.S.t); return; }
   addLog('info', 'Bắt đầu nhiệm vụ: ' + TASK_LABEL[SV.task], '', Sim.S.t);
 }
+window.svStart = svStart;
 function svLaunchTick(){
   const L = SV.launch; if (!L.on) return;
   const S = Sim.S, st = S.state;
@@ -5557,6 +5638,7 @@ function svLaunchTick(){
   else if (L.step === 1 && st === 'ARMED' && S.stateT > 0.8){ Sim.command('TAKEOFF', 'sv'); L.step = 2; }
   else if (L.step === 2 && (st === 'HOVER' || st === 'MANUAL') && S.stateT > 0.6){ Sim.command('MISSION', 'sv'); L.on = false; }
 }
+window.svLaunchTick = svLaunchTick;
 
 /* --- picking targets and areas on the 3D ground --- */
 function svPick(kind){
