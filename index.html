@@ -187,14 +187,35 @@ table.wp input:focus{border-color:var(--tele);outline:none;background:var(--pane
 .ov-hint, #hint{display:none!important}
 .ov-hud{right:10px;top:10px;display:grid;grid-template-columns:auto auto;gap:1px 10px;font-variant-numeric:tabular-nums}
 .ov-hud span{color:var(--muted)}
-.ov-wind, #windHud{display:none!important}
+/* wind HUD overlay (chỉ báo hướng gió mờ mờ như thật) */
+#windHud{display:none}
+#windHud:not([hidden]){display:flex}
 .ov-wind[hidden]{display:none!important}
-.wind-dial{width:46px;height:46px;flex:none;display:block}
-.wind-info{display:flex;flex-direction:column;gap:1px;font-variant-numeric:tabular-nums;line-height:1.28}
-.wind-title{font-family:var(--f-display);font-weight:700;font-size:12px;letter-spacing:.1em;color:var(--tele);text-transform:uppercase}
-.wind-dir{font-weight:600;color:var(--fg)}
-.wind-sub{font-size:10.5px;color:var(--muted)}
-.wind-sub.over{color:var(--bad);font-weight:600}
+.ov-wind{
+  position:absolute;
+  left:12px;top:12px;bottom:auto;
+  display:flex;align-items:center;gap:10px;
+  padding:7px 11px 7px 8px;
+  background:rgba(15,23,42,0.52);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:8px;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  box-shadow:0 4px 16px rgba(0,0,0,0.22);
+  pointer-events:none;
+  opacity:0.88;
+  z-index:8;
+  transition:top .2s, opacity .3s;
+}
+.stage.traj-mode .ov-wind{top:48px}
+.wind-dial{width:48px;height:48px;flex:none;display:block}
+.wind-info{display:flex;flex-direction:column;gap:1px;font-variant-numeric:tabular-nums;line-height:1.25}
+.wind-title{font-family:var(--f-display);font-weight:700;font-size:10.5px;letter-spacing:.12em;color:rgba(186,230,253,0.85);text-transform:uppercase}
+.wind-spd-big{font-family:var(--f-mono);font-size:17px;font-weight:600;color:#ffffff;line-height:1}
+.wind-spd-big span{font-size:10px;color:rgba(255,255,255,0.6);margin-left:3px;font-weight:400}
+.wind-dir{font-size:10.5px;color:rgba(255,255,255,0.78);font-family:var(--f-mono)}
+.wind-sub{font-size:9.5px;color:rgba(255,255,255,0.48)}
+.wind-sub.over{color:#f87171;font-weight:600}
 .ov-banner{left:50%;top:48px;transform:translateX(-50%);font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.08em;padding:5px 12px;text-transform:uppercase;white-space:nowrap;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis}
 .ov-banner.warn{color:var(--warn);border-color:var(--warn);background:var(--ov)}
 .ov-banner.bad{color:var(--on-bad);background:var(--bad);border-color:var(--bad)}
@@ -481,7 +502,7 @@ td.an-bad{color:var(--bad);font-weight:600}
 .osd-svg .sh{stroke:var(--osd-bg);stroke-width:4}
 .osd-svg .hz{stroke-width:1.5;stroke-dasharray:10 6}
 .stage.fpv #gl{cursor:crosshair}
-.stage.fpv .ov-hint,.stage.fpv .ov-hud,.stage.fpv .ov-wind{display:none!important}
+.stage.fpv .ov-hint,.stage.fpv .ov-hud,.stage.fpv #windHud{display:none!important}
 .stage.fpv .ov-banner{top:68px}
 .cam-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:7px 12px;border-top:1px solid var(--line)}
 .cam-t{font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
@@ -684,8 +705,8 @@ table.an-t tr.on td{background:var(--accent-soft)}
 
         <div class="sec">
           <h3>Gió đô thị &amp; Giả lập sự cố</h3>
-          <label class="chk" style="margin-bottom:10px"><input type="checkbox" id="pWindOn"> Bật gió luồn giữa các tòa nhà (hiển thị hướng gió)</label>
-          <div class="field"><label for="pWind">Tốc độ gió</label><output id="oWind"></output><input type="range" id="pWind" min="0" max="12" step="1" value="5"></div>
+          <label class="chk" style="margin-bottom:10px"><input type="checkbox" id="pWindOn" checked> Bật gió luồn giữa các tòa nhà (hiển thị hướng gió)</label>
+          <div class="field"><label for="pWind">Tốc độ gió</label><output id="oWind"></output><input type="range" id="pWind" min="0" max="12" step="1" value="4"></div>
           <div class="field"><label for="pWdir">Gió thổi từ hướng</label><output id="oWdir"></output><input type="range" id="pWdir" min="0" max="355" step="5" value="270"></div>
           <div class="field"><label for="pGust">Giật</label><output id="oGust"></output><input type="range" id="pGust" min="0" max="60" step="5" value="30"></div>
           <div class="field"><label for="pDrain">Hệ số xả pin</label><output id="oDrain"></output><input type="range" id="pDrain" min="1" max="20" step="1" value="5"></div>
@@ -715,7 +736,15 @@ table.an-t tr.on td{background:var(--accent-soft)}
           <span>LIDAR</span><b id="hudObs">—</b>
           <span>WP</span><b id="hudWp">—</b>
         </div>
-        <div class="ov ov-wind" id="windHud" style="display:none!important" hidden></div>
+        <div class="ov ov-wind" id="windHud" hidden aria-label="Hướng và tốc độ gió">
+          <canvas class="wind-dial" id="windDial" width="52" height="52" aria-hidden="true"></canvas>
+          <div class="wind-info">
+            <div class="wind-title">GIÓ</div>
+            <div class="wind-spd-big" id="windHudSpd">0.0<span>m/s</span></div>
+            <div class="wind-dir" id="windHudDir">—</div>
+            <div class="wind-sub" id="windHudLim"></div>
+          </div>
+        </div>
         <div class="ov ov-banner" id="banner" hidden></div>
         <div class="ov ov-err" id="glErr" hidden>Trình duyệt không khởi tạo được WebGL nên cảnh 3D không hiển thị. Mô phỏng, dashboard và máy trạng thái vẫn chạy bình thường.</div>
         <div class="cam-flash" id="camFlash" hidden aria-hidden="true"></div>
@@ -1169,7 +1198,7 @@ var Sim = (function(){
   const params = {
     takeoffAlt: 10, rtlAlt: 14, vMax: 8, missionAlt: 12, missionEnd: 'RTL',
     cargoMass: 1.5, autoAvoid: true, autoDrop: true, safeMargin: 4.5,
-    windOn: false, windSpeed: 5, windDir: 270, gust: 0.3, drain: 5, linkLost: false, adaptive: true,
+    windOn: true, windSpeed: 4, windDir: 270, gust: 0.3, drain: 5, linkLost: false, adaptive: true,
     // task: 'delivery' | 'patrol' | 'orbit' | 'scan'; loops: patrol laps (0 = until recalled); orbit: { e, n, r, u, dir, v, laps, lookU, name }
     task: 'delivery', loops: 1, orbit: null
   };
@@ -2390,24 +2419,113 @@ function compassDirVN(deg){
   const dirs = ['Bắc','Đông Bắc','Đông','Đông Nam','Nam','Tây Nam','Tây','Tây Bắc'];
   return dirs[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
 }
+function drawWindDial(cv, towardDeg, speed){
+  if (!cv) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const size = 48;
+  if (cv.width !== size * dpr || cv.height !== size * dpr){
+    cv.width = size * dpr;
+    cv.height = size * dpr;
+  }
+  const ctx = cv.getContext('2d');
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size, size);
+
+  const cx = size / 2, cy = size / 2, r = size / 2 - 3;
+
+  // Vành la bàn mờ mờ
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Vạch 4 hướng chính
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+  ctx.lineWidth = 1;
+  [[0, -r, 0, -r + 3.5], [r, 0, r - 3.5, 0], [0, r, 0, r - 3.5], [-r, 0, -r + 3.5, 0]].forEach(([x1, y1, x2, y2]) => {
+    ctx.beginPath(); ctx.moveTo(cx + x1, cy + y1); ctx.lineTo(cx + x2, cy + y2); ctx.stroke();
+  });
+
+  // Chữ B (Bắc) nổi bật nhẹ
+  ctx.font = '600 8px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+  ctx.fillText('B', cx, cy - r + 7.5);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+  ctx.fillText('N', cx, cy + r - 7);
+  ctx.fillText('Đ', cx + r - 7, cy);
+  ctx.fillText('T', cx - r + 7, cy);
+
+  // Mũi tên luồng gió chỉ hướng gió thổi đến
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(towardDeg * Math.PI / 180);
+
+  // Đuôi vệt gió đứt đoạn mờ ảo
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.38)';
+  ctx.lineWidth = 1.4;
+  ctx.setLineDash([2, 2]);
+  ctx.beginPath();
+  ctx.moveTo(0, r - 5);
+  ctx.lineTo(0, 1);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Đầu mũi tên khí động học
+  const isHigh = speed > 8.5;
+  ctx.fillStyle = isHigh ? '#f87171' : '#38bdf8';
+  ctx.shadowColor = isHigh ? 'rgba(248, 113, 113, 0.5)' : 'rgba(56, 189, 248, 0.45)';
+  ctx.shadowBlur = 4;
+  ctx.beginPath();
+  ctx.moveTo(0, -r + 3);
+  ctx.lineTo(4, -r + 12);
+  ctx.lineTo(1.2, -r + 10.5);
+  ctx.lineTo(1.2, 1);
+  ctx.lineTo(-1.2, 1);
+  ctx.lineTo(-1.2, -r + 10.5);
+  ctx.lineTo(-4, -r + 12);
+  ctx.closePath();
+  ctx.fill();
+
+  // Tâm la bàn
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(0, 0, 1.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+  ctx.restore();
+}
+
 function updateWindHudUI(){
   const hud = $('#windHud');
   if (!hud) return;
   const P = Sim.params, S = Sim.S;
-  const show = P.windOn && P.windSpeed > 0;
+  const show = P.windOn && (P.windSpeed > 0 || Math.hypot(S.windNow[0], S.windNow[1]) > 0.05);
   hud.hidden = !show;
   if (!show) return;
   const fromDeg = ((P.windDir % 360) + 360) % 360;
   const toDeg = (fromDeg + 180) % 360;
   const wNow = Math.hypot(S.windNow[0], S.windNow[1]);
   const liveTowardDeg = wNow > 0.05 ? hdgOf(Math.atan2(S.windNow[1], S.windNow[0])) : toDeg;
-  const arrow = $('#windArrowG');
-  if (arrow) arrow.setAttribute('transform', 'translate(28,28) rotate(' + liveTowardDeg.toFixed(1) + ')');
-  $('#windHudDir').textContent = 'Từ ' + pad3(fromDeg) + '° (' + compassDirVN(fromDeg) + ') → ' + compassDirVN(toDeg);
-  $('#windHudSpd').textContent = 'Hiện tại ' + fx(wNow || P.windSpeed, 1) + ' m/s · gốc ' + P.windSpeed + ' m/s · giật ' + Math.round(P.gust*100) + '%';
+
+  const cv = document.getElementById('windDial');
+  drawWindDial(cv, liveTowardDeg, wNow);
+
+  const spdEl = $('#windHudSpd');
+  if (spdEl) spdEl.innerHTML = fx(wNow, 1) + '<span>m/s</span>';
+
+  const dirEl = $('#windHudDir');
+  if (dirEl) dirEl.textContent = 'Từ ' + compassDirVN(fromDeg) + ' (' + pad3(fromDeg) + '°) → ' + compassDirVN(toDeg);
+
   const lim = Sim.windLimit(), limEl = $('#windHudLim');
-  limEl.textContent = (wNow > 0.92 * lim ? 'Vượt sức chịu gió ' : 'Drone chịu được ') + '~' + fx(lim, 1) + ' m/s';
-  limEl.classList.toggle('over', wNow > 0.92 * lim);
+  if (limEl){
+    limEl.textContent = (wNow > 0.92 * lim ? '⚠️ Vượt sức chịu ' : 'Sức chịu ~') + fx(lim, 1) + ' m/s · giật ' + Math.round(P.gust * 100) + '%';
+    limEl.classList.toggle('over', wNow > 0.92 * lim);
+  }
 }
 function updateCargoSpecUI(){
   const cm = Sim.params.cargoMass;
@@ -3512,25 +3630,36 @@ function init3D(){
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(0.65*k, 0.65*k), new THREE.MeshBasicMaterial({ map:shTex, transparent:true, depthWrite:false }));
   shadow.rotation.x = -Math.PI/2; scene.add(shadow);
 
-  // 3D Wind Streamlines & On-Drone Wind Vector Indicator (visible when wind is enabled)
+  // 3D Wind Streamlines: dải vệt gió khí động học mờ mờ tự nhiên (mờ mờ như thật)
   const windStreamGroup = new THREE.Group(); scene.add(windStreamGroup);
-  const WIND_STREAKS = 65;
+  const WIND_STREAKS = 120;
+  const PTS_PER_STREAK = 5;
   const windParticles = [];
-  const streakMat = new THREE.LineBasicMaterial({ color:0x52c2e4, transparent:true, opacity:0.55 });
+  const streakMat = new THREE.LineBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.22,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
   for (let i = 0; i < WIND_STREAKS; i++){
-    const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(3.5, 0, 0)]);
+    const pts = [];
+    for (let p = 0; p < PTS_PER_STREAK; p++) pts.push(new THREE.Vector3());
+    const g = new THREE.BufferGeometry().setFromPoints(pts);
     const ln = new THREE.Line(g, streakMat);
-    const head = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.6, 6), new THREE.MeshBasicMaterial({ color:0x52c2e4, transparent:true, opacity:0.7 }));
-    head.rotation.z = -Math.PI / 2;
-    head.position.x = 3.5;
-    const item = new THREE.Group();
-    item.add(ln, head);
+    windStreamGroup.add(ln);
     const e0 = (Math.random() - 0.5) * 140;
     const n0 = (Math.random() - 0.5) * 140;
-    const u0 = 4 + Math.random() * 28;
-    item.position.copy(toV(e0, n0, u0));
-    windStreamGroup.add(item);
-    windParticles.push({ grp: item, e: e0, n: n0, u: u0, spdMul: 0.8 + Math.random() * 0.5 });
+    const u0 = 2.5 + Math.random() * 32;
+    windParticles.push({
+      geo: g,
+      e: e0,
+      n: n0,
+      u: u0,
+      phase: Math.random() * Math.PI * 2,
+      len: 4.5 + Math.random() * 4.0,
+      spdMul: 0.82 + Math.random() * 0.38
+    });
   }
 
   // Multi-lap Colorful Flight Trajectories: distinct, high-contrast, vivid colors
@@ -4118,9 +4247,53 @@ function init3D(){
     const w = S.windNow, ws = Math.hypot(w[0], w[1]);
     sockPivot.rotation.set(0, ws > 0.05 ? Math.atan2(w[1], w[0]) : sockPivot.rotation.y, -(1 - Math.min(1, ws/9))*1.25);
 
-    // 3D wind streamlines hidden
-    const windVisible = false;
-    windStreamGroup.visible = false;
+    // 3D wind streamlines: hiển thị luồng vệt gió mờ mờ tự nhiên theo hướng gió
+    const windActive = ws > 0.08;
+    windStreamGroup.visible = windActive;
+    if (windActive){
+      const centerE = cam.tgt ? cam.tgt.x : p[0];
+      const centerN = cam.tgt ? -cam.tgt.z : p[1];
+      const wDirE = w[0] / ws, wDirN = w[1] / ws, wDirU = (w[2] || 0) / ws;
+      const vDir = toV(wDirE, wDirN, wDirU);
+      // Độ mờ dịu nhẹ mờ mờ tự nhiên (tối đa ~0.24 để không che khuất cảnh quan)
+      streakMat.opacity = Math.min(0.24, Math.max(0.12, 0.08 + ws * 0.022));
+      const BOX_R = 70;
+      windParticles.forEach(pt => {
+        pt.e += w[0] * pt.spdMul * dtSim;
+        pt.n += w[1] * pt.spdMul * dtSim;
+        pt.u += (w[2] || 0) * pt.spdMul * dtSim;
+
+        // Quấn vòng quanh tâm nhìn của camera/drone để luôn thấy gió trong tầm mắt
+        const de = pt.e - centerE, dn = pt.n - centerN;
+        const forwardProj = de * wDirE + dn * wDirN;
+        if (forwardProj > BOX_R){
+          pt.e -= wDirE * (BOX_R * 1.9) + (Math.random() - 0.5) * 32;
+          pt.n -= wDirN * (BOX_R * 1.9) + (Math.random() - 0.5) * 32;
+          pt.u = 2.5 + Math.random() * 32;
+        } else if (forwardProj < -BOX_R){
+          pt.e += wDirE * (BOX_R * 1.9);
+          pt.n += wDirN * (BOX_R * 1.9);
+        }
+        if (Math.hypot(de, dn) > BOX_R * 1.45){
+          pt.e = centerE - wDirE * BOX_R * 0.75 + (Math.random() - 0.5) * 36;
+          pt.n = centerN - wDirN * BOX_R * 0.75 + (Math.random() - 0.5) * 36;
+        }
+
+        // Cập nhật các điểm của vệt gió (uốn lượn mềm mại theo nhịp gió)
+        const posArr = pt.geo.attributes.position.array;
+        const headV = toV(pt.e, pt.n, pt.u);
+        const streakLen = pt.len * (0.8 + Math.min(1.4, ws / 5.0));
+        for (let j = 0; j < PTS_PER_STREAK; j++){
+          const frac = j / (PTS_PER_STREAK - 1);
+          const tailOffset = frac * streakLen;
+          const wave = Math.sin(t * 3.8 + pt.phase + frac * 2.2) * 0.22 * (1 - frac * 0.25);
+          posArr[j * 3]     = headV.x - vDir.x * tailOffset - vDir.z * wave;
+          posArr[j * 3 + 1] = headV.y - vDir.y * tailOffset + wave * 0.45;
+          posArr[j * 3 + 2] = headV.z - vDir.z * tailOffset + vDir.x * wave;
+        }
+        pt.geo.attributes.position.needsUpdate = true;
+      });
+    }
     // Trees gently sway with ambient wind
     if (treeCrowns.length && ws > 0.05){
       const wAng = Math.atan2(w[1], w[0]);
