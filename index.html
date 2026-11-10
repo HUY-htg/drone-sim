@@ -100,9 +100,11 @@ h1{font-family:var(--f-display);font-weight:700;font-size:23px;letter-spacing:.0
 .seg button[aria-pressed="true"]{background:var(--fg);color:var(--panel)}
 
 /* grid */
-.grid{display:grid;gap:12px;grid-template-columns:320px minmax(0,1fr) 350px;grid-template-areas:"fn view sm" "dash dash dash" "sv sv sv" "rq rq rq" "rp rp rp"}
-.fn{grid-area:fn}.view{grid-area:view}.dash{grid-area:dash}.sm{grid-area:sm}.rp{grid-area:rp}.sv{grid-area:sv}.rq{grid-area:rq}
+.grid{display:grid;gap:12px;grid-template-columns:320px minmax(0,1fr) 350px;grid-template-areas:"fn view sm" "log log log" "dash dash dash" "sv sv sv" "rq rq rq" "rp rp rp"}
+.fn{grid-area:fn}.view{grid-area:view}.dash{grid-area:dash}.sm{grid-area:sm}.log-panel{grid-area:log}.rp{grid-area:rp}.sv{grid-area:sv}.rq{grid-area:rq}
 .fn,.view,.sm{height:clamp(620px,calc(100vh - 110px),900px)}
+.log-panel{grid-area:log;height:auto}
+.log-panel .log{border-top:0;max-height:220px}
 .dash{grid-area:dash;height:auto}
 .dash .scroll{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;padding:12px 14px;overflow-y:visible}
 .dash .sec{border:1px solid var(--line);border-radius:6px;background:var(--panel-2);padding:12px 14px;border-bottom:1px solid var(--line);display:flex;flex-direction:column}
@@ -446,8 +448,8 @@ table.an-t td:first-child{font-weight:600}
 td.an-bad{color:var(--bad);font-weight:600}
 @media (max-width:980px){ .an-grid{grid-template-columns:minmax(0,1fr)} }
 @media (max-width:1240px){
-  .grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"view view" "fn sm" "dash dash" "sv sv" "rq rq" "rp rp"}
-  .fn,.sm,.dash{height:auto}
+  .grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"view view" "fn sm" "log log" "dash dash" "sv sv" "rq rq" "rp rp"}
+  .fn,.sm,.log-panel,.dash{height:auto}
   .view{height:clamp(460px,65vh,680px)}
   .scroll{overflow:visible}
 }
@@ -456,7 +458,7 @@ td.an-bad{color:var(--bad);font-weight:600}
   .sm-dia{border-right:0;border-bottom:1px solid var(--line)}
 }
 @media (max-width:760px){
-  .grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"view" "fn" "sm" "dash" "sv" "rq" "rp"}
+  .grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"view" "fn" "sm" "log" "dash" "sv" "rq" "rp"}
   .view{height:min(76vh,480px)}
   .top-state{min-width:0;flex-basis:100%;order:3}
   .ph-note{margin-left:0;flex-basis:100%}
@@ -822,9 +824,9 @@ table.an-t tr.on td{background:var(--accent-soft)}
       </div>
     </section>
 
-    <!-- STATE MACHINE, STATUS CARD & LIVE LOG (SIDEBAR NEXT TO 3D VIEW) -->
+    <!-- STATE MACHINE & STATUS CARD (SIDEBAR NEXT TO 3D VIEW) -->
     <section class="panel sm" aria-labelledby="hSm">
-      <div class="ph"><span class="code">SM</span><h2 id="hSm">Trạng thái &amp; Nhật ký</h2><span class="ph-note">thẻ trạng thái · cảm biến</span></div>
+      <div class="ph"><span class="code">SM</span><h2 id="hSm">Trạng thái bay</h2><span class="ph-note">thẻ trạng thái · 10 trạng thái</span></div>
       <div class="scroll">
         <div class="sec">
           <div class="sec-h" style="margin-bottom:8px">
@@ -838,14 +840,6 @@ table.an-t tr.on td{background:var(--accent-soft)}
           </div>
         </div>
 
-        <div class="sec" style="display:flex;flex-direction:column">
-          <div class="sec-h" style="margin-bottom:6px">
-            <h3 style="margin:0;font-size:12px">Nhật ký điều hành &amp; Cảm biến</h3>
-            <button class="btn mini" id="btnClearLog" title="Xoá nhật ký" style="padding:1px 6px;font-size:11px">Xoá</button>
-          </div>
-          <ol class="log" id="log" aria-live="polite" style="max-height:280px"></ol>
-        </div>
-
         <div class="sec">
           <div class="sec-h" style="margin-bottom:6px">
             <h3 style="margin:0;font-size:12px">Sơ đồ máy trạng thái</h3>
@@ -854,6 +848,17 @@ table.an-t tr.on td{background:var(--accent-soft)}
           <div class="sm-scroll"><svg id="smSvg" viewBox="0 0 1020 340" role="img" aria-label="Sơ đồ máy trạng thái của drone giám sát"></svg></div>
           <p class="note" style="margin-top:6px;font-size:11px">Ô cam là trạng thái hiện tại, viền đứt là trạng thái ngay trước, mũi tên sáng là lần chuyển gần nhất. Drone tự động né vật cản khi vào MISSION, RTL hoặc FAILSAFE.</p>
         </div>
+      </div>
+    </section>
+
+    <!-- OPERATIONAL & SENSOR LOG (REPLACING TELEMETRY POSITION UNDER 3D VIEW) -->
+    <section class="panel log-panel" aria-labelledby="hLog">
+      <div class="ph"><span class="code">LOG</span><h2 id="hLog">Nhật ký điều hành &amp; Cảm biến</h2>
+        <span class="ph-note">sự kiện · chuyển trạng thái · cảm biến</span>
+        <button class="btn mini" id="btnClearLog" title="Xoá nhật ký" style="margin-left:auto;padding:2px 8px;font-size:11px">Xoá</button>
+      </div>
+      <div class="scroll" style="padding:10px 14px">
+        <ol class="log" id="log" aria-live="polite" style="max-height:220px;border-top:0"></ol>
       </div>
     </section>
 
@@ -6567,23 +6572,23 @@ addEventListener('keydown', e => {
 rqGallery();
 
 /* ---------- panel visibility: every dashboard can be hidden, the 3D view always stays ---------- */
-const LAY_KEYS = ['fn', 'dash', 'sv', 'rq', 'sm', 'rp'];
+const LAY_KEYS = ['fn', 'sm', 'log', 'dash', 'sv', 'rq', 'rp'];
 const LAY = { hidden:new Set(), before:null };
 try { (JSON.parse(localStorage.getItem('ucds-hidden') || '[]') || []).forEach(k => { if (LAY_KEYS.includes(k)) LAY.hidden.add(k); }); } catch (e){}
-const layEl = k => $('.grid > .panel.' + k);
+const layEl = k => $('.grid > .panel.' + (k === 'log' ? 'log-panel' : k));
 const layName = k => { const h = layEl(k) && layEl(k).querySelector('h2'); return h ? h.textContent.trim() : k; };
 const mqMid = matchMedia('(max-width:1240px)'), mqNarrow = matchMedia('(max-width:760px)');
 function layApply(){
   const vis = k => !LAY.hidden.has(k), grid = $('.grid');
   let cols, rows;
   if (!mqMid.matches){
-    const top = [vis('fn') && 'fn', 'view', vis('dash') && 'dash'].filter(Boolean);
-    cols = top.map(a => a === 'fn' ? '320px' : a === 'dash' ? '340px' : 'minmax(0,1fr)');
-    rows = [top].concat(['sv', 'rq', 'sm', 'rp'].filter(vis).map(a => top.map(() => a)));
+    const top = [vis('fn') && 'fn', 'view', vis('sm') && 'sm'].filter(Boolean);
+    cols = top.map(a => a === 'fn' ? '320px' : a === 'sm' ? '350px' : 'minmax(0,1fr)');
+    rows = [top].concat(['log', 'dash', 'sv', 'rq', 'rp'].filter(vis).map(a => top.map(() => a)));
   } else if (!mqNarrow.matches){
     cols = ['minmax(0,1fr)', 'minmax(0,1fr)'];
-    const pair = ['fn', 'dash'].filter(vis);
-    rows = [['view', 'view']].concat(pair.length === 2 ? [pair] : pair.map(a => [a, a]), ['sv', 'rq', 'sm', 'rp'].filter(vis).map(a => [a, a]));
+    const pair = ['fn', 'sm'].filter(vis);
+    rows = [['view', 'view']].concat(pair.length === 2 ? [pair] : pair.map(a => [a, a]), ['log', 'dash', 'sv', 'rq', 'rp'].filter(vis).map(a => [a, a]));
   } else {
     cols = ['minmax(0,1fr)'];
     rows = [['view']].concat(LAY_KEYS.filter(vis).map(a => [a]));
