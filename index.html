@@ -841,22 +841,10 @@ table.an-t tr.on td{background:var(--accent-soft)}
       </div>
     </section>
 
-    <!-- STATE MACHINE & STATUS CARD (WIDE ROW BELOW 3D VIEW) -->
+    <!-- STATE MACHINE & STATUS (WIDE ROW BELOW 3D VIEW) -->
     <section class="panel sm" aria-labelledby="hSm">
-      <div class="ph"><span class="code">SM</span><h2 id="hSm">Trạng thái bay</h2><span class="ph-note">thẻ trạng thái · 10 trạng thái</span></div>
+      <div class="ph"><span class="code">SM</span><h2 id="hSm">Trạng thái bay</h2><span class="ph-note">sơ đồ 10 trạng thái</span></div>
       <div class="scroll">
-        <div class="sec">
-          <div class="sec-h" style="margin-bottom:8px">
-            <h3>Thẻ trạng thái hiện tại</h3>
-          </div>
-          <div class="sm-card">
-            <div class="sm-cur"><span class="pill s-idle" id="smPill">DISARMED</span><span class="sm-t" id="smTime">0.0 s</span></div>
-            <p id="smDesc"></p>
-            <div class="sm-prev" id="smPrev">Chưa có chuyển trạng thái.</div>
-            <div class="valid"><span>Lệnh hợp lệ:</span><span id="validSm" class="row"></span></div>
-          </div>
-        </div>
-
         <div class="sec">
           <div class="sec-h" style="margin-bottom:6px">
             <h3 style="margin:0;font-size:12px">Sơ đồ máy trạng thái</h3>
@@ -2528,10 +2516,11 @@ function updateFlightModeUI(){
 function setPill(el, st){ el.textContent = st; el.className = 'pill s-' + META[st].cls; }
 function onStateChanged(){
   const S = Sim.S, st = S.state;
-  setPill($('#statePill'), st); setPill($('#smPill'), st);
-  $('#stateSub').textContent = st === 'FAILSAFE' ? 'Failsafe: ' + S.fsReason + ', đang né vật cản về Nhà Máy' : META[st].top;
-  $('#smDesc').textContent = META[st].desc;
-  $('#smPrev').textContent = S.prevState ? 'Trước đó: ' + S.prevState + ' · lý do: ' + S.lastReason : 'Chưa có chuyển trạng thái.';
+  const stPill = $('#statePill'); if (stPill) setPill(stPill, st);
+  const smP = $('#smPill'); if (smP) setPill(smP, st);
+  const stSub = $('#stateSub'); if (stSub) stSub.textContent = st === 'FAILSAFE' ? 'Failsafe: ' + S.fsReason + ', đang né vật cản về Nhà Máy' : META[st].top;
+  const smD = $('#smDesc'); if (smD) smD.textContent = META[st].desc;
+  const smPr = $('#smPrev'); if (smPr) smPr.textContent = S.prevState ? 'Trước đó: ' + S.prevState + ' · lý do: ' + S.lastReason : 'Chưa có chuyển trạng thái.';
   highlightDiagram(S.prevState, st);
   refreshValidity(true);
   updateFlightModeUI();
@@ -2554,7 +2543,8 @@ function refreshValidity(force){
   lastValid = key;
   const html = valid.length ? valid.map(c => '<span class="chip">' + c + '</span>').join('')
     : '<span class="none">' + (Sim.params.linkLost ? 'không có (mất liên kết)' : 'không có, drone đang tự xử lý') + '</span>';
-  $('#validFn').innerHTML = html; $('#validSm').innerHTML = html;
+  const valFn = $('#validFn'); if (valFn) valFn.innerHTML = html;
+  const valSm = $('#validSm'); if (valSm) valSm.innerHTML = html;
 }
 
 /* ---------- sim events ---------- */
@@ -3328,7 +3318,7 @@ function updateDom(){
   els.batRem.textContent = S.state !== 'DISARMED' && rate > 0.1 ? mmss((Pp.capacity - S.mAh)/rate) : '—';
   els.batFt.textContent = mmss(S.flightT);
   els.metaTime.textContent = mmss(S.armT);
-  els.smTime.textContent = 'đã ' + S.stateT.toFixed(1) + ' s';
+  if (els.smTime) els.smTime.textContent = 'đã ' + S.stateT.toFixed(1) + ' s';
   for (let i = 0; i < 4; i++){
     const r = S.f[i]/Pp.fMax; const m = motEls[i];
     m.fill.style.width = (r*100).toFixed(1) + '%'; m.bar.classList.toggle('hot', r > 0.85);
