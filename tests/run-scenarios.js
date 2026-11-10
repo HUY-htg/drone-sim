@@ -241,12 +241,12 @@ function hoverSteps(adaptive){
       `${passes}/${L.pts.length} đầu làn · vệt ${L.width.toFixed(0)} m · cách tường gần nhất ${r.minClear.toFixed(2)} m`);
   }
 
-  // 11. Giả lập sự cố tuần tra: Mất kết nối camera trực tiếp → Drone tự động lưu bản record vào bộ nhớ nội bộ
+  // 11. Giả lập sự cố tuần tra: Mất liên kết dữ liệu & camera → Mất thông tin mặt đất & lưu vào bộ nhớ hộp đen drone
   {
     const Sim = makeSim();
     Sim.params.task = 'patrol';
     Sim.params.loops = 1;
-    Sim.params.autoCamFailOnPatrol = true;
+    Sim.params.autoLinkFailOnPatrol = true;
     Sim.setDestinations([
       { e: 10, n: 10, u: 14, role: 'pass', label: 'Điểm tuần tra 1' },
       { e: 20, n: 20, u: 14, role: 'pass', label: 'Điểm tuần tra 2' },
@@ -263,11 +263,11 @@ function hoverSteps(adaptive){
       Sim.step(DT);
       if ((Sim.S.state === 'ARMED' || Sim.S.state === 'DISARMED') && Sim.S.grounded) break;
     }
-    const hadCamLost = events.some(e => e.msg && e.msg.includes('MẤT KẾT NỐI CAMERA'));
-    const hadRecSaved = events.some(e => e.msg && e.msg.includes('LƯU BẢN GHI VÀO BỘ NHỚ'));
-    check('Sự cố tuần tra: Mất camera trực tiếp → Lưu bản record vào bộ nhớ',
-      hadCamLost && hadRecSaved && Sim.S.grounded,
-      `ghi nhận mất camera, lưu bản ghi vào thẻ nhớ (${Sim.S.camRecMB} MB), về nhà an toàn`);
+    const hadLinkLost = events.some(e => e.to === 'FAILSAFE' || (e.msg && e.msg.includes('MẤT LIÊN KẾT')));
+    const hadRecSaved = events.some(e => e.msg && (e.msg.includes('LƯU TOÀN BỘ THÔNG TIN') || e.msg.includes('HỘP ĐEN')));
+    check('Sự cố tuần tra: Mất liên kết (dữ liệu & camera) → Mất thông tin mặt đất & lưu vào bộ nhớ drone',
+      hadLinkLost && hadRecSaved && Sim.S.grounded,
+      `ghi nhận mất liên kết, lưu thông tin vào hộp đen (${Sim.S.blackboxMB} MB), về nhà an toàn`);
   }
 
   // 12. Bomber: Đánh giá thả bom trúng mục tiêu (trong bán kính diệt) vs chưa trúng mục tiêu (ngoài bán kính diệt)

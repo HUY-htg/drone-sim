@@ -728,7 +728,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
           <div class="sv-opt" id="optPatrol" data-for="patrol">
             <div class="row"><label for="svPatrol">Tuyến</label><select id="svPatrol"><option value="fence">Hàng rào Nhà máy</option><option value="center">Trục đường trung tâm</option><option value="city">Vòng ngoài căn cứ</option><option value="custom">Tự vẽ: click mặt đất 3D</option></select></div>
             <div class="field"><label for="svPu">Độ cao tuần tra</label><output id="oSvPu"></output><input type="range" id="svPu" min="10" max="40" step="1" value="16"></div>
-            <label class="chk" style="margin:4px 0 6px" title="Tự động kích hoạt sự cố mất kết nối camera trực tiếp khi đang tuần tra để kiểm tra tính năng lưu bản record vào bộ nhớ"><input type="checkbox" id="chkAutoCamFail"> Giả lập mất camera khi tuần tra (Lưu bộ nhớ)</label>
+            <label class="chk" style="margin:4px 0 6px" title="Tự động kích hoạt sự cố mất liên kết toàn phần khi đang tuần tra để mất thông tin mặt đất và lưu toàn bộ vào bộ nhớ drone"><input type="checkbox" id="chkAutoLinkFail"> Giả lập mất liên kết khi tuần tra (Lưu bộ nhớ)</label>
             <p class="sv-info">Chế độ: <b>Auto bay 1 vòng</b> theo tuyến rồi tự động quay về Nhà máy (RTL). Camera tự quét hai bên ±55°.</p>
             <div class="sv-go"><button class="btn primary" id="svStart">Auto bay 1 vòng</button><button class="btn" id="svStop" title="Dừng nhiệm vụ, bay về Nhà máy">Gọi về (RTL)</button></div>
           </div>
@@ -751,8 +751,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
           <div class="field"><label for="pGust">Giật</label><output id="oGust"></output><input type="range" id="pGust" min="0" max="60" step="5" value="30"></div>
           <div class="field"><label for="pDrain">Hệ số xả pin</label><output id="oDrain"></output><input type="range" id="pDrain" min="1" max="20" step="1" value="5"></div>
           <div class="row" style="margin-top:6px;gap:6px">
-            <button class="btn" id="btnLink" aria-pressed="false" style="flex:1">Mất liên kết</button>
-            <button class="btn" id="btnCamFail" aria-pressed="false" style="flex:1;color:var(--warn);border-color:var(--warn)" title="Giả lập mất luồng camera trực tiếp: drone tự động chuyển sang lưu bản record vào bộ nhớ nội bộ">Mất camera (Lưu bộ nhớ)</button>
+            <button class="btn" id="btnLink" aria-pressed="false" style="flex:1;color:var(--warn);border-color:var(--warn)" title="Mô phỏng mất liên kết dữ liệu toàn phần (mất điều khiển, telemetry và luồng camera). Drone chuyển FAILSAFE né vật cản về Nhà máy và tự động lưu toàn bộ thông tin vào bộ nhớ nội bộ.">Mô phỏng mất liên kết (Lưu bộ nhớ)</button>
           </div>
           <div class="row" style="margin-top:4px">
             <button class="btn" id="btnReset" style="width:100%">Đặt lại về Nhà máy</button>
@@ -1257,7 +1256,7 @@ var Sim = (function(){
     takeoffAlt: 10, rtlAlt: 14, vMax: 8, missionAlt: 12, missionEnd: 'RTL',
     autoAvoid: true, safeMargin: 4.5,
     windOn: true, windSpeed: 4, windDir: 270, gust: 0.3, drain: 5, linkLost: false, adaptive: true,
-    autoCamFailOnPatrol: false, bomberTarget: null,
+    autoLinkFailOnPatrol: false, bomberTarget: null,
     // task: 'patrol' | 'orbit' | 'scan' | 'bomber'; loops: patrol laps (0 = until recalled); orbit: { e, n, r, u, dir, v, laps, lookU, name }
     task: 'patrol', loops: 1, orbit: null
   };
@@ -1318,7 +1317,7 @@ var Sim = (function(){
       destDone: 0, legFrom: null, dwell: 0, rtlVer: 0, windWarnT: -99,
       lap: 1, orbPhase: 'approach', orbTrav: 0, orbPrev: 0,
       nfzIn: null, nfzT: 0, nfzDist: 999, nfzNear: null, nfzWarned: false, nfzMark: 0, jammed: false, jam: null,
-      camFeedLost: false, camLostT: 0, camRecMB: '0.0', camFailTriggered: false
+      linkLostT: 0, blackboxMB: '0.0', blackboxRecords: 0, linkFailTriggered: false
     };
   }
   S = fresh();
@@ -1989,8 +1988,8 @@ var Sim = (function(){
         if (S.grounded){
           S.touchT += dt;
           if (S.touchT > 0.4){
-            if (S.camFeedLost){
-              emit({ type:'info', msg:'📁 ĐÃ LƯU BẢN GHI VÀO BỘ NHỚ', sub:'Chuyến bay kết thúc: Bản ghi video sự cố (' + S.camRecMB + ' MB) đã được lưu trữ an toàn trong bộ nhớ nội bộ thẻ nhớ drone.' });
+            if (params.linkLost){
+              emit({ type:'info', msg:'📁 ĐÃ LƯU TOÀN BỘ THÔNG TIN VÀO BỘ NHỚ HỘP ĐEN DRONE', sub:'Chuyến bay kết thúc: Toàn bộ thông tin bay (telemetry, cảm biến, GPS) & video trong thời gian mất liên kết (' + S.blackboxMB + ' MB) đã được lưu trữ an toàn trong bộ nhớ nội bộ của drone.' });
             }
             setState('ARMED', 'đã đáp xuống bãi', 'auto');
             return null;
@@ -2188,12 +2187,13 @@ var Sim = (function(){
     S.t += dt; S.stateT += dt;
     if (S.state !== 'DISARMED') S.armT += dt;
     if (!S.grounded) S.flightT += dt;
-    if (S.camFeedLost){
-      S.camRecMB = ((S.t - S.camLostT) * 2.8).toFixed(1);
+    if (params.linkLost){
+      S.blackboxMB = ((S.t - S.linkLostT) * 3.6).toFixed(1);
+      S.blackboxRecords = (S.blackboxRecords || 0) + 1;
     }
-    if (params.autoCamFailOnPatrol && !S.camFeedLost && !S.camFailTriggered && params.task === 'patrol' && S.state === 'MISSION' && S.stateT > 3.5){
-      S.camFailTriggered = true;
-      setCamFeedLost(true);
+    if (params.autoLinkFailOnPatrol && !params.linkLost && !S.linkFailTriggered && params.task === 'patrol' && S.state === 'MISSION' && S.stateT > 3.5){
+      S.linkFailTriggered = true;
+      setLink(true);
     }
     updateWind(dt);
     updateLidarAndAPF();
@@ -2207,40 +2207,32 @@ var Sim = (function(){
   }
 
   function setLink(lost){
+    lost = !!lost;
     if (params.linkLost === lost) return;
     if (!lost && S.jammed){ emit({ type:'reject', msg:'Không khôi phục được liên kết: drone đang bị phá sóng. Dùng "Đặt lại" để đưa drone về Nhà máy.' }); return; }
     params.linkLost = lost;
-    emit({ type: lost ? 'warn' : 'info', msg: lost ? 'Mất liên kết RC/telemetry' : 'Đã khôi phục liên kết' });
     if (lost){
-      if (FLYING_CMD.indexOf(S.state) >= 0){ S.fsReason = 'mất liên kết'; setState('FAILSAFE', 'mất liên kết', 'fail'); }
-      else if (S.state === 'ARMED') setState('DISARMED', 'mất liên kết khi đang trên đất', 'fail');
-    }
-  }
-
-  function setCamFeedLost(lost){
-    lost = !!lost;
-    if (S.camFeedLost === lost) return;
-    S.camFeedLost = lost;
-    if (lost){
-      S.camLostT = S.t;
+      S.linkLostT = S.t;
       emit({
         type: 'warn',
-        kind: 'cam-lost',
-        msg: '⚠️ MẤT KẾT NỐI CAMERA TRỰC TIẾP (VIDEO DOWNLINK LOST)!',
-        sub: 'Drone tự động chuyển sang chế độ lưu bản record vào bộ nhớ nội bộ (Onboard SD Card). Tuyến bay vẫn tiếp tục an toàn.'
+        kind: 'link-lost',
+        msg: '⚠️ MẤT LIÊN KẾT TRUYỀN DỮ LIỆU & CAMERA (DATALINK LOST)!',
+        sub: 'Trạm mặt đất mất hoàn toàn telemetry và luồng video. Drone tự chuyển FAILSAFE né vật cản về Nhà máy và tự động lưu toàn bộ thông tin bay & video vào bộ nhớ hộp đen nội bộ.'
       });
       emit({
         type: 'info',
-        msg: '💾 BẮT ĐẦU GHI HÌNH VÀO BỘ NHỚ NỘI BỘ (ONBOARD SD)',
-        sub: 'File: VID_PATROL_' + Math.floor(S.t) + '.mp4 · Độ phân giải 1080p60 · Mã hóa H.265'
+        msg: '💾 ĐÃ KÍCH HOẠT LƯU BỘ NHỚ HỘP ĐEN NỘI BỘ (ONBOARD BLACKBOX)',
+        sub: 'Đang ghi toàn bộ telemetry, cảm biến Lidar, GPS, IMU và luồng camera 1080p60 vào bộ nhớ thẻ nhớ drone.'
       });
+      if (FLYING_CMD.indexOf(S.state) >= 0){ S.fsReason = 'mất liên kết dữ liệu & camera'; setState('FAILSAFE', 'mất liên kết dữ liệu & camera', 'fail'); }
+      else if (S.state === 'ARMED') setState('DISARMED', 'mất liên kết khi đang trên đất', 'fail');
     } else {
-      const dur = Math.max(0, S.t - S.camLostT);
-      const mb = (dur * 2.8).toFixed(1);
+      const dur = Math.max(0, S.t - S.linkLostT);
+      const mb = (dur * 3.6).toFixed(1);
       emit({
         type: 'info',
-        msg: '📶 KHÔI PHỤC KẾT NỐI CAMERA TRỰC TIẾP',
-        sub: 'Đã hoàn tất lưu ' + dur.toFixed(1) + 's (' + mb + ' MB) vào bộ nhớ nội bộ. Đồng bộ lại luồng phát trực tiếp.'
+        msg: '📶 ĐÃ KHÔI PHỤC LIÊN KẾT TRUYỀN DỮ LIỆU & CAMERA',
+        sub: 'Đã khôi phục kết nối điều khiển, telemetry và video trực tiếp. Đồng bộ thành công ' + dur.toFixed(1) + 's (' + mb + ' MB) dữ liệu từ bộ nhớ nội bộ.'
       });
     }
   }
@@ -2280,7 +2272,7 @@ var Sim = (function(){
   }
 
   function reset(){
-    S = fresh(); params.linkLost = false; params.autoCamFailOnPatrol = false;
+    S = fresh(); params.linkLost = false; params.autoLinkFailOnPatrol = false;
     for (const k in sticks) sticks[k] = 0;
     rebuildTrajectory(true);
     updateLidarAndAPF();
@@ -2293,7 +2285,7 @@ var Sim = (function(){
 
   return {
     P, K, MOT, AIR, CMDS, obstacles, params, mission, blockedSegments, sticks,
-    on, step, command, check, setLink, setCamFeedLost, evalBombHit, reset, syncMass,
+    on, step, command, check, setLink, evalBombHit, reset, syncMass,
     rebuildTrajectory, setDestinations, addDestination, removeDestination, sanitizePoint, setOrbit, pointInObs, NFZ, JAM_AFTER, nfzAt,
     planSegmentAStar, clearanceAt, windLimit, EST,
     get destinations(){ return destinations; },
@@ -2721,39 +2713,33 @@ $('#pWindOn').addEventListener('change', e => {
 $('#pEnd').addEventListener('change', e => { P.missionEnd = e.target.value; });
 $('#btnLink').addEventListener('click', e => {
   const lost = !P.linkLost; Sim.setLink(lost);
-  e.currentTarget.setAttribute('aria-pressed', String(lost));
-  e.currentTarget.textContent = lost ? 'Khôi phục liên kết' : 'Mất liên kết';
+  syncLinkBtn();
   refreshValidity(true);
 });
-function syncLinkBtn(){ const b = $('#btnLink'); b.setAttribute('aria-pressed', String(P.linkLost)); b.textContent = P.linkLost ? 'Khôi phục liên kết' : 'Mất liên kết'; }
-
-function syncCamFailBtn(){
-  const b = $('#btnCamFail');
+function syncLinkBtn(){
+  const b = $('#btnLink');
   if (!b) return;
-  const lost = !!Sim.S.camFeedLost;
+  const lost = !!Sim.params.linkLost;
   b.setAttribute('aria-pressed', String(lost));
-  b.textContent = lost ? 'Khôi phục camera' : 'Mất camera (Lưu bộ nhớ)';
+  b.textContent = lost ? 'Khôi phục liên kết' : 'Mô phỏng mất liên kết (Lưu bộ nhớ)';
   b.style.background = lost ? 'rgba(239,68,68,0.18)' : '';
   b.style.borderColor = lost ? '#ef4444' : 'var(--warn)';
   b.style.color = lost ? '#ef4444' : 'var(--warn)';
 }
-$('#btnCamFail')?.addEventListener('click', () => {
-  Sim.setCamFeedLost(!Sim.S.camFeedLost);
-  syncCamFailBtn();
-});
-$('#chkAutoCamFail')?.addEventListener('change', e => {
-  Sim.params.autoCamFailOnPatrol = e.target.checked;
+
+$('#chkAutoLinkFail')?.addEventListener('change', e => {
+  Sim.params.autoLinkFailOnPatrol = e.target.checked;
   if (e.target.checked){
-    addLog('warn', '⚡ ĐÃ BẬT KỊCH BẢN SỰ CỐ TUẦN TRA', 'Khi đang bay tuần tra, drone sẽ tự động giả lập mất kết nối camera trực tiếp để chuyển sang lưu bản record vào bộ nhớ nội bộ.', Sim.S.t);
+    addLog('warn', '⚡ ĐÃ BẬT KỊCH BẢN SỰ CỐ TUẦN TRA', 'Khi đang bay tuần tra, drone sẽ tự động giả lập mất liên kết toàn phần để ngắt thông tin mặt đất và lưu toàn bộ vào bộ nhớ drone.', Sim.S.t);
   } else {
-    addLog('info', 'Đã tắt kịch bản tự động mất camera khi tuần tra', '', Sim.S.t);
+    addLog('info', 'Đã tắt kịch bản tự động mất liên kết khi tuần tra', '', Sim.S.t);
   }
 });
 
 $('#btnReset').addEventListener('click', () => {
   resetKill();
-  Sim.reset(); syncLinkBtn(); syncCamFailBtn(); clearHistory();
-  if ($('#chkAutoCamFail')) $('#chkAutoCamFail').checked = false;
+  Sim.reset(); syncLinkBtn(); clearHistory();
+  if ($('#chkAutoLinkFail')) $('#chkAutoLinkFail').checked = false;
   window.bombResultBanner = null;
   if (R3 && R3.advanceFlightRun) R3.advanceFlightRun();
   renderMission();
@@ -3174,25 +3160,65 @@ const els = {}; ['roAlt','roVs','roGs','roHdg','roHome','roObs','kvRoll','kvRoll
   'cSpE','cSpN','cSpU','cPE','cPN','cPU','cVE','cVN','cVU','hudAlt','hudGs','hudObs','hudWp','banner'].forEach(k => els[k] = E(k));
 const motEls = [E('m1'), E('m2'), E('m3'), E('m4')].map(m => ({ bar:m.querySelector('.m-bar'), fill:m.querySelector('.m-bar span'), rpm:m.querySelector('.m-v b'), pct:m.querySelector('.m-v span') }));
 function updateDom(){
-  const S = Sim.S, p = S.pos, v = S.vel, Pp = Sim.P;
+  const S = Sim.S, p = S.pos, v = S.vel, Pp = Sim.P, P = Sim.params;
   const gs = Math.hypot(v[0], v[1]);
-  els.roAlt.textContent = fx(p[2], 1);
-  els.roVs.textContent = fx(v[2], 1);
-  els.roGs.textContent = fx(gs, 1);
-  els.roHdg.textContent = pad3(hdgOf(S.att[2]));
-  els.roHome.textContent = fx(Math.hypot(p[0], p[1]), 1);
   const obsD = Math.max(0, S.minObsDist);
-  els.roObs.textContent = obsD > 40 ? '>40' : fx(obsD, 1);
-  els.roObs.style.color = obsD < 3.5 ? 'var(--bad)' : obsD < 6.5 ? 'var(--warn)' : '';
 
-  els.kvRoll.textContent = fx(S.att[0]*DEG, 1) + '°';
-  els.kvPitch.textContent = fx(-S.att[1]*DEG, 1) + '°';
-  els.kvRollSp.textContent = S.sp ? 'đặt ' + fx(S.tgtAtt[0]*DEG, 1) + '°' : '';
-  els.kvPitchSp.textContent = S.sp ? 'đặt ' + fx(-S.tgtAtt[1]*DEG, 1) + '°' : '';
-  els.kvMass.textContent = Pp.m.toFixed(2) + ' kg';
-  els.kvPayloadSub.textContent = 'gimbal + Lidar';
-  els.kvT.textContent = fx(S.T, 1) + ' N';
-  els.kvTW.textContent = 'T/W ' + (S.T/(Pp.m*Pp.g)).toFixed(2);
+  if (P.linkLost){
+    els.roAlt.textContent = 'MẤT LINK';
+    els.roVs.textContent = '—';
+    els.roGs.textContent = '—';
+    els.roHdg.textContent = '—';
+    els.roHome.textContent = '—';
+    els.roObs.textContent = 'MẤT TÍN HIỆU';
+    els.roObs.style.color = 'var(--bad)';
+
+    els.kvRoll.textContent = '—';
+    els.kvPitch.textContent = '—';
+    els.kvRollSp.textContent = '';
+    els.kvPitchSp.textContent = '';
+    els.kvMass.textContent = Pp.m.toFixed(2) + ' kg';
+    els.kvPayloadSub.textContent = 'hộp đen ghi bộ nhớ';
+    els.kvT.textContent = '—';
+    els.kvTW.textContent = 'MẤT DỮ LIỆU';
+
+    els.cSpE.textContent = '—'; els.cSpN.textContent = '—'; els.cSpU.textContent = '—';
+    els.cPE.textContent = '—'; els.cPN.textContent = '—'; els.cPU.textContent = '—';
+    els.cVE.textContent = '—'; els.cVN.textContent = '—'; els.cVU.textContent = '—';
+    els.hudAlt.textContent = 'MẤT TÍN HIỆU';
+    els.hudGs.textContent = 'NO TELEMETRY';
+    els.hudObs.textContent = 'MẤT DỮ LIỆU';
+    els.hudWp.textContent = 'FAILSAFE (RTL)';
+  } else {
+    els.roAlt.textContent = fx(p[2], 1);
+    els.roVs.textContent = fx(v[2], 1);
+    els.roGs.textContent = fx(gs, 1);
+    els.roHdg.textContent = pad3(hdgOf(S.att[2]));
+    els.roHome.textContent = fx(Math.hypot(p[0], p[1]), 1);
+    els.roObs.textContent = obsD > 40 ? '>40' : fx(obsD, 1);
+    els.roObs.style.color = obsD < 3.5 ? 'var(--bad)' : obsD < 6.5 ? 'var(--warn)' : '';
+
+    els.kvRoll.textContent = fx(S.att[0]*DEG, 1) + '°';
+    els.kvPitch.textContent = fx(-S.att[1]*DEG, 1) + '°';
+    els.kvRollSp.textContent = S.sp ? 'đặt ' + fx(S.tgtAtt[0]*DEG, 1) + '°' : '';
+    els.kvPitchSp.textContent = S.sp ? 'đặt ' + fx(-S.tgtAtt[1]*DEG, 1) + '°' : '';
+    els.kvMass.textContent = Pp.m.toFixed(2) + ' kg';
+    els.kvPayloadSub.textContent = 'gimbal + Lidar';
+    els.kvT.textContent = fx(S.T, 1) + ' N';
+    els.kvTW.textContent = 'T/W ' + (S.T/(Pp.m*Pp.g)).toFixed(2);
+
+    const sp = S.sp;
+    els.cSpE.textContent = sp && sp.xy ? fx(sp.xy[0], 1) : '—';
+    els.cSpN.textContent = sp && sp.xy ? fx(sp.xy[1], 1) : '—';
+    els.cSpU.textContent = sp && sp.z != null ? fx(sp.z, 1) : '—';
+    els.cPE.textContent = fx(p[0], 1); els.cPN.textContent = fx(p[1], 1); els.cPU.textContent = fx(p[2], 1);
+    els.cVE.textContent = sp ? fx(sp.vd[0], 1) : '—'; els.cVN.textContent = sp ? fx(sp.vd[1], 1) : '—'; els.cVU.textContent = sp ? fx(sp.vd[2], 1) : '—';
+    els.hudAlt.textContent = fx(p[2], 1) + ' m';
+    els.hudGs.textContent = fx(gs, 1) + ' m/s';
+    els.hudObs.textContent = obsD > 40 ? 'AN TOÀN' : fx(obsD, 1) + ' m';
+    els.hudWp.textContent = S.state === 'MISSION' ? (S.wpIdx + 1) + '/' + Sim.mission.length : Sim.mission.length ? '—/' + Sim.mission.length : '—';
+  }
+
   const pct = S.soc*100;
   els.batPct.textContent = Math.ceil(pct - 0.001) + '%';
   els.metaBat.textContent = Math.ceil(pct - 0.001) + '%';
@@ -3213,16 +3239,6 @@ function updateDom(){
     m.fill.style.width = (r*100).toFixed(1) + '%'; m.bar.classList.toggle('hot', r > 0.85);
     m.rpm.textContent = Math.round(S.rpm[i]/10)*10; m.pct.textContent = Math.round(r*100);
   }
-  const sp = S.sp;
-  els.cSpE.textContent = sp && sp.xy ? fx(sp.xy[0], 1) : '—';
-  els.cSpN.textContent = sp && sp.xy ? fx(sp.xy[1], 1) : '—';
-  els.cSpU.textContent = sp && sp.z != null ? fx(sp.z, 1) : '—';
-  els.cPE.textContent = fx(p[0], 1); els.cPN.textContent = fx(p[1], 1); els.cPU.textContent = fx(p[2], 1);
-  els.cVE.textContent = sp ? fx(sp.vd[0], 1) : '—'; els.cVN.textContent = sp ? fx(sp.vd[1], 1) : '—'; els.cVU.textContent = sp ? fx(sp.vd[2], 1) : '—';
-  els.hudAlt.textContent = fx(p[2], 1) + ' m';
-  els.hudGs.textContent = fx(gs, 1) + ' m/s';
-  els.hudObs.textContent = obsD > 40 ? 'AN TOÀN' : fx(obsD, 1) + ' m';
-  els.hudWp.textContent = S.state === 'MISSION' ? (S.wpIdx + 1) + '/' + Sim.mission.length : Sim.mission.length ? '—/' + Sim.mission.length : '—';
 
   // banner
   let msg = '', cls = 'warn';
@@ -3231,9 +3247,8 @@ function updateDom(){
     cls = window.bombResultBanner.cls;
   }
   else if (S.jammed) { msg = 'BỊ PHÁ SÓNG: mất liên kết, video, GNSS · ' + (S.grounded ? 'đã hạ cánh tại chỗ' : 'đang hạ cánh tại chỗ'); cls = 'bad'; }
-  else if (S.camFeedLost) { msg = 'MẤT KẾT NỐI CAMERA TRỰC TIẾP · ĐANG LƯU BẢN RECORD VÀO BỘ NHỚ NỘI BỘ (' + (S.camRecMB || '0.0') + ' MB)'; cls = 'warn'; }
+  else if (P.linkLost) { msg = 'MẤT LIÊN KẾT: MẤT TOÀN BỘ THÔNG TIN MẶT ĐẤT · DRONE ĐANG TỰ LƯU VÀO BỘ NHỚ HỘP ĐEN (' + (S.blackboxMB || '0.0') + ' MB)'; cls = 'bad'; }
   else if (S.nfzIn) { msg = 'VÙNG CẤM BAY: bị chặn · phá sóng sau ' + Math.max(0, Sim.JAM_AFTER - S.nfzT).toFixed(1) + ' s'; cls = 'bad'; }
-  else if (P.linkLost) { msg = 'Mất liên kết: drone tự né vật cản về Nhà Máy'; cls = 'bad'; }
   else if (S.nfzNear && !S.grounded) { msg = 'Gần ' + S.nfzNear.name + ': còn ' + S.nfzDist.toFixed(0) + ' m tới vùng cấm bay'; cls = 'warn'; }
   else if (S.state === 'EMERGENCY') { msg = 'Khẩn cấp: Động cơ đã ngắt'; cls = 'bad'; }
   else if (S.state === 'FAILSAFE') msg = 'Failsafe: ' + S.fsReason + ', đang về Nhà Máy';
@@ -3245,8 +3260,8 @@ function updateDom(){
 
   const pipLab = $('#pipLab');
   if (pipLab){
-    if (S.camFeedLost){
-      pipLab.innerHTML = '<span style="color:#ef4444;font-weight:700;display:inline-block;animation:recBlink 1s infinite">● REC BỘ NHỚ</span> <span class="wide-only">· MẤT LIVE</span>';
+    if (P.linkLost){
+      pipLab.innerHTML = '<span style="color:#ef4444;font-weight:700;display:inline-block;animation:recBlink 1s infinite">● LƯU HỘP ĐEN</span> <span class="wide-only">· MẤT LINK</span>';
     } else if (R3 && R3.cam && R3.cam.mode() === 'fpv'){
       pipLab.innerHTML = 'QUỸ ĐẠO<span class="wide-only"> · GÓC NGOÀI</span>';
     } else {
@@ -4975,25 +4990,30 @@ function init3D(){
   }
   function osdLine(id, x1, y1, x2, y2){ const l = $('#' + id); l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2); }
   function osdUpdate(W, H){
-    const S = Sim.S, w = S.windNow, ws = Math.hypot(w[0], w[1]), soc = S.soc * 100;
-    if (S.camFeedLost){
-      osdSet('osdRec', '● ONBOARD REC ' + mmss(S.t - S.camLostT) + ' (' + (S.camRecMB || '0.0') + 'MB)', 'osd-warn');
-      osdSet('osdSens', '⚠️ MẤT LIVE · GHI BỘ NHỚ (SD CARD 1080p60)', 'osd-warn');
+    const S = Sim.S, w = S.windNow, ws = Math.hypot(w[0], w[1]), soc = S.soc * 100, P = Sim.params;
+    if (P.linkLost){
+      osdSet('osdRec', '● BLACKBOX REC ' + mmss(S.t - S.linkLostT) + ' (' + (S.blackboxMB || '0.0') + 'MB)', 'osd-warn');
+      osdSet('osdSens', '⚠️ MẤT LIÊN KẾT · LƯU HỘP ĐEN DRONE', 'osd-warn');
+      osdSet('osdAlt', 'MẤT TÍN HIỆU');
+      osdSet('osdVs', '—');
+      osdSet('osdGs', '—');
+      osdSet('osdHome', '—');
+      osdSet('osdGps', 'MẤT TELEMETRY');
     } else {
       const rec = REC.cur ? '● REC ' + mmss(S.t - REC.cur.t0) : '○ CHỜ GHI';
       osdSet('osdRec', rec, REC.cur ? 'osd-rec' : '');
       osdSet('osdSens', (GB.sensor === 'ir' ? 'NHIỆT · IRONBOW' : 'QUANG HỌC') + (ENV.night ? ' · ĐÊM' : '') + ' · 1080p30');
+      osdSet('osdAlt', S.pos[2].toFixed(1) + ' m');
+      osdSet('osdVs', (S.vel[2] >= 0 ? '+' : '') + S.vel[2].toFixed(1) + ' m/s');
+      osdSet('osdGs', Math.hypot(S.vel[0], S.vel[1]).toFixed(1) + ' m/s');
+      osdSet('osdHome', Math.hypot(S.pos[0], S.pos[1]).toFixed(0) + ' m');
+      osdSet('osdGps', S.jammed ? 'MẤT GNSS' : fmtGps(S.pos[0], S.pos[1]));
     }
     osdSet('osdState', S.state);
     osdSet('osdBat', 'PIN ' + Math.round(soc) + '%', soc < 25 ? 'osd-warn' : '');
     const hd = bearing(S.att[2]), cb = bearing(S.att[2] + GB.pan * D2R);
     osdSet('osdHdg', 'MŨI ' + pad3(Math.round(hd) % 360) + '° ' + dirVN(hd) + (Math.abs(GB.pan) > 0.5 ? ' · CAMERA ' + pad3(Math.round(cb) % 360) + '°' : ''));
     osdSet('osdGim', 'GIMBAL ' + (GB.tilt > 0 ? '+' : '') + Math.round(GB.tilt) + '° · ' + (GB.zoom < 1.05 ? '1' : GB.zoom.toFixed(1).replace('.0', '')) + '×' + (GB.stab ? '' : ' · GẮN CỨNG'));
-    osdSet('osdAlt', S.pos[2].toFixed(1) + ' m');
-    osdSet('osdVs', (S.vel[2] >= 0 ? '+' : '') + S.vel[2].toFixed(1) + ' m/s');
-    osdSet('osdGs', Math.hypot(S.vel[0], S.vel[1]).toFixed(1) + ' m/s');
-    osdSet('osdHome', Math.hypot(S.pos[0], S.pos[1]).toFixed(0) + ' m');
-    osdSet('osdGps', S.jammed ? 'MẤT GNSS' : fmtGps(S.pos[0], S.pos[1]));
     osdSet('osdWind', ws < 0.3 ? 'lặng' : ws.toFixed(1) + ' từ ' + pad3(Math.round(((Math.atan2(w[0], w[1]) / D2R) + 180 + 360) % 360)) + '°');
     $('#osdX').setAttribute('transform', 'translate(' + (W / 2) + ',' + (H / 2) + ')');
     // horizon: directions level with the lens project onto the horizon line
@@ -6074,15 +6094,15 @@ function svDetect(C){
 function svDrawBoxes(views){
   const svg = $('#detSvg'); if (!svg) return;
   // picture effects over the camera view (only one view is a camera picture at a time)
-  const fx = $('#camFx'), S = Sim.S, cv = views[0];
-  const mode = !cv ? '' : S.camFeedLost ? 'cam-lost' : S.jammed ? 'jam' : SV.ctx.GB.sensor === 'ir' ? 'ir' : SV.ctx.ENV.night ? 'n-eo' : '';
+  const fx = $('#camFx'), S = Sim.S, cv = views[0], P = Sim.params;
+  const mode = !cv ? '' : P.linkLost ? 'cam-lost' : S.jammed ? 'jam' : SV.ctx.GB.sensor === 'ir' ? 'ir' : SV.ctx.ENV.night ? 'n-eo' : '';
   if (!mode){ if (!fx.hidden) fx.hidden = true; }
   else {
     fx.hidden = false; fx.className = 'cam-fx ' + mode + (cv.full ? '' : ' small');
     fx.style.left = cv.x + 'px'; fx.style.top = cv.y + 'px'; fx.style.width = cv.w + 'px'; fx.style.height = cv.h + 'px';
     if (mode === 'cam-lost'){
       $('#camFxTxt').hidden = false;
-      $('#camFxTxt').innerHTML = '<span style="color:#f87171">⚠️ MẤT KẾT NỐI CAMERA TRỰC TIẾP</span><br><span style="color:#22c55e;font-size:11px;font-weight:600;display:inline-block;animation:recBlink 1s infinite">● REC ONBOARD · ĐANG LƯU VÀO BỘ NHỚ</span><br><span style="color:#cbd5e1;font-size:10px;font-weight:400">Dung lượng: ' + (S.camRecMB || '0.0') + ' MB · MicroSD: OK</span>';
+      $('#camFxTxt').innerHTML = '<span style="color:#f87171;font-weight:700">⚠️ MẤT LIÊN KẾT TRUYỀN DỮ LIỆU & CAMERA</span><br><span style="color:#ef4444;font-size:11px;font-weight:600">MẤT TÍN HIỆU TELEMETRY MẶT ĐẤT</span><br><span style="color:#22c55e;font-size:11px;font-weight:600;display:inline-block;animation:recBlink 1s infinite">● DRONE ĐANG TỰ ĐỘNG LƯU VÀO BỘ NHỚ HỘP ĐEN</span><br><span style="color:#cbd5e1;font-size:10px;font-weight:400">Dung lượng: ' + (S.blackboxMB || '0.0') + ' MB · FAILSAFE RTL</span>';
     } else if (mode === 'jam'){
       $('#camFxTxt').hidden = false;
       $('#camFxTxt').textContent = 'MẤT TÍN HIỆU VIDEO · BỊ PHÁ SÓNG';
@@ -6090,7 +6110,7 @@ function svDrawBoxes(views){
       $('#camFxTxt').hidden = true;
     }
   }
-  if (S.jammed || S.camFeedLost) views = [];
+  if (S.jammed || P.linkLost) views = [];
   let html = '';
   const v = new THREE.Vector3();
   views.forEach(view => {
