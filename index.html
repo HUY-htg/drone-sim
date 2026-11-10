@@ -100,9 +100,12 @@ h1{font-family:var(--f-display);font-weight:700;font-size:23px;letter-spacing:.0
 .seg button[aria-pressed="true"]{background:var(--fg);color:var(--panel)}
 
 /* grid */
-.grid{display:grid;gap:12px;grid-template-columns:320px minmax(0,1fr) 340px;grid-template-areas:"fn view dash" "sm sm sm" "rp rp rp"}
-.fn{grid-area:fn}.view{grid-area:view}.dash{grid-area:dash}.sm{grid-area:sm}.rp{grid-area:rp}.an{grid-area:an}
-.fn,.view,.dash{height:clamp(620px,calc(100vh - 110px),900px)}
+.grid{display:grid;gap:12px;grid-template-columns:320px minmax(0,1fr) 350px;grid-template-areas:"fn view sm" "dash dash dash" "sv sv sv" "rq rq rq" "rp rp rp"}
+.fn{grid-area:fn}.view{grid-area:view}.dash{grid-area:dash}.sm{grid-area:sm}.rp{grid-area:rp}.sv{grid-area:sv}.rq{grid-area:rq}
+.fn,.view,.sm{height:clamp(620px,calc(100vh - 110px),900px)}
+.dash{grid-area:dash;height:auto}
+.dash .scroll{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;padding:12px 14px;overflow-y:visible}
+.dash .sec{border:1px solid var(--line);border-radius:6px;background:var(--panel-2);padding:12px 14px;border-bottom:1px solid var(--line);display:flex;flex-direction:column}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;min-width:0;min-height:0}
 .scroll{overflow-y:auto;flex:1;min-height:0}
 .ph{display:flex;align-items:center;flex-wrap:wrap;gap:6px 9px;padding:9px 12px;border-bottom:1px solid var(--line)}
@@ -443,8 +446,8 @@ table.an-t td:first-child{font-weight:600}
 td.an-bad{color:var(--bad);font-weight:600}
 @media (max-width:980px){ .an-grid{grid-template-columns:minmax(0,1fr)} }
 @media (max-width:1240px){
-  .grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"view view" "fn dash" "sm sm" "rp rp"}
-  .fn,.dash{height:auto}
+  .grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"view view" "fn sm" "dash dash" "sv sv" "rq rq" "rp rp"}
+  .fn,.sm,.dash{height:auto}
   .view{height:clamp(460px,65vh,680px)}
   .scroll{overflow:visible}
 }
@@ -453,7 +456,7 @@ td.an-bad{color:var(--bad);font-weight:600}
   .sm-dia{border-right:0;border-bottom:1px solid var(--line)}
 }
 @media (max-width:760px){
-  .grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"view" "fn" "dash" "sm" "rp"}
+  .grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"view" "fn" "sm" "dash" "sv" "rq" "rp"}
   .view{height:min(76vh,480px)}
   .top-state{min-width:0;flex-basis:100%;order:3}
   .ph-note{margin-left:0;flex-basis:100%}
@@ -733,25 +736,6 @@ table.an-t tr.on td{background:var(--accent-soft)}
           </div>
         </div>
 
-        <div class="sec sm-side-sec">
-          <div class="sec-h" style="margin-bottom:8px">
-            <h3>Trạng thái &amp; Nhật ký điều hành</h3>
-          </div>
-          <div class="sm-card">
-            <div class="sm-cur"><span class="pill s-idle" id="smPill">DISARMED</span><span class="sm-t" id="smTime">0.0 s</span></div>
-            <p id="smDesc"></p>
-            <div class="sm-prev" id="smPrev">Chưa có chuyển trạng thái.</div>
-            <div class="valid"><span>Lệnh hợp lệ:</span><span id="validSm" class="row"></span></div>
-          </div>
-          <div style="margin-top:10px">
-            <div class="sec-h" style="margin-bottom:6px">
-              <h3 style="margin:0;font-size:12px">Nhật ký điều hành &amp; Cảm biến</h3>
-              <button class="btn mini" id="btnClearLog" title="Xoá nhật ký" style="padding:1px 6px;font-size:11px">Xoá</button>
-            </div>
-            <ol class="log" id="log" aria-live="polite"></ol>
-          </div>
-        </div>
-
         <div class="sec">
           <h3>Mô hình gió &amp; Giả lập sự cố</h3>
           <label class="chk" style="margin-bottom:10px"><input type="checkbox" id="pWindOn" checked> Bật mô phỏng gió (hiển thị luồng gió 3D)</label>
@@ -835,6 +819,41 @@ table.an-t tr.on td{background:var(--accent-soft)}
         <label class="chk" title="Camera tự hướng theo nhiệm vụ: quét hai bên khi tuần tra, nhìn vào mục tiêu khi bay vòng, chúc thẳng xuống khi quét vùng"><input type="checkbox" id="optAuto" checked> Tự động theo nhiệm vụ</label>
         <label class="chk"><input type="checkbox" id="optStab" checked> Ổn định gimbal</label>
         <span class="sub" id="camHelp">Toàn khung: kéo = xoay gimbal · cuộn = zoom · nhấp đúp = mặc định</span>
+      </div>
+    </section>
+
+    <!-- STATE MACHINE, STATUS CARD & LIVE LOG (SIDEBAR NEXT TO 3D VIEW) -->
+    <section class="panel sm" aria-labelledby="hSm">
+      <div class="ph"><span class="code">SM</span><h2 id="hSm">Trạng thái &amp; Nhật ký</h2><span class="ph-note">thẻ trạng thái · cảm biến</span></div>
+      <div class="scroll">
+        <div class="sec">
+          <div class="sec-h" style="margin-bottom:8px">
+            <h3>Thẻ trạng thái hiện tại</h3>
+          </div>
+          <div class="sm-card">
+            <div class="sm-cur"><span class="pill s-idle" id="smPill">DISARMED</span><span class="sm-t" id="smTime">0.0 s</span></div>
+            <p id="smDesc"></p>
+            <div class="sm-prev" id="smPrev">Chưa có chuyển trạng thái.</div>
+            <div class="valid"><span>Lệnh hợp lệ:</span><span id="validSm" class="row"></span></div>
+          </div>
+        </div>
+
+        <div class="sec" style="display:flex;flex-direction:column">
+          <div class="sec-h" style="margin-bottom:6px">
+            <h3 style="margin:0;font-size:12px">Nhật ký điều hành &amp; Cảm biến</h3>
+            <button class="btn mini" id="btnClearLog" title="Xoá nhật ký" style="padding:1px 6px;font-size:11px">Xoá</button>
+          </div>
+          <ol class="log" id="log" aria-live="polite" style="max-height:280px"></ol>
+        </div>
+
+        <div class="sec">
+          <div class="sec-h" style="margin-bottom:6px">
+            <h3 style="margin:0;font-size:12px">Sơ đồ máy trạng thái</h3>
+            <span class="sub">10 trạng thái</span>
+          </div>
+          <div class="sm-scroll"><svg id="smSvg" viewBox="0 0 1020 340" role="img" aria-label="Sơ đồ máy trạng thái của drone giám sát"></svg></div>
+          <p class="note" style="margin-top:6px;font-size:11px">Ô cam là trạng thái hiện tại, viền đứt là trạng thái ngay trước, mũi tên sáng là lần chuyển gần nhất. Drone tự động né vật cản khi vào MISSION, RTL hoặc FAILSAFE.</p>
+        </div>
       </div>
     </section>
 
@@ -968,15 +987,6 @@ table.an-t tr.on td{background:var(--accent-soft)}
     <section class="panel rq" id="reqs" aria-labelledby="hRq">
       <div class="ph"><span class="code">REQ</span><h2 id="hRq">Yêu cầu bên liên quan</h2><span class="ph-note" id="rqSum"></span></div>
       <ul class="rq-list2" id="rqGrid"></ul>
-    </section>
-    <section class="panel sm" aria-labelledby="hSm">
-      <div class="ph"><span class="code">SM</span><h2 id="hSm">Máy trạng thái</h2><span class="ph-note">10 trạng thái · tự động né vật cản khi MISSION, RTL và FAILSAFE</span></div>
-      <div class="sm-body">
-        <div class="sm-dia">
-          <div class="sm-scroll"><svg id="smSvg" viewBox="0 0 1020 340" role="img" aria-label="Sơ đồ máy trạng thái của drone giám sát"></svg></div>
-          <p class="note">Ô cam là trạng thái hiện tại, viền đứt là trạng thái ngay trước, mũi tên sáng là lần chuyển gần nhất. Khi vào RTL hoặc FAILSAFE, drone tự động sinh quỹ đạo né các vật cản để quay về Nhà Máy Sản Xuất. Nhật ký điều hành và thẻ trạng thái chi tiết hiển thị trực tiếp ở bảng Điều hành nhiệm vụ (bên cạnh màn hình 3D).</p>
-        </div>
-      </div>
     </section>
 
     <!-- REPORT -->
@@ -4317,6 +4327,7 @@ function init3D(){
     shadow.material.opacity = Math.max(0.12, 1 - p[2]/40);
     if (!S.grounded && S.t - lastTrailT > 0.08){ pushTrail(p, S.lap || 1); lastTrailT = S.t; }
     trail.visible = isTraj && $('#optTrail').checked;
+    wpGroup.visible = isTraj;
     const sp = S.sp;
     if (sp && sp.xy && $('#optSp').checked){ spMark.visible = true; spMark.position.copy(toV(sp.xy[0], sp.xy[1], sp.z != null ? sp.z : p[2])); }
     else spMark.visible = false;
