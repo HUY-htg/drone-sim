@@ -240,6 +240,47 @@ function hoverSteps(adaptive){
       covered && !r.crashed && r.home && passes === L.pts.length,
       `${passes}/${L.pts.length} đầu làn · vệt ${L.width.toFixed(0)} m · cách tường gần nhất ${r.minClear.toFixed(2)} m`);
   }
+
+  // 11. Giả lập sự cố tuần tra: Mất kết nối camera trực tiếp → Drone tự động lưu bản record vào bộ nhớ nội bộ
+  {
+    const Sim = makeSim();
+    Sim.params.task = 'patrol';
+    Sim.params.loops = 1;
+    Sim.params.autoCamFailOnPatrol = true;
+    Sim.setDestinations([
+      { e: 10, n: 10, u: 14, role: 'pass', label: 'Điểm tuần tra 1' },
+      { e: 20, n: 20, u: 14, role: 'pass', label: 'Điểm tuần tra 2' },
+      { e: 0, n: 0, u: 14, role: 'stop', label: 'Nhà máy' }
+    ], true);
+    const events = [];
+    Sim.on(e => events.push(e));
+    Sim.command('ARM');
+    for (let i = 0; i < 1 / DT; i++) Sim.step(DT);
+    Sim.command('TAKEOFF');
+    while (!(Sim.S.state === 'HOVER' && Sim.S.stateT > 1)) Sim.step(DT);
+    Sim.command('MISSION');
+    for (let i = 0; i < 45 / DT; i++){
+      Sim.step(DT);
+      if ((Sim.S.state === 'ARMED' || Sim.S.state === 'DISARMED') && Sim.S.grounded) break;
+    }
+    const hadCamLost = events.some(e => e.msg && e.msg.includes('MẤT KẾT NỐI CAMERA'));
+    const hadRecSaved = events.some(e => e.msg && e.msg.includes('LƯU BẢN GHI VÀO BỘ NHỚ'));
+    check('Sự cố tuần tra: Mất camera trực tiếp → Lưu bản record vào bộ nhớ',
+      hadCamLost && hadRecSaved && Sim.S.grounded,
+      `ghi nhận mất camera, lưu bản ghi vào thẻ nhớ (${Sim.S.camRecMB} MB), về nhà an toàn`);
+  }
+
+  // 12. Bomber: Đánh giá thả bom trúng mục tiêu (trong bán kính diệt) vs chưa trúng mục tiêu (ngoài bán kính diệt)
+  {
+    const Sim = makeSim();
+    const tgt = { e: 52, n: 38, name: 'Kho quân khí', radius: 6.0 };
+    Sim.params.bomberTarget = tgt;
+    const hitRes = Sim.evalBombHit(52.8, 38.5, tgt); // ~0.9m <= 6.0m
+    const missRes = Sim.evalBombHit(72.0, 55.0, tgt); // ~26m > 6.0m
+    check('Bomber: Đánh giá thả bom trúng hay chưa (báo trúng mục tiêu vs chưa trúng mục tiêu)',
+      hitRes.hit === true && missRes.hit === false && hitRes.dist < 2.0 && missRes.dist > 20.0,
+      `Trúng: lệch ${hitRes.dist.toFixed(1)} m · Chưa trúng: lệch ${missRes.dist.toFixed(1)} m`);
+  }
 }
 
 console.log(failures ? `\n${failures} kiểm tra thất bại` : '\nTất cả kiểm tra đều đạt');
