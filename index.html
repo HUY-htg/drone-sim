@@ -735,7 +735,8 @@ table.an-t tr.on td{background:var(--accent-soft)}
           <div class="sv-opt" id="optBomber" style="display:none" data-for="bomber">
             <div class="row"><label for="bomberTarget">Mục tiêu</label><select id="bomberTarget"><option value="depot">Kho quân khí ngoại ô (52, 38)</option><option value="radar">Trạm radar phòng không (-42, 48)</option><option value="convoy">Đoàn xe cơ giới địch (18, -42)</option><option value="bunker">Boongke kiên cố (-48, -32)</option><option value="custom">Tự chọn mục tiêu (Click mặt đất 3D)</option></select></div>
             <div class="field"><label for="bomberAlt">Độ cao ném bom</label><output id="oBomberAlt">20 m</output><input type="range" id="bomberAlt" min="14" max="38" step="1" value="20"></div>
-            <p class="sv-info">Chế độ <b>Bomber Oanh tạc</b>: Drone tự cất cánh né vật cản A*, ngắm và <b>cắt bom chính xác</b> nổ tung mục tiêu, sau đó tự động RTL về căn cứ.</p>
+            <label class="chk" style="margin:4px 0 6px" title="Tự động kích hoạt sự cố mất liên kết toàn phần khi đang xuất kích ném bom; drone sẽ tự hành bay đến mục tiêu thả bom xong rồi mới kích hoạt FAILSAFE né vật cản quay về căn cứ"><input type="checkbox" id="chkAutoLinkFailBomber"> Giả lập mất liên kết khi ném bom (Thả bom xong mới về)</label>
+            <p class="sv-info">Chế độ <b>Bomber Oanh tạc</b>: Drone tự cất cánh né vật cản A*, ngắm và <b>cắt bom chính xác</b> nổ tung mục tiêu, sau đó tự động RTL về căn cứ. <i>(Nếu mất liên kết, drone vẫn tự hành hoàn thành thả bom rồi mới quay về).</i></p>
             <div class="sv-go">
               <button class="btn primary" id="btnBomberStart" style="background:#dc2626;border-color:#b91c1c;color:#fff;font-weight:700">💣 Xuất kích ném bom</button>
               <button class="btn" id="btnManualDrop" title="Thả bom ngay tại chỗ (phím B)">Thả bom ngay (B)</button>
@@ -1256,7 +1257,7 @@ var Sim = (function(){
     takeoffAlt: 10, rtlAlt: 14, vMax: 8, missionAlt: 12, missionEnd: 'RTL',
     autoAvoid: true, safeMargin: 4.5,
     windOn: true, windSpeed: 4, windDir: 270, gust: 0.3, drain: 5, linkLost: false, adaptive: true,
-    autoLinkFailOnPatrol: false, bomberTarget: null,
+    autoLinkFailOnPatrol: false, autoLinkFailOnBomber: false, bomberTarget: null,
     // task: 'patrol' | 'orbit' | 'scan' | 'bomber'; loops: patrol laps (0 = until recalled); orbit: { e, n, r, u, dir, v, laps, lookU, name }
     task: 'patrol', loops: 1, orbit: null
   };
@@ -1317,7 +1318,8 @@ var Sim = (function(){
       destDone: 0, legFrom: null, dwell: 0, rtlVer: 0, windWarnT: -99,
       lap: 1, orbPhase: 'approach', orbTrav: 0, orbPrev: 0,
       nfzIn: null, nfzT: 0, nfzDist: 999, nfzNear: null, nfzWarned: false, nfzMark: 0, jammed: false, jam: null,
-      linkLostT: 0, blackboxMB: '0.0', blackboxRecords: 0, linkFailTriggered: false
+      linkLostT: 0, blackboxMB: '0.0', blackboxRecords: 0, linkFailTriggered: false, linkFailTriggeredBomber: false,
+      fsPendingDrop: false, bombDropped: false
     };
   }
   S = fresh();
@@ -1796,6 +1798,10 @@ var Sim = (function(){
   const TASK_NAME = { patrol:'tuần tra', orbit:'bay vòng', scan:'quét khu vực', bomber:'oanh tạc ném bom' };
   function finishTask(why){
     S.wpIdx = 0; S.destDone = 0;
+    if (params.linkLost){
+      setState('FAILSAFE', why || 'hoàn thành nhiệm vụ khi mất liên kết, về Nhà máy', 'fail');
+      return;
+    }
     const end = params.missionEnd;
     setState(end === 'RTL' ? 'RTL' : end === 'LAND' ? 'LANDING' : 'HOVER', why || ('hoàn thành ' + (TASK_NAME[params.task] || 'nhiệm vụ')), 'auto');
   }
@@ -1880,10 +1886,21 @@ var Sim = (function(){
     const moving = Math.abs(sk.pitch) > 0.08 || Math.abs(sk.roll) > 0.08 || Math.abs(sk.thr) > 0.08 || Math.abs(sk.yaw) > 0.08;
     switch (st){
       case 'TAKEOFF':
-        if (p[2] >= params.takeoffAlt - 0.3){ setState('HOVER', 'đạt độ cao cất cánh ' + params.takeoffAlt + ' m tại Nhà máy', 'auto'); return guidance(dt); }
+        if (p[2] >= params.takeoffAlt - 0.3){
+          if (params.linkLost && S.fsPendingDrop && params.task === 'bomber'){
+            setState('MISSION', 'tự hành xuất kích oanh tạc mục tiêu khi mất liên kết', 'auto');
+            return guidance(dt);
+          }
+          setState('HOVER', 'đạt độ cao cất cánh ' + params.takeoffAlt + ' m tại Nhà máy', 'auto');
+          return guidance(dt);
+        }
         return { xy:S.toXY, z:params.takeoffAlt, vUp:2.4, yaw:S.yawSp };
       case 'HOVER':
         if (moving && !params.linkLost){ setState('MANUAL', 'chạm cần điều khiển', 'auto'); return guidance(dt); }
+        if (params.linkLost && S.fsPendingDrop && params.task === 'bomber'){
+          setState('MISSION', 'tự hành tiếp tục nhiệm vụ oanh tạc khi mất liên kết', 'auto');
+          return guidance(dt);
+        }
         return { xy:[S.hold[0], S.hold[1]], z:S.hold[2], yaw:S.yawSp };
       case 'MANUAL': {
         S.yawSp = wrap(S.yawSp - sk.yaw*1.6*dt);
@@ -1943,16 +1960,42 @@ var Sim = (function(){
             S.dwell = w.role === 'stop' ? 0.3 : 0.6;
             if (w.role === 'bomb' && !w.dropped){
               w.dropped = true;
+              S.bombDropped = true;
               if (typeof window !== 'undefined' && window.dropBomb) window.dropBomb();
               emit({ type:'bomb', msg:'💣 ĐÃ CẮT BOM OANH TẠC ' + (w.label || 'MỤC TIÊU') });
+              if (params.linkLost || S.fsPendingDrop){
+                S.fsPendingDrop = false;
+                S.fsReason = 'đã hoàn thành cắt bom khi mất liên kết, tự động né vật cản về Nhà máy';
+                emit({
+                  type: 'warn',
+                  kind: 'link-lost',
+                  msg: '🎯 ĐÃ HOÀN THÀNH CẮT BOM KHI MẤT LIÊN KẾT → TỰ ĐỘNG CHUYỂN FAILSAFE VỀ CĂN CỨ!',
+                  sub: 'Drone đã hoàn thành thả bom tự hành. Lập tức kích hoạt FAILSAFE né vật cản quay về bãi đáp Nhà máy.'
+                });
+                setState('FAILSAFE', 'đã hoàn thành cắt bom khi mất liên kết, tự động né vật cản về Nhà máy', 'fail');
+                return guidance(dt);
+              }
             }
             return { xy:[w.e, w.n], z:w.u, yaw:S.yawSp };
           }
         } else if ((tr.toB < 1.8 || legPassed(tr)) && dz < 1.4){
           if (w.role === 'bomb' && !w.dropped){
             w.dropped = true;
+            S.bombDropped = true;
             if (typeof window !== 'undefined' && window.dropBomb) window.dropBomb();
             emit({ type:'bomb', msg:'💣 CẮT BOM TRÊN KHÔNG: ' + (w.label || 'MỤC TIÊU') + ' (v = ' + (gs || params.vMax).toFixed(1) + ' m/s)' });
+            if (params.linkLost || S.fsPendingDrop){
+              S.fsPendingDrop = false;
+              S.fsReason = 'đã hoàn thành cắt bom khi mất liên kết, tự động né vật cản về Nhà máy';
+              emit({
+                type: 'warn',
+                kind: 'link-lost',
+                msg: '🎯 ĐÃ HOÀN THÀNH CẮT BOM KHI MẤT LIÊN KẾT → TỰ ĐỘNG CHUYỂN FAILSAFE VỀ CĂN CỨ!',
+                sub: 'Drone đã hoàn thành thả bom tự hành. Lập tức kích hoạt FAILSAFE né vật cản quay về bãi đáp Nhà máy.'
+              });
+              setState('FAILSAFE', 'đã hoàn thành cắt bom khi mất liên kết, tự động né vật cản về Nhà máy', 'fail');
+              return guidance(dt);
+            }
           }
           if (isDest){ S.destDone = w.destIdx + 1; emit({ type:'pass', msg:'Đã qua ' + (w.label || ('điểm ' + (w.destIdx + 1))) }); }
           else emit({ type:'info', msg:'Đã qua điểm né vật cản (' + w.e + ', ' + w.n + ')' });
@@ -2195,6 +2238,10 @@ var Sim = (function(){
       S.linkFailTriggered = true;
       setLink(true);
     }
+    if (params.autoLinkFailOnBomber && !params.linkLost && !S.linkFailTriggeredBomber && params.task === 'bomber' && S.state === 'MISSION' && S.stateT > 2.0 && !S.bombDropped){
+      S.linkFailTriggeredBomber = true;
+      setLink(true);
+    }
     updateWind(dt);
     updateLidarAndAPF();
     const g = guidance(dt);
@@ -2213,20 +2260,38 @@ var Sim = (function(){
     params.linkLost = lost;
     if (lost){
       S.linkLostT = S.t;
-      emit({
-        type: 'warn',
-        kind: 'link-lost',
-        msg: '⚠️ MẤT LIÊN KẾT TRUYỀN DỮ LIỆU & CAMERA (DATALINK LOST)!',
-        sub: 'Trạm mặt đất mất hoàn toàn telemetry và luồng video. Drone tự chuyển FAILSAFE né vật cản về Nhà máy và tự động lưu toàn bộ thông tin bay & video vào bộ nhớ hộp đen nội bộ.'
-      });
-      emit({
-        type: 'info',
-        msg: '💾 ĐÃ KÍCH HOẠT LƯU BỘ NHỚ HỘP ĐEN NỘI BỘ (ONBOARD BLACKBOX)',
-        sub: 'Đang ghi toàn bộ telemetry, cảm biến Lidar, GPS, IMU và luồng camera 1080p60 vào bộ nhớ thẻ nhớ drone.'
-      });
-      if (FLYING_CMD.indexOf(S.state) >= 0){ S.fsReason = 'mất liên kết dữ liệu & camera'; setState('FAILSAFE', 'mất liên kết dữ liệu & camera', 'fail'); }
-      else if (S.state === 'ARMED') setState('DISARMED', 'mất liên kết khi đang trên đất', 'fail');
+      const isBomberPending = params.task === 'bomber' && (mission.some(w => w.role === 'bomb' && !w.dropped) || !S.bombDropped);
+      if (isBomberPending){
+        S.fsPendingDrop = true;
+        emit({
+          type: 'warn',
+          kind: 'link-lost',
+          msg: '⚠️ MẤT LIÊN KẾT TRUYỀN DỮ LIỆU & CAMERA (NHIỆM VỤ BOMBER)!',
+          sub: 'Mất tín hiệu điều khiển mặt đất. Drone kích hoạt chế độ tự hành chiến đấu: tiếp tục bay tới mục tiêu, thả bom rồi mới quay về căn cứ.'
+        });
+        emit({
+          type: 'info',
+          msg: '💾 ĐÃ KÍCH HOẠT LƯU BỘ NHỚ HỘP ĐEN NỘI BỘ (ONBOARD BLACKBOX)',
+          sub: 'Toàn bộ hành trình bay công kích, thả bom, đánh giá sát thương và video sẽ được ghi vào bộ nhớ drone.'
+        });
+        if (S.state === 'ARMED') setState('DISARMED', 'mất liên kết khi đang trên đất', 'fail');
+      } else {
+        emit({
+          type: 'warn',
+          kind: 'link-lost',
+          msg: '⚠️ MẤT LIÊN KẾT TRUYỀN DỮ LIỆU & CAMERA (DATALINK LOST)!',
+          sub: 'Trạm mặt đất mất hoàn toàn telemetry và luồng video. Drone tự chuyển FAILSAFE né vật cản về Nhà máy và tự động lưu toàn bộ thông tin bay & video vào bộ nhớ hộp đen nội bộ.'
+        });
+        emit({
+          type: 'info',
+          msg: '💾 ĐÃ KÍCH HOẠT LƯU BỘ NHỚ HỘP ĐEN NỘI BỘ (ONBOARD BLACKBOX)',
+          sub: 'Đang ghi toàn bộ telemetry, cảm biến Lidar, GPS, IMU và luồng camera 1080p60 vào bộ nhớ thẻ nhớ drone.'
+        });
+        if (FLYING_CMD.indexOf(S.state) >= 0){ S.fsReason = 'mất liên kết dữ liệu & camera'; setState('FAILSAFE', 'mất liên kết dữ liệu & camera', 'fail'); }
+        else if (S.state === 'ARMED') setState('DISARMED', 'mất liên kết khi đang trên đất', 'fail');
+      }
     } else {
+      S.fsPendingDrop = false;
       const dur = Math.max(0, S.t - S.linkLostT);
       const mb = (dur * 3.6).toFixed(1);
       emit({
@@ -2257,7 +2322,7 @@ var Sim = (function(){
 
   function setDestinations(list, silent){
     destinations = list.map(d => ({ e: d.e, n: d.n, u: d.u, label: d.label || '', role: d.role || 'pass' }));
-    S.destDone = 0; S.lap = 1;
+    S.destDone = 0; S.lap = 1; S.bombDropped = false;
     return rebuildTrajectory(silent);
   }
   function addDestination(d, silent){
@@ -2272,7 +2337,7 @@ var Sim = (function(){
   }
 
   function reset(){
-    S = fresh(); params.linkLost = false; params.autoLinkFailOnPatrol = false;
+    S = fresh(); params.linkLost = false; params.autoLinkFailOnPatrol = false; params.autoLinkFailOnBomber = false;
     for (const k in sticks) sticks[k] = 0;
     rebuildTrajectory(true);
     updateLidarAndAPF();
@@ -2735,11 +2800,20 @@ $('#chkAutoLinkFail')?.addEventListener('change', e => {
     addLog('info', 'Đã tắt kịch bản tự động mất liên kết khi tuần tra', '', Sim.S.t);
   }
 });
+$('#chkAutoLinkFailBomber')?.addEventListener('change', e => {
+  Sim.params.autoLinkFailOnBomber = e.target.checked;
+  if (e.target.checked){
+    addLog('warn', '⚡ ĐÃ BẬT KỊCH BẢN SỰ CỐ OANH TẠC BOMBER', 'Khi xuất kích, drone sẽ tự động giả lập mất liên kết toàn phần: tự hành bay tới mục tiêu, thả bom chính xác, lưu video & kết quả vào bộ nhớ hộp đen rồi mới quay về căn cứ.', Sim.S.t);
+  } else {
+    addLog('info', 'Đã tắt kịch bản tự động mất liên kết khi xuất kích bomber', '', Sim.S.t);
+  }
+});
 
 $('#btnReset').addEventListener('click', () => {
   resetKill();
   Sim.reset(); syncLinkBtn(); clearHistory();
   if ($('#chkAutoLinkFail')) $('#chkAutoLinkFail').checked = false;
+  if ($('#chkAutoLinkFailBomber')) $('#chkAutoLinkFailBomber').checked = false;
   window.bombResultBanner = null;
   if (R3 && R3.advanceFlightRun) R3.advanceFlightRun();
   renderMission();
@@ -3247,7 +3321,14 @@ function updateDom(){
     cls = window.bombResultBanner.cls;
   }
   else if (S.jammed) { msg = 'BỊ PHÁ SÓNG: mất liên kết, video, GNSS · ' + (S.grounded ? 'đã hạ cánh tại chỗ' : 'đang hạ cánh tại chỗ'); cls = 'bad'; }
-  else if (P.linkLost) { msg = 'MẤT LIÊN KẾT: MẤT TOÀN BỘ THÔNG TIN MẶT ĐẤT · DRONE ĐANG TỰ LƯU VÀO BỘ NHỚ HỘP ĐEN (' + (S.blackboxMB || '0.0') + ' MB)'; cls = 'bad'; }
+  else if (P.linkLost){
+    if (S.fsPendingDrop){
+      msg = 'MẤT LIÊN KẾT: TỰ HÀNH OANH TẠC CẮT BOM TRƯỚC KHI VỀ · LƯU HỘP ĐEN (' + (S.blackboxMB || '0.0') + ' MB)';
+    } else {
+      msg = 'MẤT LIÊN KẾT: MẤT TOÀN BỘ THÔNG TIN MẶT ĐẤT · DRONE ĐANG TỰ LƯU VÀO BỘ NHỚ HỘP ĐEN (' + (S.blackboxMB || '0.0') + ' MB)';
+    }
+    cls = 'bad';
+  }
   else if (S.nfzIn) { msg = 'VÙNG CẤM BAY: bị chặn · phá sóng sau ' + Math.max(0, Sim.JAM_AFTER - S.nfzT).toFixed(1) + ' s'; cls = 'bad'; }
   else if (S.nfzNear && !S.grounded) { msg = 'Gần ' + S.nfzNear.name + ': còn ' + S.nfzDist.toFixed(0) + ' m tới vùng cấm bay'; cls = 'warn'; }
   else if (S.state === 'EMERGENCY') { msg = 'Khẩn cấp: Động cơ đã ngắt'; cls = 'bad'; }
@@ -3838,12 +3919,18 @@ function init3D(){
         if (Sim.params.task === 'bomber'){
           addLog('good', '🎯 BÁO CÁO TÁC CHIẾN: OANH TẠC TRÚNG MỤC TIÊU!', 'Mục tiêu đã bị tiêu diệt! Drone tiếp tục thoát ly thẳng và vòng lượn về căn cứ.', '', S.t);
         }
+        if (Sim.params.linkLost){
+          addLog('info', '💾 [HỘP ĐEN DRONE] ĐÃ GHI NHẬN KẾT QUẢ OANH TẠC VÀO BỘ NHỚ', '🎯 TRÚNG MỤC TIÊU (Lệch ' + dist.toFixed(1) + 'm). Đã lưu video đòn đánh và dữ liệu cảm biến vào hộp đen.', S.t);
+        }
         window.bombResultBanner = { text: '🎯 TRÚNG MỤC TIÊU ' + tgt.name + ' (Lệch ' + dist.toFixed(1) + 'm)', cls: 'good', until: S.t + 6.0 };
       } else {
         tgt.destroyed = false;
         addLog('warn', '⚠️ BÙM! CHƯA TRÚNG MỤC TIÊU!', 'Điểm nổ: (' + e.toFixed(1) + ', ' + n.toFixed(1) + ') · Lệch tâm ' + tgt.name + ' ' + dist.toFixed(1) + ' m (Ngoài bán kính diệt ' + killRadius.toFixed(1) + ' m).', S.t);
         if (Sim.params.task === 'bomber'){
           addLog('rej', '❌ BÁO CÁO TÁC CHIẾN: CHƯA TRÚNG MỤC TIÊU!', 'Bom rơi chệch mục tiêu! Mục tiêu chưa bị phá hủy. Drone tiếp tục thoát ly theo lộ trình.', '', S.t);
+        }
+        if (Sim.params.linkLost){
+          addLog('info', '💾 [HỘP ĐEN DRONE] ĐÃ GHI NHẬN KẾT QUẢ OANH TẠC VÀO BỘ NHỚ', '⚠️ CHƯA TRÚNG MỤC TIÊU (Lệch ' + dist.toFixed(1) + 'm). Đã lưu video đòn đánh và dữ liệu cảm biến vào hộp đen.', S.t);
         }
         window.bombResultBanner = { text: '⚠️ CHƯA TRÚNG MỤC TIÊU (Lệch ' + dist.toFixed(1) + 'm)', cls: 'bad', until: S.t + 6.0 };
       }
@@ -3864,6 +3951,7 @@ function init3D(){
       addLog('rej', 'Drone chưa cất cánh, không thể thả bom!', '', S.t);
       return false;
     }
+    S.bombDropped = true;
     const p = S.pos, v = S.vel;
     const bMesh = makeBombModel();
     const startPos = toV(p[0], p[1], p[2] - 0.25);
@@ -6337,6 +6425,7 @@ let bomberCustomTarget = { e: 28, n: 28, name: 'Mục tiêu tự chọn (28, 28)
 
 function buildBomberRoute(tgt, alt){
   tgt.destroyed = false;
+  if (Sim.S) Sim.S.bombDropped = false;
   window.bomberCurrentTarget = tgt;
   if (Sim.params) Sim.params.bomberTarget = tgt;
   const T = { e: tgt.e, n: tgt.n, name: tgt.name || 'Mục tiêu' };

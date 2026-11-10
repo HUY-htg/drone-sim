@@ -281,6 +281,38 @@ function hoverSteps(adaptive){
       hitRes.hit === true && missRes.hit === false && hitRes.dist < 2.0 && missRes.dist > 20.0,
       `Trúng: lệch ${hitRes.dist.toFixed(1)} m · Chưa trúng: lệch ${missRes.dist.toFixed(1)} m`);
   }
+
+  // 13. Bomber: Mất liên kết khi chưa hoàn thành nhiệm vụ → Tiếp tục tự hành thả bom rồi mới quay về Nhà máy (FAILSAFE)
+  {
+    const bombDests = [
+      { e: 15, n: 10, u: 16, label: 'Đường tiếp cận', role: 'pass' },
+      { e: 30, n: 25, u: 16, label: '🎯 Cắt bom (Kho quân khí)', role: 'bomb' },
+      { e: 45, n: 35, u: 18, label: '🚀 Thoát ly thẳng', role: 'pass' },
+      { e: 20, n: 40, u: 18, label: '🔄 Vòng lượn thoát ly', role: 'pass' },
+      { e: 0, n: 0, u: 14, label: 'Nhà máy Sản xuất (Hạ cánh)', role: 'stop' }
+    ];
+    let cut = false;
+    const r = flyRoute(Sim => {
+      Sim.params.task = 'bomber';
+      Sim.setDestinations(bombDests, true);
+    }, {
+      maxT: 900,
+      during(Sim, t){
+        // Mất liên kết ngay khi đang bay MISSION tiếp cận mục tiêu trước khi cắt bom
+        if (!cut && Sim.S.state === 'MISSION' && Sim.S.stateT > 0.5 && !Sim.S.bombDropped){
+          Sim.setLink(true);
+          cut = true;
+        }
+      }
+    });
+
+    const hadBomb = r.bombs >= 1;
+    const hadFailsafe = r.events.some(e => e.to === 'FAILSAFE');
+    const blackboxSaved = parseFloat(r.S.blackboxMB) > 0;
+    check('Sự cố Bomber: Mất liên kết khi chưa thả bom → Tự hành thả bom rồi mới FAILSAFE về Nhà máy',
+      !r.crashed && r.home && hadBomb && hadFailsafe && blackboxSaved,
+      `cắt bom: ${r.bombs} lần, hộp đen lưu: ${r.S.blackboxMB} MB, về bãi an toàn`);
+  }
 }
 
 console.log(failures ? `\n${failures} kiểm tra thất bại` : '\nTất cả kiểm tra đều đạt');
