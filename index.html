@@ -728,14 +728,12 @@ table.an-t tr.on td{background:var(--accent-soft)}
           <div class="sv-opt" id="optPatrol" data-for="patrol">
             <div class="row"><label for="svPatrol">Tuyến</label><select id="svPatrol"><option value="fence">Hàng rào Nhà máy</option><option value="center">Trục đường trung tâm</option><option value="city">Vòng ngoài căn cứ</option><option value="custom">Tự vẽ: click mặt đất 3D</option></select></div>
             <div class="field"><label for="svPu">Độ cao tuần tra</label><output id="oSvPu"></output><input type="range" id="svPu" min="10" max="40" step="1" value="16"></div>
-            <label class="chk" style="margin:4px 0 6px" title="Tự động kích hoạt sự cố mất liên kết toàn phần khi đang tuần tra để mất thông tin mặt đất và lưu toàn bộ vào bộ nhớ drone"><input type="checkbox" id="chkAutoLinkFail"> Giả lập mất liên kết khi tuần tra (Lưu bộ nhớ)</label>
             <p class="sv-info">Chế độ: <b>Auto bay 1 vòng</b> theo tuyến rồi tự động quay về Nhà máy (RTL). Camera tự quét hai bên ±55°.</p>
             <div class="sv-go"><button class="btn primary" id="svStart">Auto bay 1 vòng</button><button class="btn" id="svStop" title="Dừng nhiệm vụ, bay về Nhà máy">Gọi về (RTL)</button></div>
           </div>
           <div class="sv-opt" id="optBomber" style="display:none" data-for="bomber">
             <div class="row"><label for="bomberTarget">Mục tiêu</label><select id="bomberTarget"><option value="depot">Kho quân khí ngoại ô (52, 38)</option><option value="radar">Trạm radar phòng không (-42, 48)</option><option value="convoy">Đoàn xe cơ giới địch (18, -42)</option><option value="bunker">Boongke kiên cố (-48, -32)</option><option value="custom">Tự chọn mục tiêu (Click mặt đất 3D)</option></select></div>
             <div class="field"><label for="bomberAlt">Độ cao ném bom</label><output id="oBomberAlt">20 m</output><input type="range" id="bomberAlt" min="14" max="38" step="1" value="20"></div>
-            <label class="chk" style="margin:4px 0 6px" title="Tự động kích hoạt sự cố mất liên kết toàn phần khi đang xuất kích ném bom; drone sẽ tự hành bay đến mục tiêu thả bom xong rồi mới kích hoạt FAILSAFE né vật cản quay về căn cứ"><input type="checkbox" id="chkAutoLinkFailBomber"> Giả lập mất liên kết khi ném bom (Thả bom xong mới về)</label>
             <p class="sv-info">Chế độ <b>Bomber Oanh tạc</b>: Drone tự cất cánh né vật cản A*, ngắm và <b>cắt bom chính xác</b> nổ tung mục tiêu, sau đó tự động RTL về căn cứ. <i>(Nếu mất liên kết, drone vẫn tự hành hoàn thành thả bom rồi mới quay về).</i></p>
             <div class="sv-go">
               <button class="btn primary" id="btnBomberStart" style="background:#dc2626;border-color:#b91c1c;color:#fff;font-weight:700">💣 Xuất kích ném bom</button>
@@ -884,6 +882,15 @@ table.an-t tr.on td{background:var(--accent-soft)}
             <div class="ro"><span class="ro-k">VẬT CẢN</span><span class="ro-v"><b id="roObs">14.0</b><i>m</i></span></div>
           </div>
         </div>
+        <div class="sec" id="pos3dSec">
+          <div class="sec-h"><h3>Tọa độ vị trí 3 trục</h3><span class="sub">Hệ ENU · Gốc Nhà máy</span></div>
+          <div class="ro-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:6px">
+            <div class="ro"><span class="ro-k">TRỤC X (ĐÔNG)</span><span class="ro-v"><b id="roPosX">0.0</b><i>m</i></span></div>
+            <div class="ro"><span class="ro-k">TRỤC Y (BẮC)</span><span class="ro-v"><b id="roPosY">0.0</b><i>m</i></span></div>
+            <div class="ro"><span class="ro-k">TRỤC Z (CAO)</span><span class="ro-v"><b id="roPosZ">0.0</b><i>m</i></span></div>
+          </div>
+          <div class="sub mono" id="roGpsPos" style="font-size:11px;color:var(--muted);text-align:center;padding:2px 0">10.80000°N · 106.65000°E</div>
+        </div>
         <div class="sec">
           <h3>Tư thế &amp; Tải trọng</h3>
           <div class="att">
@@ -897,7 +904,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
           </div>
           <canvas id="tape" class="tape" role="img" aria-label="Băng hướng mũi"></canvas>
         </div>
-        <div class="sec" id="adSec">
+        <div class="sec" id="adSec" style="display:none">
           <div class="sec-h"><h3>Thích nghi điều khiển</h3><span class="sub">ước lượng trực tuyến</span></div>
           <div class="ad-grid">
             <canvas id="adWind" class="ad-wind" role="img" aria-label="La bàn: gió thật, gió ước lượng và hướng drone nghiêng để giữ vị trí"></canvas>
@@ -949,14 +956,14 @@ table.an-t tr.on td{background:var(--accent-soft)}
             <div class="m" id="m4"><div class="m-h"><b>M4</b><span>RR · CW</span></div><div class="m-bar"><span></span></div><div class="m-v"><b>0</b> rpm · <span>0</span>%</div></div>
           </div>
         </div>
-        <div class="sec">
+        <div class="sec" id="chartSec" style="display:none">
           <div class="sec-h"><h3>30 giây gần nhất</h3>
             <div class="seg" role="group" aria-label="Chọn biểu đồ" id="chartSeg"><button data-ch="alt" aria-pressed="true">Độ cao</button><button data-ch="spd">Tốc độ</button><button data-ch="att">Góc</button></div>
           </div>
           <div class="legend" id="legend"></div>
           <canvas id="chart" class="chart" role="img" aria-label="Biểu đồ telemetry"></canvas>
         </div>
-        <div class="sec">
+        <div class="sec" id="ctlGuideSec" style="display:none">
           <h3>Bộ điều khiển &amp; Dẫn đường né</h3>
           <table class="ctl">
             <thead><tr><th></th><th>E</th><th>N</th><th>U</th></tr></thead>
@@ -3227,9 +3234,13 @@ function drawChart(){
   ctx.fillStyle = TK.muted; ctx.textAlign = 'left'; ctx.fillText(def.unit, 2, padT + 6);
 }
 
+const GPS0 = { lat: 10.80000, lon: 106.65000 };   // assumed geodetic position of the factory pad (0,0)
+const gpsOf = (e, n) => ({ lat: GPS0.lat + n / 111320, lon: GPS0.lon + e / (111320 * Math.cos(GPS0.lat * Math.PI / 180)) });
+const fmtGps = (e, n) => { const g = gpsOf(e, n); return g.lat.toFixed(5) + '°N · ' + g.lon.toFixed(5) + '°E'; };
+
 /* ---------- DOM telemetry (10 Hz) ---------- */
 const E = id => document.getElementById(id);
-const els = {}; ['roAlt','roVs','roGs','roHdg','roHome','roObs','kvRoll','kvRollSp','kvPitch','kvPitchSp','kvMass','kvPayloadSub','kvT','kvTW',
+const els = {}; ['roAlt','roVs','roGs','roHdg','roHome','roObs','roPosX','roPosY','roPosZ','roGpsPos','kvRoll','kvRollSp','kvPitch','kvPitchSp','kvMass','kvPayloadSub','kvT','kvTW',
   'batPct','batFill','batBar','batV','batCell','batI','batUsed','batRem','batFt','metaTime','metaBat','smTime',
   'cSpE','cSpN','cSpU','cPE','cPN','cPU','cVE','cVN','cVU','hudAlt','hudGs','hudObs','hudWp','banner'].forEach(k => els[k] = E(k));
 const motEls = [E('m1'), E('m2'), E('m3'), E('m4')].map(m => ({ bar:m.querySelector('.m-bar'), fill:m.querySelector('.m-bar span'), rpm:m.querySelector('.m-v b'), pct:m.querySelector('.m-v span') }));
@@ -3246,6 +3257,11 @@ function updateDom(){
     els.roHome.textContent = '—';
     els.roObs.textContent = 'MẤT TÍN HIỆU';
     els.roObs.style.color = 'var(--bad)';
+
+    if (els.roPosX) els.roPosX.textContent = 'MẤT LINK';
+    if (els.roPosY) els.roPosY.textContent = 'MẤT LINK';
+    if (els.roPosZ) els.roPosZ.textContent = 'MẤT LINK';
+    if (els.roGpsPos) els.roGpsPos.textContent = 'MẤT TÍN HIỆU ĐỊNH VỊ';
 
     els.kvRoll.textContent = '—';
     els.kvPitch.textContent = '—';
@@ -3271,6 +3287,11 @@ function updateDom(){
     els.roHome.textContent = fx(Math.hypot(p[0], p[1]), 1);
     els.roObs.textContent = obsD > 40 ? '>40' : fx(obsD, 1);
     els.roObs.style.color = obsD < 3.5 ? 'var(--bad)' : obsD < 6.5 ? 'var(--warn)' : '';
+
+    if (els.roPosX) els.roPosX.textContent = (p[0] >= 0 ? '+' : '') + fx(p[0], 1);
+    if (els.roPosY) els.roPosY.textContent = (p[1] >= 0 ? '+' : '') + fx(p[1], 1);
+    if (els.roPosZ) els.roPosZ.textContent = fx(p[2], 1);
+    if (els.roGpsPos) els.roGpsPos.textContent = fmtGps(p[0], p[1]);
 
     els.kvRoll.textContent = fx(S.att[0]*DEG, 1) + '°';
     els.kvPitch.textContent = fx(-S.att[1]*DEG, 1) + '°';
@@ -6796,9 +6817,6 @@ Sim.on(ev => {
 });
 
 /* ---------- stakeholder requirements (SCV capabilities): coverage + what is in use right now ---------- */
-const GPS0 = { lat: 10.80000, lon: 106.65000 };   // assumed geodetic position of the factory pad (0,0)
-const gpsOf = (e, n) => ({ lat: GPS0.lat + n / 111320, lon: GPS0.lon + e / (111320 * Math.cos(GPS0.lat * Math.PI / 180)) });
-const fmtGps = (e, n) => { const g = gpsOf(e, n); return g.lat.toFixed(5) + '°N · ' + g.lon.toFixed(5) + '°E'; };
 // Operational capabilities of the Surveillance Drone line (the strike variant is out of scope) and their stakeholder needs
 const SCV = [
   { id:'OC1', type:'Core', name:'Perform Controlled Flight', vi:'Thực hiện bay có điều khiển', needs:[
