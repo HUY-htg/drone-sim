@@ -1258,7 +1258,11 @@ var Sim = (function(){
     // Compact Manufacturing Factory structures near Home (0,0) - leaving (0,0) launch pad wide open
     { id:'F1', name:'Xưởng Lắp Ráp Chính', e:-8,  n: 2,   rx:2.6, ry:3.2, h:4.8, kind:'factory' },
     { id:'F2', name:'Kho Linh Kiện Bắc',   e:-8,  n: 9,   rx:2.2, ry:1.8, h:3.8, kind:'factory' },
-    { id:'F3', name:'Trạm Năng Lượng & Silo', e:-3.5, n:-7.5, rx:1.4, ry:1.4, h:6.5, kind:'silo' }
+    { id:'F3', name:'Trạm Năng Lượng & Silo', e:-3.5, n:-7.5, rx:1.4, ry:1.4, h:6.5, kind:'silo' },
+    // 3 Cột điện cao thế (Transmission Power Towers)
+    { id:'P1', name:'Cột điện cao thế T-01', e:-16, n: 26, rx:1.8, ry:1.8, h:18.0, kind:'pylon' },
+    { id:'P2', name:'Cột điện cao thế T-02', e: 14, n: 34, rx:1.8, ry:1.8, h:18.0, kind:'pylon' },
+    { id:'P3', name:'Cột điện cao thế T-03', e: 40, n: 26, rx:1.8, ry:1.8, h:18.0, kind:'pylon' }
   ];
 
   // No-fly zones (disabled)
@@ -3256,51 +3260,14 @@ function init3D(){
     houseGroup.add(g);
   }
 
-  const HOUSES_34 = [
-    // Cluster A: West Hamlet (10 houses)
-    { e: -58, n: 16, w: 4.8, d: 4.2, h: 4.5, rotY: 0 },
-    { e: -50, n: 16, w: 4.4, d: 4.6, h: 4.2, rotY: 0.1 },
-    { e: -42, n: 16, w: 5.0, d: 4.0, h: 4.6, rotY: -0.1 },
-    { e: -58, n: 4,  w: 4.5, d: 4.5, h: 4.3, rotY: 0 },
-    { e: -50, n: 4,  w: 5.2, d: 4.2, h: 4.7, rotY: 0.15 },
-    { e: -42, n: 4,  w: 4.6, d: 4.4, h: 4.4, rotY: 0 },
-    { e: -58, n: -10, w: 4.8, d: 4.0, h: 4.5, rotY: -0.2 },
-    { e: -50, n: -10, w: 4.4, d: 4.6, h: 4.2, rotY: 0 },
-    { e: -55, n: -24, w: 5.0, d: 4.2, h: 4.6, rotY: 0.1 },
-    { e: -46, n: -24, w: 4.6, d: 4.5, h: 4.3, rotY: 0 },
-
-    // Cluster B: North Meadow Hamlet (10 houses)
-    { e: -24, n: 54, w: 4.6, d: 4.4, h: 4.5, rotY: 0 },
-    { e: -16, n: 54, w: 5.0, d: 4.0, h: 4.2, rotY: 0.1 },
-    { e: -8,  n: 54, w: 4.5, d: 4.6, h: 4.7, rotY: -0.1 },
-    { e: 2,   n: 55, w: 5.2, d: 4.2, h: 4.4, rotY: 0 },
-    { e: 10,  n: 55, w: 4.4, d: 4.5, h: 4.3, rotY: 0.2 },
-    { e: 18,  n: 55, w: 4.8, d: 4.2, h: 4.6, rotY: 0 },
-    { e: -20, n: 42, w: 5.0, d: 4.4, h: 4.5, rotY: -0.15 },
-    { e: -12, n: 42, w: 4.5, d: 4.5, h: 4.2, rotY: 0 },
-    { e: 12,  n: 42, w: 4.8, d: 4.2, h: 4.6, rotY: 0.1 },
-    { e: 20,  n: 42, w: 5.2, d: 4.0, h: 4.4, rotY: 0 },
-
-    // Cluster C: East Garden Hamlet (10 houses)
-    { e: 52,  n: 24, w: 4.6, d: 4.5, h: 4.5, rotY: 0 },
-    { e: 60,  n: 24, w: 5.0, d: 4.2, h: 4.3, rotY: 0.15 },
-    { e: 52,  n: 12, w: 4.5, d: 4.6, h: 4.6, rotY: -0.1 },
-    { e: 60,  n: 12, w: 5.2, d: 4.0, h: 4.2, rotY: 0 },
-    { e: 50,  n: 0,  w: 4.8, d: 4.4, h: 4.5, rotY: 0.2 },
-    { e: 58,  n: 0,  w: 4.4, d: 4.6, h: 4.4, rotY: 0 },
-    { e: 50,  n: -12, w: 5.2, d: 4.2, h: 4.7, rotY: -0.1 },
-    { e: 58,  n: -12, w: 4.6, d: 4.5, h: 4.3, rotY: 0 },
-    { e: 52,  n: -24, w: 4.8, d: 4.2, h: 4.5, rotY: 0.1 },
-    { e: 60,  n: -24, w: 5.0, d: 4.4, h: 4.6, rotY: 0 },
-
-    // Cluster D: South Homesteads (4 houses)
-    { e: -14, n: -48, w: 4.8, d: 4.4, h: 4.5, rotY: 0 },
-    { e: -6,  n: -48, w: 5.2, d: 4.2, h: 4.3, rotY: 0.1 },
-    { e: 6,   n: -48, w: 4.5, d: 4.6, h: 4.6, rotY: -0.1 },
-    { e: 14,  n: -48, w: 5.0, d: 4.2, h: 4.4, rotY: 0 }
+  // Residential Houses: Exactly 3 houses across the countryside
+  const HOUSES_3 = [
+    { e: -36, n: 16, w: 5.2, d: 4.4, h: 4.5, rotY: 0.1 },
+    { e:  32, n: 24, w: 4.8, d: 4.6, h: 4.6, rotY: -0.2 },
+    { e:  28, n: -24, w: 5.0, d: 4.2, h: 4.4, rotY: 0.2 }
   ];
 
-  HOUSES_34.forEach((h, idx) => {
+  HOUSES_3.forEach((h, idx) => {
     addLowRiseHouse(h.e, h.n, h.w, h.d, h.h, h.rotY, idx);
   });
 
@@ -3441,6 +3408,96 @@ function init3D(){
       const band = new THREE.Mesh(new THREE.CylinderGeometry(o.rx*0.83, o.rx*0.85, 1.8, 18), new THREE.MeshBasicMaterial({ color:0xc4302a }));
       band.position.copy(toV(o.e, o.n, h - 2.2)); cityEnvGroup.add(band);
       cityMeshes.push({ mesh:cyl, kind:'silo' });
+    } else if (o.kind === 'pylon'){
+      // High-Voltage Steel Lattice Transmission Power Tower (Cột điện cao thế)
+      const pylonGroup = new THREE.Group();
+      pylonGroup.position.copy(toV(o.e, o.n, 0));
+      cityEnvGroup.add(pylonGroup);
+
+      const steelMat = new THREE.MeshStandardMaterial({ color: 0x7c8a99, roughness: 0.45, metalness: 0.70 });
+      const concreteMat = new THREE.MeshLambertMaterial({ color: 0x949ea8 });
+      const insulMat = new THREE.MeshStandardMaterial({ color: 0xc4ded9, roughness: 0.3, metalness: 0.1 });
+
+      // 4 Concrete footing foundation piers
+      const bRad = o.rx * 0.95;
+      const footGeo = new THREE.CylinderGeometry(0.24, 0.32, 0.6, 8);
+      [[-bRad, -bRad], [bRad, -bRad], [bRad, bRad], [-bRad, bRad]].forEach(([fx, fz]) => {
+        const ft = new THREE.Mesh(footGeo, concreteMat);
+        ft.position.set(fx, 0.3, fz);
+        pylonGroup.add(ft);
+      });
+
+      // Key height stations: base, lower body, waist, crossarm base, crossarm top, apex
+      const stations = [
+        { y: 0.5, r: bRad },
+        { y: 4.8, r: bRad * 0.72 },
+        { y: 9.5, r: bRad * 0.50 },
+        { y: 13.5, r: bRad * 0.34 },
+        { y: 15.8, r: bRad * 0.44 },
+        { y: h, r: 0.08 }
+      ];
+
+      const strut = (pA, pB, thick) => {
+        const dir = new THREE.Vector3().subVectors(pB, pA);
+        const len = dir.length();
+        if (len < 0.01) return;
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(thick, thick, len, 5), steelMat);
+        mesh.position.addVectors(pA, pB).multiplyScalar(0.5);
+        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+        pylonGroup.add(mesh);
+      };
+
+      const cornerPts = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+      for (let s = 0; s < stations.length - 1; s++){
+        const s1 = stations[s], s2 = stations[s + 1];
+        for (let c = 0; c < 4; c++){
+          const p1 = new THREE.Vector3(cornerPts[c][0] * s1.r, s1.y, cornerPts[c][1] * s1.r);
+          const p2 = new THREE.Vector3(cornerPts[c][0] * s2.r, s2.y, cornerPts[c][1] * s2.r);
+          strut(p1, p2, 0.065);
+
+          const nextC = (c + 1) % 4;
+          const pNext = new THREE.Vector3(cornerPts[nextC][0] * s2.r, s2.y, cornerPts[nextC][1] * s2.r);
+          strut(p2, pNext, 0.048);
+
+          const pNext1 = new THREE.Vector3(cornerPts[nextC][0] * s1.r, s1.y, cornerPts[nextC][1] * s1.r);
+          strut(p1, pNext, 0.036);
+          strut(pNext1, p2, 0.036);
+        }
+      }
+
+      // Horizontal Crossarms (Tay xà đỡ dây)
+      // 1. Lower Main Crossarm (span 7.6m)
+      const arm1Span = 7.6;
+      const arm1 = new THREE.Mesh(new THREE.BoxGeometry(arm1Span, 0.35, 0.6), steelMat);
+      arm1.position.set(0, 13.5, 0);
+      pylonGroup.add(arm1);
+      [-arm1Span * 0.42, arm1Span * 0.42].forEach(ax => {
+        const pArm = new THREE.Vector3(ax, 13.4, 0);
+        const pBody = new THREE.Vector3(ax > 0 ? 0.3 : -0.3, 11.0, 0);
+        strut(pBody, pArm, 0.05);
+
+        const insul = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.4, 8), insulMat);
+        insul.position.set(ax, 12.6, 0);
+        pylonGroup.add(insul);
+      });
+
+      // 2. Middle Crossarm (span 5.6m)
+      const arm2Span = 5.6;
+      const arm2 = new THREE.Mesh(new THREE.BoxGeometry(arm2Span, 0.3, 0.5), steelMat);
+      arm2.position.set(0, 15.6, 0);
+      pylonGroup.add(arm2);
+      [-arm2Span * 0.45, arm2Span * 0.45].forEach(ax => {
+        const insul = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.2, 8), insulMat);
+        insul.position.set(ax, 14.8, 0);
+        pylonGroup.add(insul);
+      });
+
+      // 3. Top Peak Bridge
+      const arm3 = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.22, 0.35), steelMat);
+      arm3.position.set(0, h, 0);
+      pylonGroup.add(arm3);
+
+      cityMeshes.push({ mesh: pylonGroup, kind: 'pylon' });
     } else {
       const mat = new THREE.MeshLambertMaterial({ map: winTexLight });
       const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -3454,6 +3511,38 @@ function init3D(){
     }
     obsGroups[idx] = cityEnvGroup.children.slice(firstChild);
   });
+
+  // Power transmission lines spanning between pylons (P1 -> P2 -> P3)
+  const pylons = Sim.obstacles.filter(o => o.kind === 'pylon');
+  if (pylons.length >= 2){
+    const cableMat = new THREE.LineBasicMaterial({ color: 0x1f2937, transparent: true, opacity: 0.85 });
+    function makeCatenaryCable(p1, p2, sagMax){
+      const pts = [];
+      const segs = 24;
+      for (let s = 0; s <= segs; s++){
+        const t = s / segs;
+        const pt = new THREE.Vector3().lerpVectors(p1, p2, t);
+        pt.y -= Math.sin(t * Math.PI) * sagMax;
+        pts.push(pt);
+      }
+      return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), cableMat);
+    }
+    for (let i = 0; i < pylons.length - 1; i++){
+      const pA = pylons[i], pB = pylons[i + 1];
+      const offsets = [
+        [-3.2, 11.9, 1.5],
+        [ 3.2, 11.9, 1.5],
+        [-2.5, 14.2, 1.3],
+        [ 2.5, 14.2, 1.3],
+        [ 0.0, pA.h, 0.9]
+      ];
+      offsets.forEach(([ox, uy, sag]) => {
+        const pt1 = toV(pA.e + ox, pA.n, uy);
+        const pt2 = toV(pB.e + ox, pB.n, uy);
+        cityEnvGroup.add(makeCatenaryCable(pt1, pt2, sag));
+      });
+    }
+  }
 
   function rebuildSafetyBuffers(){
     while (bufferGroup.children.length){
@@ -3482,11 +3571,11 @@ function init3D(){
   sockCone.rotation.z = Math.PI/2; sockCone.position.x = 0.6; sockPivot.add(sockCone);
 
   // High-Visibility Surveillance Drone 3D Model (with 360° Lidar turret & 3-axis Gimbal Camera)
-  // High-Visibility DJI Mavic-Style Surveillance Drone 3D Model (Gunmetal Grey & Enlarged)
+  // High-Visibility DJI Mavic-Style Surveillance Drone 3D Model (Safety Orange & Enlarged)
   const k = 5.4;
   const drone = new THREE.Group(); scene.add(drone);
-  const darkM = new THREE.MeshStandardMaterial({ color:0x6b7785, roughness:0.40, metalness:0.28 });
-  const plateM = new THREE.MeshStandardMaterial({ color:0x4b5563, roughness:0.42, metalness:0.25 });
+  const darkM = new THREE.MeshStandardMaterial({ color:0xff6600, roughness:0.35, metalness:0.20 }); // High-Visibility Rescue Orange
+  const plateM = new THREE.MeshStandardMaterial({ color:0xd95700, roughness:0.38, metalness:0.25 }); // Deep Satin Orange accent
   const metalM = new THREE.MeshStandardMaterial({ color:0xc5ccd6, roughness:0.20, metalness:0.80 });
   const goldM = new THREE.MeshStandardMaterial({ color:0xdfa328, roughness:0.30, metalness:0.55 });
   const blackM = new THREE.MeshStandardMaterial({ color:0x1e242b, roughness:0.55, metalness:0.20 });
