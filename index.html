@@ -915,7 +915,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
               <tr><th>Vận tốc đặt</th><td id="cVE">—</td><td id="cVN">—</td><td id="cVU">—</td></tr>
             </tbody>
           </table>
-          <p class="note">Bộ lập kế hoạch A* tìm đường vòng qua các tòa nhà cao hơn độ cao bay + kết hợp trường lực đẩy APF thời gian thực từ cảm biến Lidar 360°.</p>
+          <p class="note">Bộ lập kế hoạch A* tìm đường vòng qua các công trình & vật cản cao hơn độ cao bay + kết hợp trường lực đẩy APF thời gian thực từ cảm biến Lidar 360°.</p>
         </div>
       </div>
     </section>
@@ -931,7 +931,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
         </div>
         <div class="sv-main">
           <figure class="sv-map">
-            <canvas id="svMap" role="img" aria-label="Bản đồ giám sát: tòa nhà, tuyến bay, vùng camera đã quét"></canvas>
+            <canvas id="svMap" role="img" aria-label="Bản đồ giám sát: khu căn cứ / công trình, tuyến bay, vùng camera đã quét"></canvas>
             <figcaption><span><i class="lg-cov"></i>Đã quét</span><span><i class="lg-foot"></i>Camera đang nhìn</span><span><i class="lg-rt"></i>Tuyến / vòng / vùng</span></figcaption>
           </figure>
           <div class="sv-log">
@@ -984,7 +984,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
         </div>
       </div>
       <div class="rp-empty" id="rpEmpty">
-        <p><b>Chưa có chuyến bay nào được ghi.</b> Bấm <b>Bắt đầu tuần tra</b> (hoặc một nhiệm vụ khác), hoặc ARM rồi TAKEOFF. Báo cáo cập nhật ngay trong lúc bay và chốt lại khi drone hạ cánh: quỹ đạo thực tế so với tuyến dự kiến, trạng thái theo thời gian, độ cao, tốc độ, pin và khoảng cách tới tòa nhà.</p>
+        <p><b>Chưa có chuyến bay nào được ghi.</b> Bấm <b>Bắt đầu tuần tra</b> (hoặc một nhiệm vụ khác), hoặc ARM rồi TAKEOFF. Báo cáo cập nhật ngay trong lúc bay và chốt lại khi drone hạ cánh: quỹ đạo thực tế so với tuyến dự kiến, trạng thái theo thời gian, độ cao, tốc độ, pin và khoảng cách tới vật cản.</p>
       </div>
       <div class="rp-body" id="rpBody" hidden>
         <div class="rp-tiles" id="rpTiles"></div>
@@ -1000,7 +1000,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
                 <figcaption class="rp-cap">Diễn biến theo thời gian <span class="sub">rê chuột lên biểu đồ hoặc bản đồ, hoặc kéo thanh tua; ◆ = thay đổi gió hoặc tải</span></figcaption>
                 <div class="seg" role="group" aria-label="Chọn nhóm biểu đồ" id="rpTab"><button data-tab="flight" aria-pressed="true">Bay &amp; trạng thái</button><button data-tab="ctrl">Điều khiển &amp; môi trường</button></div>
               </div>
-              <canvas id="rpTl" class="rp-tl" role="img" aria-label="Dải trạng thái và biểu đồ độ cao, tốc độ, pin, khoảng cách tới tòa nhà theo thời gian"></canvas>
+              <canvas id="rpTl" class="rp-tl" role="img" aria-label="Dải trạng thái và biểu đồ độ cao, tốc độ, pin, khoảng cách tới vật cản theo thời gian"></canvas>
             </figure>
             <div class="rp-scrub">
               <input type="range" id="rpScrub" min="0" max="1" value="1" aria-label="Tua lại chuyến bay">
@@ -1472,7 +1472,7 @@ var Sim = (function(){
         const r = cum[best] / total;
         points.push({
           e: Math.round(raw[best].e * 2) / 2, n: Math.round(raw[best].n * 2) / 2,
-          u: Math.round((p1.u + (p2.u - p1.u) * r) * 2) / 2, kind: 'avoid', label: 'Né tòa nhà'
+          u: Math.round((p1.u + (p2.u - p1.u) * r) * 2) / 2, kind: 'avoid', label: 'Né vật cản'
         });
       }
       i = best;
@@ -1643,7 +1643,7 @@ var Sim = (function(){
     TAKEOFF: { from:['ARMED'], to:'TAKEOFF', guard(){ if (S.soc < 0.2) return 'pin dưới 20%'; } },
     HOLD:    { from:['TAKEOFF','MANUAL','MISSION','RTL','LANDING','FAILSAFE'], to:'HOVER',
                guard(){ if (S.state==='FAILSAFE' && S.soc < 0.15) return 'pin dưới 15%, failsafe không thể huỷ'; } },
-    MANUAL:  { from:['HOVER','MISSION','RTL'], to:'MANUAL' },
+    MANUAL:  { from:['HOVER','MISSION','RTL','TAKEOFF','LANDING'], to:'MANUAL' },
     MISSION: { from:['HOVER','MANUAL'], to:'MISSION', guard(){ if (!mission.length && !(params.task === 'orbit' && params.orbit)) return 'chưa có nhiệm vụ (tuyến tuần tra, vòng bay, vùng quét hoặc điểm giao)'; } },
     RTL:     { from:['TAKEOFF','HOVER','MANUAL','MISSION','LANDING'], to:'RTL' },
     LAND:    { from:['TAKEOFF','HOVER','MANUAL','MISSION','RTL','FAILSAFE'], to:'LANDING' },
@@ -1695,7 +1695,7 @@ var Sim = (function(){
         buildRtlPath();
         break;
       case 'LANDING': {
-        const nearHome = Math.hypot(p[0], p[1]) < 1.5 && (prev === 'RTL' || prev === 'FAILSAFE');
+        const nearHome = Math.hypot(p[0], p[1]) < 2.0 && (prev === 'RTL' || prev === 'FAILSAFE');
         S.landXY = nearHome ? [0,0] : [p[0] + v[0]*0.35, p[1] + v[1]*0.35];
         S.touchT = 0; S.yawSp = S.att[2]; break;
       }
@@ -1862,13 +1862,25 @@ var Sim = (function(){
           g.vxy = [S.apfVec[0], S.apfVec[1]];
           if (gs < 0.45){ S.braking = false; S.hold[0] = p[0]; S.hold[1] = p[1]; }
         } else g.xy = [S.hold[0], S.hold[1]];
+        if (S.grounded){
+          S.touchT += dt;
+          if (S.touchT > 0.4 || sk.thr < -0.2){
+            setState('ARMED', 'đã đáp xuống bãi', 'auto');
+            return null;
+          }
+        } else S.touchT = 0;
         if (Math.abs(sk.thr) > 0.05){
           let vz = sk.thr > 0 ? sk.thr*3.2 : sk.thr*2.2;
-          if (vz < 0 && p[2] < 1.5) vz = Math.max(vz, -0.4);
-          if (vz < 0 && p[2] < 0.8) vz = 0;
+          if (vz < 0 && p[2] < 1.5) vz = Math.max(vz, -0.6);
+          if (vz < 0 && p[2] < 0.35 && sk.thr < -0.15){
+            setState('LANDING', 'hạ cánh bằng cần lái', 'auto');
+            return guidance(dt);
+          }
           if (vz > 0 && p[2] > P.fenceAlt) vz = 0;
-          g.vz = vz; S.hold[2] = clamp(p[2] + v[2]*0.3, 0.8, P.fenceAlt);
-        } else g.z = S.hold[2];
+          g.vz = vz; S.hold[2] = clamp(p[2] + v[2]*0.3, 0.0, P.fenceAlt);
+        } else {
+          g.z = S.hold[2];
+        }
         return g;
       }
       case 'MISSION': {
@@ -1930,7 +1942,7 @@ var Sim = (function(){
           S.legFrom = { e:tgt.e, n:tgt.n, u:tgt.u }; rtlIdx++;
           return guidance(dt);
         }
-        if (last && dhHome < 0.7 && gs < 0.85){
+        if (last && ((dhHome < 0.75 && gs < 0.85) || (dhHome < 1.2 && S.stateT > 10))){
           setState('LANDING', 'đã về tới bãi đáp Nhà máy (0,0)', 'auto');
           return guidance(dt);
         }
@@ -1945,7 +1957,9 @@ var Sim = (function(){
         return { xy:S.landXY, vz, yaw:S.yawSp };
       }
       case 'ARMED':
-        if (S.stateT > 12) setState('DISARMED', 'tự DISARM sau 12 s không cất cánh', 'auto');
+        if (S.prevState === 'LANDING' ? S.stateT > 0.8 : S.stateT > 12){
+          setState('DISARMED', S.prevState === 'LANDING' ? 'đã hạ cánh và tắt động cơ' : 'tự DISARM sau 12 s không cất cánh', 'auto');
+        }
         return null;
       case 'EMERGENCY':
         if (S.grounded && S.stateT > 0.3 && Math.hypot(v[0], v[1], v[2]) < 0.3) setState('DISARMED', 'drone đã nằm yên trên đất', 'auto');
@@ -2355,7 +2369,7 @@ function setPill(el, st){ el.textContent = st; el.className = 'pill s-' + META[s
 function onStateChanged(){
   const S = Sim.S, st = S.state;
   setPill($('#statePill'), st); setPill($('#smPill'), st);
-  $('#stateSub').textContent = st === 'FAILSAFE' ? 'Failsafe: ' + S.fsReason + ', đang né tòa nhà về Nhà Máy' : META[st].top;
+  $('#stateSub').textContent = st === 'FAILSAFE' ? 'Failsafe: ' + S.fsReason + ', đang né vật cản về Nhà Máy' : META[st].top;
   $('#smDesc').textContent = META[st].desc;
   $('#smPrev').textContent = S.prevState ? 'Trước đó: ' + S.prevState + ' · lý do: ' + S.lastReason : 'Chưa có chuyển trạng thái.';
   highlightDiagram(S.prevState, st);
@@ -4080,7 +4094,7 @@ function init3D(){
     if ($('#optCity')) $('#optCity').checked = cityVisible;
     const btn = $('#btnToggleCity');
     if (btn){
-      btn.textContent = cityVisible ? '🏢 Ẩn tòa nhà & nhà máy' : '🏢 Hiện tòa nhà & nhà máy';
+      btn.textContent = cityVisible ? '🏢 Ẩn công trình căn cứ' : '🏢 Hiện công trình căn cứ';
       btn.setAttribute('aria-pressed', String(cityVisible));
     }
     if (window.SV && SV.agents){
@@ -4557,9 +4571,20 @@ function init3D(){
     if (on){
       const sky = new THREE.Color('#060b15');
       renderer.setClearColor(sky); scene.fog.color.copy(sky);
-      groundMat.color.set('#1b2e1e');
-      hemi.intensity = 0.34; sun.intensity = 0.22; sun.color.set('#9fb3ff');
+      groundMat.color.set('#1e2c22');
+      hemi.color.set('#8898b8');
+      hemi.groundColor.set('#222d36');
+      hemi.intensity = 0.55;
+      sun.intensity = 0.45;
+      sun.color.set('#9fb3ff');
     } else {
+      const sky = new THREE.Color(TK['scene-sky']);
+      renderer.setClearColor(sky); scene.fog.color.copy(sky);
+      groundMat.color.set(TK['scene-ground']);
+      hemi.color.set('#ffffff');
+      hemi.groundColor.set(0x556270);
+      hemi.intensity = TK.dark ? 0.65 : 0.9;
+      sun.intensity = TK.dark ? 0.58 : 0.78;
       sun.color.set('#ffffff');
     }
     cityMeshes.forEach(c => {
@@ -4620,7 +4645,6 @@ function init3D(){
   function tempOf(o, m){
     if (o.userData.temp != null) return o.userData.temp;
     const sunBoost = ENV.night ? 0 : 0.12;
-    if (m === bulbMat) return 0.82;
     if (m === groundMat) return ENV.night ? 0.2 : 0.36;
     if (m === roadMat) return ENV.night ? 0.34 : 0.52;   // asphalt keeps the day's heat
     if (m.map && m.map !== poolMat.map) return (ENV.night ? 0.15 : 0.3) + ((o.id * 37) % 9) / 100;
@@ -4871,7 +4895,7 @@ Sim.on(ev => {
     if (ev.to === 'RTL' || ev.to === 'FAILSAFE'){
       f.plans.push({ t:ev.t, kind:'rtl', pts:[{ e:S.pos[0], n:S.pos[1] }].concat(Sim.rtlPath.map(w => ({ e:w.e, n:w.n, avoid:!(w.e === 0 && w.n === 0) }))) });
     }
-    if (ev.from === 'LANDING' && ev.to === 'ARMED'){
+    if ((ev.from === 'LANDING' || ev.from === 'MANUAL') && (ev.to === 'ARMED' || ev.to === 'DISARMED')){
       const home = Math.hypot(S.pos[0], S.pos[1]) < 2;
       const fs = f.events.some(x => x.to === 'FAILSAFE');
       recFinish(fs ? 'Hạ cánh sau failsafe · ' + (home ? 'tại Nhà máy' : 'ngoài Nhà máy') : home ? 'Hoàn thành · đã về Nhà máy' : 'Đã hạ cánh · tại (' + fx(S.pos[0], 0) + ', ' + fx(S.pos[1], 0) + ')', fs ? 'warn' : 'good');

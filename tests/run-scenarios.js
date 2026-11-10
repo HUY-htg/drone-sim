@@ -188,7 +188,7 @@ function hoverSteps(adaptive){
         if (st.land) Sim.command('LAND');
       }
       Sim.step(DT); rec();
-      if (k >= steps.length && Sim.S.state === 'ARMED') break;
+      if (k >= steps.length && (Sim.S.state === 'ARMED' || Sim.S.state === 'DISARMED')) break;
     }
     flights.push(f);
   }

@@ -11,7 +11,7 @@ Mô phỏng drone giám sát & tác chiến, chạy hoàn toàn trên trình duy
 | Phần | Nội dung |
 |---|---|
 | **Chức năng** (Điều hành nhiệm vụ) | Lệnh ARM, DISARM, TAKEOFF, LAND, HOLD, MANUAL, MISSION, RTL, KILL. Chọn chế độ bay Tự động (AUTO) hoặc Lái tay (MANUAL). Chọn nhiệm vụ bay (Tuần tra hoặc Bomber oanh tạc mục tiêu). Chỉnh độ cao, khoảng cách an toàn, tuyến bay (preset hoặc click mặt đất 3D), tham số bay, gió và các tình huống lỗi. |
-| **Giám sát** | Số người và xe đã nhận diện, số đang thấy, độ phủ mặt đất; bản đồ giám sát (tòa nhà, tuyến bay, người, xe); nhật ký nhận diện. |
+| **Giám sát** | Số người và xe đã nhận diện, số đang thấy, độ phủ mặt đất; bản đồ giám sát (khu căn cứ / công trình, tuyến bay, người, xe); nhật ký nhận diện. |
 | **Máy trạng thái** | 10 trạng thái, sơ đồ tô sáng trạng thái hiện tại và lần chuyển gần nhất, danh sách lệnh hợp lệ, nhật ký sự kiện. |
 | **Dashboard** | ALT, V/S, GS, HDG, khoảng cách về nhà máy, khoảng cách vật cản; chân trời nhân tạo, băng hướng mũi; pin 6S (điện áp, dòng, mAh, thời gian còn lại); RPM 4 động cơ; biểu đồ 30 giây; setpoint của bộ điều khiển. |
 | **3D** (Three.js) | Khu vực căn cứ & xưởng nhà máy, địa hình tự nhiên; quỹ đạo bay, điểm né vật cản, đường thẳng bị chắn (nét đứt đỏ), tuyến RTL (nét đứt xanh), tia Lidar, vùng đệm an toàn, vệt bay và hiệu ứng luồng gió 3D mờ ảo. Có 3 góc nhìn ngoài và góc nhìn **camera trên drone**; thu phóng bằng cuộn chuột, chụm 2 ngón, nút + / − hoặc phím + / −. Công trình nằm giữa camera và drone tự làm mờ để không che drone. |
@@ -88,7 +88,7 @@ Camera nhận diện đối tượng khi đủ 3 điều kiện: đối tượng
 - **Ngày / Đêm** (phím `N`): ban đêm trời tối, cửa sổ và đèn đường sáng, tự động kích hoạt chế độ hồng ngoại.
 - **Quang học / Nhiệt** (phím `T`): đổi giữa camera quang học (ảnh màu) và camera nhiệt.
   - Camera nhiệt có hai bảng màu: **Trắng nóng** và **Ironbow**.
-  - Người (34–37 °C) và xe có động cơ, lốp nóng nổi bật trên nền tòa nhà và mặt đất nguội.
+  - Người (34–37 °C) và xe có động cơ, lốp nóng nổi bật trên nền công trình và mặt đất nguội.
 
 ## Yêu cầu của các bên liên quan (SCV)
 
@@ -130,7 +130,7 @@ Bấm **Chạy chương trình bay thử** để drone bay thực nghiệm tự 
 
 Mỗi chuyến bay được ghi lại tự động: bắt đầu khi ARM hoặc TAKEOFF, kết thúc khi drone hạ cánh, bị ngắt khẩn cấp hoặc tắt động cơ.
 
-- **Tóm tắt:** kết quả, tổng thời gian và thời gian trên không, quãng đường, pin đã dùng, khoảng cách gần nhất tới tòa nhà, tốc độ và góc nghiêng tối đa.
+- **Tóm tắt:** kết quả, tổng thời gian và thời gian trên không, quãng đường, pin đã dùng, khoảng cách gần nhất tới vật cản, tốc độ và góc nghiêng tối đa.
 - **Quỹ đạo nhìn từ trên xuống:** đường bay thực tế tô màu theo trạng thái, vẽ chồng lên tuyến A\* dự kiến (nét đứt) và vùng đệm an toàn quanh các xưởng.
 - **Diễn biến theo thời gian:** dải trạng thái, cùng 4 biểu đồ: độ cao, tốc độ ngang, pin, khoảng cách tới vật cản.
 - **Tua lại & Xuất dữ liệu:** kéo thanh tua để xem lại mọi thời điểm; nút **Tải dữ liệu CSV** và **Lưu ảnh quỹ đạo**.
