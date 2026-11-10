@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Urban Surveillance Drone Sim</title>
-<meta name="description" content="Mô phỏng drone giám sát &amp; tác chiến đô thị chạy trên trình duyệt: tuần tra, oanh tạc mục tiêu bomber, camera gimbal, động lực học quadcopter, PID xếp tầng, né cao ốc A* + APF, máy trạng thái và cảnh 3D.">
+<title>Tactical Drone Sim</title>
+<meta name="description" content="Mô phỏng drone giám sát &amp; tác chiến oanh tạc mục tiêu bomber, camera gimbal, động lực học quadcopter, PID xếp tầng, né vật cản A* + APF, máy trạng thái và cảnh 3D.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='%2314202a' stroke-width='2.6'%3E%3Cpath d='M10 10L30 30M30 10L10 30'/%3E%3Ccircle cx='9' cy='9' r='6'/%3E%3Ccircle cx='31' cy='9' r='6'/%3E%3Ccircle cx='9' cy='31' r='6'/%3E%3Ccircle cx='31' cy='31' r='6'/%3E%3C/g%3E%3Crect x='14' y='14' width='12' height='12' rx='2' fill='%23e2891a'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -187,8 +187,7 @@ table.wp input:focus{border-color:var(--tele);outline:none;background:var(--pane
 .stage.traj-mode .ov-hud{background:rgba(241,245,249,0.92)!important;color:#0f172a!important;border:1px solid #cbd5e1!important;box-shadow:0 4px 12px rgba(0,0,0,0.06)!important}
 .stage.traj-mode .ov-hud span{color:#64748b!important}
 .stage.traj-mode .ov-hud b{color:#0f172a!important}
-.ov-city-btn{position:absolute;left:10px;top:10px;z-index:9;background:rgba(255,255,255,0.92);color:#0f172a;border:1px solid #cbd5e1;padding:4px 11px;border-radius:4px;font-family:var(--f-display);font-weight:700;font-size:12px;letter-spacing:.04em;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all .15s}
-.ov-city-btn:hover{background:#f1f5f9;border-color:#94a3b8}
+
 #gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 #gl.drag{cursor:grabbing}
 .stage.custom-mode #gl{cursor:crosshair}
@@ -655,7 +654,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
         <path d="M17 17h6v6h-6z" fill="var(--panel)"/>
       </svg>
       <div class="brand-t">
-        <h1>Urban Surveillance Drone Sim</h1>
+        <h1>Tactical Drone Simulator</h1>
         <p id="brandSpec">X4 giám sát · camera gimbal 3 trục · khung 800 mm · tự trọng 2,4 kg · pin 6S 12000 mAh · Lidar 360°</p>
       </div>
     </div>
@@ -703,7 +702,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
               <small id="cmdModeSub">Lái tay (có APF bảo vệ)</small>
             </div>
             <button class="cmd" data-cmd="MISSION"><span class="cn">MISSION</span><small>Bay nhiệm vụ tự động</small></button>
-            <button class="cmd" data-cmd="RTL"><span class="cn">RTL</span><small>Về Nhà Máy (né tòa nhà)</small></button>
+            <button class="cmd" data-cmd="RTL"><span class="cn">RTL</span><small>Về Nhà Máy (né vật cản)</small></button>
             <button class="cmd kill" data-cmd="KILL" id="killBtn"><span class="cn">KILL</span><small id="killTxt">Ngắt động cơ khẩn cấp</small></button>
           </div>
           <div class="valid"><span>Hợp lệ lúc này:</span><span id="validFn" class="row"></span></div>
@@ -718,7 +717,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
             </div>
           </div>
           <div class="sv-opt" id="optPatrol" data-for="patrol">
-            <div class="row"><label for="svPatrol">Tuyến</label><select id="svPatrol"><option value="fence">Hàng rào Nhà máy</option><option value="center">Trục phố trung tâm</option><option value="city">Vòng ngoài khu đô thị</option><option value="custom">Tự vẽ: click mặt đất 3D</option></select></div>
+            <div class="row"><label for="svPatrol">Tuyến</label><select id="svPatrol"><option value="fence">Hàng rào Nhà máy</option><option value="center">Trục đường trung tâm</option><option value="city">Vòng ngoài căn cứ</option><option value="custom">Tự vẽ: click mặt đất 3D</option></select></div>
             <div class="field"><label for="svPu">Độ cao tuần tra</label><output id="oSvPu"></output><input type="range" id="svPu" min="10" max="40" step="1" value="16"></div>
             <p class="sv-info">Chế độ: <b>Auto bay 1 vòng</b> theo tuyến rồi tự động quay về Nhà máy (RTL). Camera tự quét hai bên ±55°.</p>
             <div class="sv-go"><button class="btn primary" id="svStart">Auto bay 1 vòng</button><button class="btn" id="svStop" title="Dừng nhiệm vụ, bay về Nhà máy">Gọi về (RTL)</button></div>
@@ -735,8 +734,8 @@ table.an-t tr.on td{background:var(--accent-soft)}
         </div>
 
         <div class="sec">
-          <h3>Gió đô thị &amp; Giả lập sự cố</h3>
-          <label class="chk" style="margin-bottom:10px"><input type="checkbox" id="pWindOn" checked> Bật gió luồn giữa các tòa nhà (hiển thị hướng gió)</label>
+          <h3>Mô hình gió &amp; Giả lập sự cố</h3>
+          <label class="chk" style="margin-bottom:10px"><input type="checkbox" id="pWindOn" checked> Bật mô phỏng gió (hiển thị luồng gió 3D)</label>
           <div class="field"><label for="pWind">Tốc độ gió</label><output id="oWind"></output><input type="range" id="pWind" min="0" max="12" step="1" value="4"></div>
           <div class="field"><label for="pWdir">Gió thổi từ hướng</label><output id="oWdir"></output><input type="range" id="pWdir" min="0" max="355" step="5" value="270"></div>
           <div class="field"><label for="pGust">Giật</label><output id="oGust"></output><input type="range" id="pGust" min="0" max="60" step="5" value="30"></div>
@@ -751,15 +750,14 @@ table.an-t tr.on td{background:var(--accent-soft)}
 
     <!-- 3D -->
     <section class="panel view" aria-labelledby="h3d">
-      <div class="ph"><span class="code">3D</span><h2 id="h3d">Đô thị &amp; Nhà máy sản xuất</h2>
+      <div class="ph"><span class="code">3D</span><h2 id="h3d">Căn cứ &amp; Nhà máy sản xuất</h2>
         <div class="seg" role="group" aria-label="Thu phóng" id="zoomSeg" style="margin-left:auto"><button data-zoom="in" aria-label="Phóng to" title="Phóng to (phím +)">+</button><button data-zoom="out" aria-label="Thu nhỏ" title="Thu nhỏ (phím −)">−</button></div>
         <div class="seg" role="group" aria-label="Góc camera" id="camSeg">
           <button data-cam="orbit" aria-pressed="true">Xoay 3D</button><button data-cam="follow">Bám đuôi</button><button data-cam="traj">Xem quỹ đạo</button><button data-cam="fpv" title="Góc nhìn camera gắn trên drone (phím C)">Camera<span class="wide-only"> drone</span></button>
         </div>
       </div>
       <div class="stage" id="stage">
-        <canvas id="gl" aria-label="Cảnh 3D đô thị và nhà máy"></canvas>
-        <button id="btnToggleCity" class="ov-city-btn" type="button" style="display:none" title="Bật/tắt hiển thị tòa nhà và nhà máy">🏢 Hiện tòa nhà &amp; nhà máy</button>
+        <canvas id="gl" aria-label="Cảnh 3D căn cứ và nhà máy"></canvas>
         <div class="ov ov-hint" id="hint" style="display:none!important"></div>
         <div class="ov ov-hud" id="hud">
           <span>ALT</span><b id="hudAlt">0.0 m</b>
@@ -953,11 +951,11 @@ table.an-t tr.on td{background:var(--accent-soft)}
       <ul class="rq-list2" id="rqGrid"></ul>
     </section>
     <section class="panel sm" aria-labelledby="hSm">
-      <div class="ph"><span class="code">SM</span><h2 id="hSm">Máy trạng thái</h2><span class="ph-note">10 trạng thái · tự động né cao ốc khi MISSION, RTL và FAILSAFE</span></div>
+      <div class="ph"><span class="code">SM</span><h2 id="hSm">Máy trạng thái</h2><span class="ph-note">10 trạng thái · tự động né vật cản khi MISSION, RTL và FAILSAFE</span></div>
       <div class="sm-body">
         <div class="sm-dia">
           <div class="sm-scroll"><svg id="smSvg" viewBox="0 0 1020 340" role="img" aria-label="Sơ đồ máy trạng thái của drone giám sát"></svg></div>
-          <p class="note">Ô cam là trạng thái hiện tại, viền đứt là trạng thái ngay trước, mũi tên sáng là lần chuyển gần nhất. Khi vào RTL hoặc FAILSAFE trong đô thị, drone tự động sinh quỹ đạo né các tòa nhà cao tầng để quay về Nhà Máy Sản Xuất.</p>
+          <p class="note">Ô cam là trạng thái hiện tại, viền đứt là trạng thái ngay trước, mũi tên sáng là lần chuyển gần nhất. Khi vào RTL hoặc FAILSAFE, drone tự động sinh quỹ đạo né các vật cản để quay về Nhà Máy Sản Xuất.</p>
         </div>
         <div class="sm-side">
           <div class="sm-card">
@@ -1154,17 +1152,17 @@ function aggregatePoints(points){
 /* ===== Surveillance planning helpers (no DOM): patrol routes, scan areas, lawn-mower lanes, camera footprint ===== */
 const SURV = (() => {
   const CAM_VFOV = 56, CAM_HFOV = 2 * Math.atan(Math.tan(CAM_VFOV / 2 * Math.PI / 180) * 16 / 9) * 180 / Math.PI;   // ≈ 87°
-  // Patrol routes follow the street grid (streets run E–W at n = −42, −6, 14, 44 and N–S at e = −44, −20, 10, 46)
+  // Patrol routes across the base perimeter and surrounding terrain
   const PATROLS = {
     fence:  { name:'Hàng rào Nhà máy',     u:16, pts:[[-20,-6],[10,-6],[10,14],[-20,14]] },
-    center: { name:'Trục phố trung tâm',   u:18, pts:[[-44,14],[46,14],[46,-6],[-44,-6]] },
-    city:   { name:'Vòng ngoài khu đô thị', u:18, pts:[[-44,-42],[46,-42],[46,44],[-44,44]] }
+    center: { name:'Trục đường trung tâm', u:18, pts:[[-44,14],[46,14],[46,-6],[-44,-6]] },
+    city:   { name:'Vòng ngoài căn cứ',    u:18, pts:[[-44,-42],[46,-42],[46,44],[-44,44]] }
   };
   // Scan areas: e0..e1 × n0..n1 (m, ENU)
   const AREAS = {
     factory: { name:'Khu Nhà máy',     e0:-30, e1:14, n0:-26, n1:24 },
-    north:   { name:'Khu phố Bắc',     e0:-30, e1:30, n0:24,  n1:60 },
-    east:    { name:'Khu phố Đông',    e0:20,  e1:62, n0:-36, n1:32 }
+    north:   { name:'Khu vực Bắc',     e0:-30, e1:30, n0:24,  n1:60 },
+    east:    { name:'Khu vực Đông',    e0:20,  e1:62, n0:-36, n1:32 }
   };
   // Width of ground the nadir camera sees across track at height h
   const footprint = h => 2 * h * Math.tan(CAM_HFOV / 2 * Math.PI / 180);
@@ -1195,9 +1193,9 @@ const SURV = (() => {
 })();
 </script>
 <script id="sim-core">
-/* ===== Urban Surveillance & Bomber Drone Simulation Core:
+/* ===== Tactical & Combat Drone Simulation Core:
    Heavy-lift 6S dynamics, cascaded PID, 2.5D A* obstacle-avoidance trajectory planner,
-   real-time Lidar + Artificial Potential Field (APF), and urban obstacle database ===== */
+   real-time Lidar + Artificial Potential Field (APF), and obstacle database ===== */
 var Sim = (function(){
   const P = {
     mBase: 2.8, m: 2.8, g: 9.81, L: 0.40,
@@ -1233,7 +1231,7 @@ var Sim = (function(){
     task: 'patrol', loops: 1, orbit: null
   };
 
-  // Urban + Factory Obstacles: { id, name, e (center East), n (center North), rx (half-width E), ry (half-depth N), h (height Up), kind }
+  // Obstacles: { id, name, e (center East), n (center North), rx (half-width E), ry (half-depth N), h (height Up), kind }
   const obstacles = [
     // Compact Manufacturing Factory structures near Home (0,0) - leaving (0,0) launch pad wide open
     { id:'F1', name:'Xưởng Lắp Ráp Chính', e:-8,  n: 2,   rx:2.6, ry:3.2, h:4.8, kind:'factory' },
@@ -1538,7 +1536,7 @@ var Sim = (function(){
     if (params.autoAvoid && Math.hypot(start.e, start.n) > 3){
       const res = planSegmentAStar(start, home, params.safeMargin);
       for (let i = 0; i < res.points.length; i++) rtlPath.push({ e: res.points[i].e, n: res.points[i].n, u: Math.max(uRtl, res.points[i].u) });
-      if (res.points.length) emit({ type:'info', msg:'RTL tự động sinh ' + res.points.length + ' điểm né cao ốc về Nhà máy' });
+      if (res.points.length) emit({ type:'info', msg:'RTL tự động sinh ' + res.points.length + ' điểm né vật cản về Nhà máy' });
     }
     rtlPath.push(home);
     rtlIdx = 0;
@@ -1910,7 +1908,7 @@ var Sim = (function(){
             emit({ type:'bomb', msg:'💣 CẮT BOM TRÊN KHÔNG: ' + (w.label || 'MỤC TIÊU') + ' (v = ' + (gs || params.vMax).toFixed(1) + ' m/s)' });
           }
           if (isDest){ S.destDone = w.destIdx + 1; emit({ type:'pass', msg:'Đã qua ' + (w.label || ('điểm ' + (w.destIdx + 1))) }); }
-          else emit({ type:'info', msg:'Đã qua điểm né cao ốc (' + w.e + ', ' + w.n + ')' });
+          else emit({ type:'info', msg:'Đã qua điểm né vật cản (' + w.e + ', ' + w.n + ')' });
           advanceWaypoint();
           return guidance(dt);
         }
@@ -2065,10 +2063,10 @@ var Sim = (function(){
     if (FLYING_CMD.indexOf(S.state) >= 0 && S.soc < 0.15){ S.fsReason = 'pin dưới 15%'; setState('FAILSAFE', 'pin dưới 15%', 'fail'); }
     if (S.soc <= 0 && S.state !== 'DISARMED' && S.state !== 'EMERGENCY') setState(S.grounded ? 'DISARMED' : 'EMERGENCY', 'hết pin', 'fail');
 
-    // Urban building collision: frame or propeller tips touch a facade below its roof
+    // Obstacle collision: frame or propeller tips touch a facade below its roof
     if (S.hitObs && !S.grounded && S.state !== 'EMERGENCY' && S.state !== 'DISARMED'){
       const name = S.hitObs.name;
-      emit({ type:'warn', msg:'Va chạm tòa nhà: ' + name + '!' });
+      emit({ type:'warn', msg:'Va chạm vật cản: ' + name + '!' });
       setState('EMERGENCY', 'va chạm công trình ' + name, 'fail');
     }
 
@@ -2214,12 +2212,12 @@ const META = {
   DISARMED: { cls:'idle',  sub:'tắt động cơ',    top:'Tại Nhà Máy Sản Xuất — Động cơ tắt', desc:'Drone giám sát đang đỗ trên bãi phóng H của Nhà Máy Sản Xuất (0,0). Bấm ARM để khởi hành.' },
   ARMED:    { cls:'armed', sub:'chờ tại xưởng',  top:'Động cơ quay không tải — Sẵn sàng cất cánh', desc:'4 động cơ quay không tải. Sẵn sàng TAKEOFF hoặc MISSION. Tự DISARM sau 12 giây nếu không cất cánh.' },
   TAKEOFF:  { cls:'air',   sub:'cất cánh',       top:'Đang cất cánh khỏi Nhà Máy Sản Xuất', desc:'Leo thẳng đứng lên độ cao hành trình an toàn trước khi rời khuôn viên Nhà Máy. Tới độ cao đặt sẽ tự chuyển sang HOVER.' },
-  HOVER:    { cls:'air',   sub:'treo giữ vị trí', top:'Treo giữ vị trí ổn định', desc:'Giữ cố định toạ độ E/N/U và hướng mũi, tự động bù gió đô thị. Bấm MISSION để bay nhiệm vụ.' },
-  MANUAL:   { cls:'air',   sub:'lái tay + APF',  top:'Lái bằng tay (có trường lực APF bảo vệ)', desc:'Lái tự do bằng bàn phím hoặc cần ảo. Khi bật né vật cản, cảm biến Lidar 360° tạo lực đẩy APF giúp hạn chế va vào cao ốc.' },
-  MISSION:  { cls:'air',   sub:'bay nhiệm vụ',   top:'Đang bay nhiệm vụ tự động', desc:'Bay qua chuỗi điểm dẫn đường đã được thuật toán A* tối ưu hóa để vòng tránh các tòa nhà cao tầng.' },
-  RTL:      { cls:'air',   sub:'về Nhà Máy',     top:'Quay về Nhà Máy Sản Xuất (có né cao ốc)', desc:'Tự động tính toán hành lang né các tòa nhà cao tầng từ vị trí hiện tại về lại bãi đáp Nhà Máy Sản Xuất (0,0) rồi hạ cánh.' },
+  HOVER:    { cls:'air',   sub:'treo giữ vị trí', top:'Treo giữ vị trí ổn định', desc:'Giữ cố định toạ độ E/N/U và hướng mũi, tự động bù gió môi trường. Bấm MISSION để bay nhiệm vụ.' },
+  MANUAL:   { cls:'air',   sub:'lái tay + APF',  top:'Lái bằng tay (có trường lực APF bảo vệ)', desc:'Lái tự do bằng bàn phím hoặc cần ảo. Khi bật né vật cản, cảm biến Lidar 360° tạo lực đẩy APF giúp hạn chế va vào vật cản.' },
+  MISSION:  { cls:'air',   sub:'bay nhiệm vụ',   top:'Đang bay nhiệm vụ tự động', desc:'Bay qua chuỗi điểm dẫn đường đã được thuật toán A* tối ưu hóa để vòng tránh các vật cản.' },
+  RTL:      { cls:'air',   sub:'về Nhà Máy',     top:'Quay về Nhà Máy Sản Xuất (có né vật cản)', desc:'Tự động tính toán hành lang né các vật cản từ vị trí hiện tại về lại bãi đáp Nhà Máy Sản Xuất (0,0) rồi hạ cánh.' },
   LANDING:  { cls:'land',  sub:'hạ cánh',        top:'Đang hạ cánh chính xác', desc:'Hạ cánh tốc độ giảm dần êm ái và chính xác. Chạm đất ổn định 0,4 giây thì chuyển về ARMED.' },
-  FAILSAFE: { cls:'fs',    sub:'tự bảo vệ',      top:'Failsafe — Tự động né vật cản về Nhà Máy', desc:'Kích hoạt khi pin dưới 15% hoặc mất sóng. Drone tự lập đường né cao ốc về Nhà Máy; nếu pin dưới 6% sẽ đáp khẩn cấp tại chỗ.' },
+  FAILSAFE: { cls:'fs',    sub:'tự bảo vệ',      top:'Failsafe — Tự động né vật cản về Nhà Máy', desc:'Kích hoạt khi pin dưới 15% hoặc mất sóng. Drone tự lập đường né vật cản về Nhà Máy; nếu pin dưới 6% sẽ đáp khẩn cấp tại chỗ.' },
   EMERGENCY:{ cls:'emg',   sub:'ngắt khẩn cấp',  top:'Động cơ bị ngắt khẩn cấp', desc:'Cả 4 động cơ bị ngắt do lệnh KILL hoặc va chạm công trình. Khi nằm yên trên mặt đất sẽ về DISARMED.' },
 };
 
@@ -2289,7 +2287,7 @@ function buildDiagram(){
     + '<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0 0L10 5L0 10z"/></marker>'
     + '<marker id="ahOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ah-on" d="M0 0L10 5L0 10z"/></marker>'
     + '</defs>';
-  s += '<rect class="grp" x="330" y="38" width="500" height="290" rx="8"/><text class="grp-t" x="342" y="57">TRÊN KHÔNG · ĐÔ THỊ (CÓ NÉ VẬT CẢN A*)</text>';
+  s += '<rect class="grp" x="330" y="38" width="500" height="290" rx="8"/><text class="grp-t" x="342" y="57">TRÊN KHÔNG (CÓ NÉ VẬT CẢN A*)</text>';
   for (const e of EDGES){
     let d, lx, ly, anchor = 'middle';
     if (e.d){ d = e.d; lx = e.lx; ly = e.ly; }
@@ -2599,16 +2597,16 @@ $('#pAutoAvoid').addEventListener('change', e => {
   $('#avoidBadge').textContent = P.autoAvoid ? 'A* ON' : 'A* OFF';
   $('#avoidBadge').className = 'chip ' + (P.autoAvoid ? 'chip-avoid' : '');
   replanAndRender();
-  addLog('info', P.autoAvoid ? 'Đã bật tự động sinh quỹ đạo né tòa nhà (A* + APF)' : 'Đã tắt tự động né vật cản (đường bay thẳng)', '', Sim.S.t);
+  addLog('info', P.autoAvoid ? 'Đã bật tự động sinh quỹ đạo né vật cản (A* + APF)' : 'Đã tắt tự động né vật cản (đường bay thẳng)', '', Sim.S.t);
 });
 $('#btnReplan').addEventListener('click', () => {
   const st = replanAndRender();
-  addLog('info', 'Tái lập quỹ đạo A*: ' + st.destCount + ' đích, ' + st.avoidCount + ' điểm né cao ốc', '', Sim.S.t);
+  addLog('info', 'Tái lập quỹ đạo A*: ' + st.destCount + ' đích, ' + st.avoidCount + ' điểm né vật cản', '', Sim.S.t);
 });
 $('#pWindOn').addEventListener('change', e => {
   P.windOn = e.target.checked;
   updateWindHudUI();
-  addLog('info', P.windOn ? 'Bật gió đô thị ' + P.windSpeed + ' m/s từ ' + pad3(P.windDir) + '° (' + compassDirVN(P.windDir) + ')' : 'Tắt gió', '', Sim.S.t);
+  addLog('info', P.windOn ? 'Bật gió ' + P.windSpeed + ' m/s từ ' + pad3(P.windDir) + '° (' + compassDirVN(P.windDir) + ')' : 'Tắt gió', '', Sim.S.t);
 });
 $('#pEnd').addEventListener('change', e => { P.missionEnd = e.target.value; });
 $('#btnLink').addEventListener('click', e => {
@@ -3094,7 +3092,7 @@ function updateDom(){
   let msg = '', cls = 'warn';
   if (S.jammed) { msg = 'BỊ PHÁ SÓNG: mất liên kết, video, GNSS · ' + (S.grounded ? 'đã hạ cánh tại chỗ' : 'đang hạ cánh tại chỗ'); cls = 'bad'; }
   else if (S.nfzIn) { msg = 'VÙNG CẤM BAY: bị chặn · phá sóng sau ' + Math.max(0, Sim.JAM_AFTER - S.nfzT).toFixed(1) + ' s'; cls = 'bad'; }
-  else if (P.linkLost) { msg = 'Mất liên kết: drone tự né cao ốc về Nhà Máy'; cls = 'bad'; }
+  else if (P.linkLost) { msg = 'Mất liên kết: drone tự né vật cản về Nhà Máy'; cls = 'bad'; }
   else if (S.nfzNear && !S.grounded) { msg = 'Gần ' + S.nfzNear.name + ': còn ' + S.nfzDist.toFixed(0) + ' m tới vùng cấm bay'; cls = 'warn'; }
   else if (S.state === 'EMERGENCY') { msg = 'Khẩn cấp: Động cơ đã ngắt'; cls = 'bad'; }
   else if (S.state === 'FAILSAFE') msg = 'Failsafe: ' + S.fsReason + ', đang về Nhà Máy';
@@ -3116,7 +3114,7 @@ function updateDom(){
   refreshValidity(false);
 }
 
-/* ---------- 3D URBAN & MANUFACTURING FACTORY ENVIRONMENT ---------- */
+/* ---------- 3D BASE & MANUFACTURING FACTORY ENVIRONMENT ---------- */
 function init3D(){
   if (!window.THREE) throw new Error('three.js chưa tải được');
   const THREE = window.THREE;
@@ -3153,10 +3151,10 @@ function init3D(){
     sp.scale.set(scale * 1.65, scale, 1); sp.renderOrder = 12; return sp;
   }
 
-  // Urban & Factory Environment Root Group (Tòa nhà, Nhà máy, Đường xá, Đèn đường, Cây cối)
+  // Base & Factory Environment Root Group
   const cityEnvGroup = new THREE.Group(); scene.add(cityEnvGroup);
 
-  // Urban Road Network omitted (nền bằng đất tự nhiên, loại bỏ bê tông và đường xá)
+  // Road Network omitted (nền đất tự nhiên)
   const roadGroup = new THREE.Group(); roadGroup.visible = false;
   const roadMat = new THREE.MeshLambertMaterial({ color:0x333b42 });
   const swMat = new THREE.MeshLambertMaterial({ color:0x9aa4ad });
@@ -3360,7 +3358,7 @@ function init3D(){
 
   const north = textSprite('BẮC (N)', '#ffffff', 'rgba(20,32,42,0.82)', 0.028); north.material.opacity = 0.6; north.position.copy(toV(0, 74, 2.5)); cityEnvGroup.add(north);
 
-  // Build procedural window facade textures for urban skyscrapers
+  // Build procedural window facade textures
   const winTexLight = canvasTex(256, (x, s) => {
     x.fillStyle = '#7e8c99'; x.fillRect(0, 0, s, s);
     for (let r = 0; r < 8; r++){
@@ -3384,7 +3382,7 @@ function init3D(){
   });
   winTexDark.wrapS = winTexDark.wrapT = THREE.RepeatWrapping;
 
-  // Construct 3D meshes for all `Sim.obstacles` (Factory halls, Silo, and Urban High-Rises) + safety buffer rings
+  // Construct 3D meshes for all `Sim.obstacles` (Factory halls, Silo) + safety buffer rings
   const cityMeshes = [];
   const bufferGroup = new THREE.Group(); cityEnvGroup.add(bufferGroup);
 
@@ -3945,7 +3943,7 @@ function init3D(){
   }
 
 
-  /* ---------- military base east of the city (no-fly zone) ---------- */
+  /* ---------- military base (no-fly zone) ---------- */
   const milGroup = new THREE.Group(); scene.add(milGroup);
   const fenceGroup = new THREE.Group(); scene.add(fenceGroup);   // virtual geofence: not part of the camera picture
   const MIL = { walls:null, hatch:null, dish:null, beacon:null };
@@ -4986,10 +4984,6 @@ function rpDrawMap(f, idx){
   rpMapView = { X, Y, k, w, h };
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = TK['panel-2']; ctx.fillRect(0, 0, w, h);
-  // streets
-  ctx.fillStyle = TK.line;
-  ROADS.ew.forEach(n => ctx.fillRect(0, Y(n + ROADS.w/2), w, ROADS.w*k));
-  ROADS.ns.forEach(e => ctx.fillRect(X(e - ROADS.w/2), 0, ROADS.w*k, h));
   // safety buffer
   ctx.setLineDash([3, 3]); ctx.strokeStyle = TK['line-2']; ctx.lineWidth = 1;
   Sim.obstacles.forEach(o => ctx.strokeRect(X(o.e - o.rx - f.safe), Y(o.n + o.ry + f.safe), (o.rx + f.safe)*2*k, (o.ry + f.safe)*2*k));
@@ -5665,7 +5659,7 @@ function svBuildMeshes(C){
   });
 }
 
-/* --- ground coverage: 2 m cells over the city, marked where the camera footprint falls --- */
+/* --- ground coverage: 2 m cells over the map, marked where the camera footprint falls --- */
 const COV = { x0:-100, y0:-100, cell:2, N:100 };
 function svInitCoverage(C){
   const N = COV.N, data = new Uint8Array(N * N * 4);
@@ -6301,11 +6295,6 @@ function svDrawMap(){
   const R = 92, E0 = 38, sc = Math.min(w, h) / (2 * R * 1.4), cx = w / 2 - E0 * sc * 1, cy = h / 2;
   const X = e => cx + e * sc, Y = n => cy - n * sc;
   ctx.fillStyle = TK['panel-2']; ctx.fillRect(0, 0, w, h);
-  // streets
-  ctx.strokeStyle = TK.line; ctx.lineWidth = 7.5 * sc;
-  ROAD_EW.forEach(n => { ctx.beginPath(); ctx.moveTo(X(-84), Y(n)); ctx.lineTo(X(84), Y(n)); ctx.stroke(); });
-  ctx.beginPath(); ctx.moveTo(X(84), Y(14)); ctx.lineTo(X(100), Y(14)); ctx.stroke();
-  ROAD_NS.forEach(e => { ctx.beginPath(); ctx.moveTo(X(e), Y(-84)); ctx.lineTo(X(e), Y(84)); ctx.stroke(); });
   // coverage
   if (SV.cov){
     ctx.fillStyle = TK.accent; ctx.globalAlpha = 0.2;

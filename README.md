@@ -1,6 +1,6 @@
-# Urban Surveillance & Combat Drone Sim
+# Tactical & Surveillance Combat Drone Sim
 
-Mô phỏng drone giám sát & tác chiến đô thị, chạy hoàn toàn trên trình duyệt. Drone cất cánh từ bãi đáp của Nhà Máy Sản Xuất, mang camera gimbal để tuần tra theo tuyến, oanh tạc mục tiêu (Bomber), né vật cản A* và APF, và tự động bay về căn cứ (RTL). Bạn điều khiển drone bằng lệnh, bàn phím hoặc cần ảo, và theo dõi mọi thứ qua dashboard và cảnh 3D.
+Mô phỏng drone giám sát & tác chiến, chạy hoàn toàn trên trình duyệt. Drone cất cánh từ bãi đáp của Nhà Máy Sản Xuất, mang camera gimbal để tuần tra theo tuyến, oanh tạc mục tiêu (Bomber), né vật cản A* và APF, và tự động bay về căn cứ (RTL). Bạn điều khiển drone bằng lệnh, bàn phím hoặc cần ảo, và theo dõi mọi thứ qua dashboard và cảnh 3D.
 
 **Chạy thử:** https://huy-htg.github.io/drone-sim/
 
@@ -14,7 +14,7 @@ Mô phỏng drone giám sát & tác chiến đô thị, chạy hoàn toàn trên
 | **Giám sát** | Số người và xe đã nhận diện, số đang thấy, độ phủ mặt đất; bản đồ giám sát (tòa nhà, tuyến bay, người, xe); nhật ký nhận diện. |
 | **Máy trạng thái** | 10 trạng thái, sơ đồ tô sáng trạng thái hiện tại và lần chuyển gần nhất, danh sách lệnh hợp lệ, nhật ký sự kiện. |
 | **Dashboard** | ALT, V/S, GS, HDG, khoảng cách về nhà máy, khoảng cách vật cản; chân trời nhân tạo, băng hướng mũi; pin 6S (điện áp, dòng, mAh, thời gian còn lại); RPM 4 động cơ; biểu đồ 30 giây; setpoint của bộ điều khiển. |
-| **3D** (Three.js) | Khu đô thị có xưởng nhà máy, đường phố, cây và đèn đường; quỹ đạo bay, điểm né cao ốc, đường thẳng bị chắn (nét đứt đỏ), tuyến RTL (nét đứt xanh), tia Lidar, vùng đệm an toàn, vệt bay và hiệu ứng luồng gió 3D mờ ảo. Có 3 góc nhìn ngoài và góc nhìn **camera trên drone**; thu phóng bằng cuộn chuột, chụm 2 ngón, nút + / − hoặc phím + / −. Tòa nhà nằm giữa camera và drone tự làm mờ để không che drone. |
+| **3D** (Three.js) | Khu vực căn cứ & xưởng nhà máy, địa hình tự nhiên; quỹ đạo bay, điểm né vật cản, đường thẳng bị chắn (nét đứt đỏ), tuyến RTL (nét đứt xanh), tia Lidar, vùng đệm an toàn, vệt bay và hiệu ứng luồng gió 3D mờ ảo. Có 3 góc nhìn ngoài và góc nhìn **camera trên drone**; thu phóng bằng cuộn chuột, chụm 2 ngón, nút + / − hoặc phím + / −. Công trình nằm giữa camera và drone tự làm mờ để không che drone. |
 
 ## Cách dùng
 
@@ -72,12 +72,12 @@ Chọn nhiệm vụ ở phần **Nhiệm vụ bay** (bảng Điều hành):
 
 | Nhiệm vụ | Cách bay | Camera & Tác chiến |
 |---|---|---|
-| **Tuần tra** | Tuyến dọc các trục phố: Hàng rào Nhà máy, Trục phố trung tâm, Vòng ngoài khu đô thị, hoặc tự vẽ bằng click mặt đất 3D. Drone tự cất cánh, bay 1 vòng theo tuyến và tự động quay về Nhà máy (RTL). | Chúc −32°, quét qua lại hai bên ±55°. |
+| **Tuần tra** | Tuyến quanh khu vực: Hàng rào Nhà máy, Trục đường trung tâm, Vòng ngoài căn cứ, hoặc tự vẽ bằng click mặt đất 3D. Drone tự cất cánh, bay 1 vòng theo tuyến và tự động quay về Nhà máy (RTL). | Chúc −32°, quét qua lại hai bên ±55°. |
 | **Bomber (Oanh tạc)** | Chọn mục tiêu (Kho quân khí, Trạm radar phòng không, Đoàn xe cơ giới, Boongke, hoặc tự click mặt đất). Drone cất cánh, tiếp cận mục tiêu, tính toán điểm cắt bom quán tính tốc độ cao, bay thoát ly thẳng qua vùng nguy hiểm, lượn vòng chiến thuật và tự động bay về hạ cánh tại Nhà máy. | Camera chúc hướng vào mục tiêu; hiệu ứng bom rơi quán tính và vụ nổ 3D sinh động. |
 
-### Nhận diện người và xe
+### Nhận diện mục tiêu
 
-Trong thành phố có 16 người đi bộ trên vỉa hè và 10 xe chạy trên các làn đường. Camera nhận diện một đối tượng khi đủ 3 điều kiện: đối tượng nằm trong khung hình, đủ lớn trên cảm biến 1920 × 1080, và đường nhìn từ ống kính tới đối tượng không bị tòa nhà che.
+Camera nhận diện đối tượng khi đủ 3 điều kiện: đối tượng nằm trong khung hình, đủ độ phân giải trên cảm biến 1920 × 1080, và đường nhìn từ ống kính không bị vật cản che.
 
 Đối tượng được nhận diện có khung màu trong hình camera (cả toàn khung lẫn cửa sổ nhỏ) và vòng tròn trên bản đồ giám sát. Mỗi lần một đối tượng xuất hiện lại sau hơn 15 giây vắng mặt được ghi một dòng vào **Nhật ký nhận diện**. Bấm một dòng để camera bám theo đối tượng đó.
 
@@ -152,7 +152,7 @@ Góc nghiêng giữ vị trí trước gió tuân theo công thức vật lý: `
 - **Khung và lực đẩy:** Quad X khung 800 mm, khối lượng 2,8 kg. 4 động cơ, mỗi chiếc tối đa 22 N, có độ trễ bậc nhất 40 ms. Lực cản không khí gồm thành phần tuyến tính và bậc hai.
 - **Điều khiển:** PID xếp tầng: vị trí → vận tốc → gia tốc → góc nghiêng và lực đẩy → bộ trộn 4 động cơ. Góc nghiêng tối đa 34°. Vòng trong chạy 250 Hz.
 - **Dẫn đường & Né vật cản (A\* + APF):** Lưới A* né các nhà xưởng; trường thế đẩy APF (Artificial Potential Field) bảo vệ thời gian thực chống va chạm ở mọi chế độ bay (kể cả MANUAL).
-- **Pin & Gió:** Pin 6S 12000 mAh; mô hình gió nền, gió giật đô thị và hiển thị vệt luồng gió 3D.
+- **Pin & Gió:** Pin 6S 12000 mAh; mô hình gió nền, gió giật môi trường và hiển thị vệt luồng gió 3D.
 
 ## Máy trạng thái
 
@@ -164,7 +164,7 @@ Góc nghiêng giữ vị trí trước gió tuân theo công thức vật lý: `
 | HOVER | Giữ vị trí E/N/U và hướng mũi | MANUAL / chạm cần, MISSION, RTL, LAND |
 | MANUAL | Lái tay, có APF bảo vệ | HOLD, MISSION, RTL, LAND |
 | MISSION | Bay theo quỹ đạo A\* thực hiện nhiệm vụ | hoàn thành → RTL / HOVER / LAND |
-| RTL | Leo tới độ cao RTL, theo tuyến né cao ốc về Nhà máy | tới bãi đáp → LANDING |
+| RTL | Leo tới độ cao RTL, theo tuyến né vật cản về Nhà máy | tới bãi đáp → LANDING |
 | LANDING | Hạ cánh tốc độ giảm dần êm ái | chạm đất 0,4 s → ARMED |
 | FAILSAFE | Pin yếu hoặc mất liên kết: tự về Nhà máy | tới nơi → LANDING |
 | EMERGENCY | KILL hoặc va chạm: ngắt động cơ khẩn cấp | nằm yên trên đất → DISARMED |

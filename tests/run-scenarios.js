@@ -91,7 +91,7 @@ for (const [name, list] of [['Điểm 1', [WAYPOINTS[0]]], ['Điểm 2', [WAYPOI
   const r = flyRoute(Sim => Sim.setDestinations([WAYPOINTS[2]], true), {
     during(Sim, t){ if (!cut && Sim.S.state === 'MISSION' && Sim.S.stateT > 0.5){ Sim.setLink(true); cut = true; } }
   });
-  check('Mất liên kết: FAILSAFE né cao ốc về Nhà máy và hạ cánh',
+  check('Mất liên kết: FAILSAFE né vật cản về Nhà máy và hạ cánh',
     !r.crashed && r.home && r.events.some(e => e.to === 'FAILSAFE'), `cách tường gần nhất ${r.minClear.toFixed(2)} m`);
 }
 
