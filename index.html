@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Urban Surveillance Drone Sim</title>
-<meta name="description" content="Mô phỏng drone giám sát đô thị (có chức năng chở hàng) chạy trên trình duyệt: tuần tra, bay vòng quanh mục tiêu, quét khu vực, camera gimbal nhận diện người và xe, động lực học quadcopter, PID xếp tầng, né cao ốc A* + APF, máy trạng thái và cảnh 3D.">
+<meta name="description" content="Mô phỏng drone giám sát &amp; tác chiến đô thị chạy trên trình duyệt: tuần tra, oanh tạc mục tiêu bomber, camera gimbal, động lực học quadcopter, PID xếp tầng, né cao ốc A* + APF, máy trạng thái và cảnh 3D.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='%2314202a' stroke-width='2.6'%3E%3Cpath d='M10 10L30 30M30 10L10 30'/%3E%3Ccircle cx='9' cy='9' r='6'/%3E%3Ccircle cx='31' cy='9' r='6'/%3E%3Ccircle cx='9' cy='31' r='6'/%3E%3Ccircle cx='31' cy='31' r='6'/%3E%3C/g%3E%3Crect x='14' y='14' width='12' height='12' rx='2' fill='%23e2891a'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -758,7 +758,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
         </div>
       </div>
       <div class="stage" id="stage">
-        <canvas id="gl" aria-label="Cảnh 3D đô thị và nhà máy của drone chở hàng"></canvas>
+        <canvas id="gl" aria-label="Cảnh 3D đô thị và nhà máy"></canvas>
         <button id="btnToggleCity" class="ov-city-btn" type="button" style="display:none" title="Bật/tắt hiển thị tòa nhà và nhà máy">🏢 Hiện tòa nhà &amp; nhà máy</button>
         <div class="ov ov-hint" id="hint" style="display:none!important"></div>
         <div class="ov ov-hud" id="hud">
@@ -800,7 +800,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
         <label class="chk"><input type="checkbox" id="optSp" checked> Điểm đặt</label>
         <label class="chk"><input type="checkbox" id="optCity" checked> Tòa nhà &amp; Nhà máy</label>
         <button class="linkbtn" id="clearTrail">Xoá vệt</button>
-        <span class="sub">Home (0,0) = NHÀ MÁY · Hub A/B/C = Trạm nhận hàng</span>
+        <span class="sub">Home (0,0) = NHÀ MÁY</span>
       </div>
       <div class="cam-foot" role="group" aria-label="Camera drone">
         <span class="cam-t">Camera</span>
@@ -811,7 +811,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
         <label class="chk"><input type="checkbox" id="optPip" checked> Cửa sổ nhỏ</label>
         <span class="cam-g">Gimbal
           <button class="btn mini" data-tilt="up" aria-label="Ngẩng camera lên 10°">▲</button><output id="oGim">−15° · 0°</output><button class="btn mini" data-tilt="down" aria-label="Chúc camera xuống 10°">▼</button>
-          <button class="btn mini" data-tilt="nadir" title="Camera nhìn thẳng xuống đất, dùng khi thả hàng">Nhìn xuống</button>
+          <button class="btn mini" data-tilt="nadir" title="Camera nhìn thẳng xuống đất">Nhìn xuống</button>
           <button class="btn mini" data-tilt="reset" title="Gimbal −15°, hướng theo mũi, zoom 1×">Mặc định</button>
         </span>
         <div class="seg" role="group" aria-label="Zoom camera" id="czSeg"><button data-cz="1" aria-pressed="true">1×</button><button data-cz="2">2×</button><button data-cz="4">4×</button></div>
@@ -842,7 +842,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
             <dl class="kv">
               <div><dt>Roll φ</dt><dd><b id="kvRoll">0.0°</b><span class="sub" id="kvRollSp">đặt 0.0°</span></dd></div>
               <div><dt>Pitch θ</dt><dd><b id="kvPitch">0.0°</b><span class="sub" id="kvPitchSp">đặt 0.0°</span></dd></div>
-              <div><dt>Tổng khối lượng</dt><dd><b id="kvMass">3.90 kg</b><span class="sub" id="kvCargoSub">gimbal + cảm biến</span></dd></div>
+              <div><dt>Tổng khối lượng</dt><dd><b id="kvMass">2.80 kg</b><span class="sub" id="kvPayloadSub">gimbal + cảm biến</span></dd></div>
               <div><dt>Lực đẩy tổng</dt><dd><b id="kvT">0.0 N</b><span class="sub" id="kvTW">T/W 0.00</span></dd></div>
             </dl>
           </div>
@@ -866,7 +866,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
               <tr><th><span class="tag ad">THÍCH NGHI</span>Lực đẩy treo m̂·g<div class="ad-why">theo m̂</div></th><td id="adTh">—</td></tr>
               <tr><th><span class="tag ad">THÍCH NGHI</span>Ga treo mỗi động cơ<div class="ad-why">theo m̂</div></th><td id="adThr">—</td></tr>
               <tr><th><span class="tag ad">THÍCH NGHI</span>Bù nhiễu gió d̂<div class="ad-why">bộ quan sát nhiễu, τ 0,5 s</div></th><td id="adD">—</td></tr>
-              <tr><th><span class="tag ad">LẬP LỊCH</span>Quán tính Î<div class="ad-why">I₀ + (m̂ − 2,4)·0,11²</div></th><td id="adI">—</td></tr>
+              <tr><th><span class="tag ad">LẬP LỊCH</span>Quán tính Î<div class="ad-why">I₀ hiệu dụng theo m̂</div></th><td id="adI">—</td></tr>
               <tr><th><span class="tag ad">LẬP LỊCH</span>K tư thế hiệu dụng<div class="ad-why">Î·Kp, giữ băng thông không đổi</div></th><td id="adKa">—</td></tr>
               <tr><th><span class="tag fx">CỐ ĐỊNH</span>Kp vị trí / vận tốc<div class="ad-why">giống nhau mọi tải</div></th><td id="adKv">—</td></tr>
               <tr><th><span class="tag fx">CỐ ĐỊNH</span>Kp / Kd tư thế<div class="ad-why">trước khi nhân Î</div></th><td id="adKatt">—</td></tr>
@@ -1042,7 +1042,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
    flightSample(Sim)        one recorded sample (the flight recorder stores these at 5 Hz)
    testSteps(payload)       the scripted test-flight programme for one payload (flown live in the simulator)
    analyzeFlights(flights)  steady operating points + step responses extracted from the recorded samples */
-const TESTPLAN = { payloads:[3, 1.5, 0], hold:12, settle:6, dropHold:8, capacityAh:12 };
+const TESTPLAN = { payloads:[0], hold:12, settle:6, capacityAh:12 };
 
 function flightSample(Sim){
   const S = Sim.S, P = Sim.params, Pp = Sim.P, E = S.est, sp = S.sp, D = 180 / Math.PI;
@@ -1053,7 +1053,7 @@ function flightSample(Sim){
   return {
     t:S.t, e:S.pos[0], n:S.pos[1], u:S.pos[2], gs:Math.hypot(S.vel[0], S.vel[1]), vs:S.vel[2],
     roll:S.att[0] * D, pitch:-S.att[1] * D, psi:S.att[2], soc:S.soc * 100, mAh:S.mAh,
-    clr:S.minObsDist, st:S.state, cargo:P.cargoMass, zsp: sp && sp.z != null ? sp.z : null, wind:wT, air:!S.grounded,
+    clr:S.minObsDist, st:S.state, zsp: sp && sp.z != null ? sp.z : null, wind:wT, air:!S.grounded,
     wT, wTd: wT > 0.3 ? from(S.windNow[0], S.windNow[1]) : null,
     wE: E.valid ? wE : null, wEd: E.valid && wE > 0.3 ? from(E.wHat[0], E.wHat[1]) : null,
     mT:Pp.m, mE:E.mHat, T:S.T, W:Pp.m * Pp.g, IE:E.IHat,
@@ -1064,8 +1064,8 @@ function flightSample(Sim){
   };
 }
 
-// One test flight for a given payload: hover, then one change every TESTPLAN.hold seconds
-function testSteps(payload){
+// Test flight: hover, then changes every TESTPLAN.hold seconds
+function testSteps(){
   const H = TESTPLAN.hold, s = [];
   s.push({ at:0,   label:'Lặng gió', set:{ windSpeed:0, gust:0, windDir:270 } });
   [3, 6, 9, 12].forEach((w, i) => s.push({ at:H * (i + 1), label:'Gió Tây ' + w + ' m/s', set:{ windSpeed:w } }));
@@ -1074,12 +1074,11 @@ function testSteps(payload){
   s.push({ at:H * 7, label:'Gió giật 30%', set:{ gust:0.3 } });
   s.push({ at:H * 8, label:'Hết giật', set:{ gust:0 } });
   let t = H * 8 + 6;
-  if (payload > 0){ s.push({ at:t, label:'Thả toàn bộ ' + String(payload).replace('.', ',') + ' kg hàng', drop:true }); t += TESTPLAN.dropHold; }
   s.push({ at:t, label:'Hạ cánh', land:true });
   return s;
 }
 
-const acKey = p => [p.wSet, p.gust, Math.round(p.cargo * 100), p.dir, p.ad].join('|');
+const acKey = p => [p.wSet, p.gust, p.dir, p.ad].join('|');
 const acR2 = v => Math.round(v * 100) / 100;
 
 function analyzeFlights(flights){
@@ -1088,7 +1087,7 @@ function analyzeFlights(flights){
     const P = f.samples || [];
     if (P.length < 2) return;
     const hov = p => p.air && p.st === 'HOVER';
-    // 1) steady operating points: stretches of HOVER with unchanged wind, gust, load and controller
+    // 1) steady operating points: stretches of HOVER with unchanged wind, gust and controller
     const segs = []; let a = null;
     for (let i = 0; i < P.length; i++){
       if (a == null){ if (hov(P[i])) a = i; continue; }
@@ -1102,18 +1101,18 @@ function analyzeFlights(flights){
       const I = mean('I'), q = P[i0];
       points.push({
         flight:f.id, t:use[0].t - f.t0, t1:use[use.length - 1].t - f.t0, absT:use[0].t,
-        payload:acR2(q.cargo), wind:q.wSet, gust:q.gust, dir:q.dir, ad:q.ad,
+        wind:q.wSet, gust:q.gust, dir:q.dir, ad:q.ad,
         lean:mean('tilt'), thrust:mean('T'), current:I, motor:mean('fPct'),
         endurance: 0.85 * TESTPLAN.capacityAh / I * 60,
         drift: Math.max(...use.map(p => p.herr || 0)), alt: Math.max(...use.map(p => Math.abs(p.verr || 0))),
         mE: use[use.length - 1].mE, mT: q.mT, n: use.length
       });
     });
-    // 2) step responses: a change of wind, gust, direction or load while hovering
+    // 2) step responses: a change of wind, gust, direction while hovering
     for (let i = 1; i < P.length; i++){
       const b = P[i - 1], p = P[i];
       if (acKey(b) === acKey(p) || !hov(b) || !hov(p) || b.ad !== p.ad) continue;
-      const kind = p.cargo < b.cargo - 1e-6 ? 'drop' : p.cargo > b.cargo + 1e-6 ? 'load' : 'wind';
+      const kind = 'wind';
       const tr = [];
       for (let j = i; j < P.length; j++){
         const q = P[j];
@@ -1127,7 +1126,7 @@ function analyzeFlights(flights){
       tr.forEach(r => { if (r[1] > base + 0.05 || Math.abs(r[2]) > 0.1) settle = r[0]; });
       resp.push({
         flight:f.id, t:p.t - f.t0, absT:p.t, kind, ad:p.ad,
-        from:{ wind:b.wSet, dir:b.dir, gust:b.gust, cargo:acR2(b.cargo) }, to:{ wind:p.wSet, dir:p.dir, gust:p.gust, cargo:acR2(p.cargo) },
+        from:{ wind:b.wSet, dir:b.dir, gust:b.gust }, to:{ wind:p.wSet, dir:p.dir, gust:p.gust },
         trace:tr, peakH, peakV, settle, settled: tr[tr.length - 1][0] - settle > 1
       });
     }
@@ -1135,16 +1134,16 @@ function analyzeFlights(flights){
   return { points, resp };
 }
 
-// Average the operating points that share payload, wind, gust and controller (direction does not change the magnitudes)
+// Average the operating points that share wind, gust and controller (direction does not change the magnitudes)
 function aggregatePoints(points){
   const groups = {};
   points.forEach(p => {
-    const k = [p.payload, p.wind, p.gust, p.ad].join('|');
+    const k = [p.wind, p.gust, p.ad].join('|');
     (groups[k] = groups[k] || []).push(p);
   });
   return Object.values(groups).map(g => {
     const m = k => g.reduce((s, p) => s + p[k], 0) / g.length;
-    return { payload:g[0].payload, wind:g[0].wind, gust:g[0].gust, ad:g[0].ad, n:g.length,
+    return { wind:g[0].wind, gust:g[0].gust, ad:g[0].ad, n:g.length,
       lean:m('lean'), thrust:m('thrust'), current:m('current'), motor:m('motor'), endurance:m('endurance'),
       drift:Math.max(...g.map(p => p.drift)), alt:Math.max(...g.map(p => p.alt)), src:g.map(p => ({ flight:p.flight, t:p.t })) };
   });
@@ -1196,13 +1195,13 @@ const SURV = (() => {
 })();
 </script>
 <script id="sim-core">
-/* ===== Urban Cargo Drone Simulation Core:
+/* ===== Urban Surveillance & Bomber Drone Simulation Core:
    Heavy-lift 6S dynamics, cascaded PID, 2.5D A* obstacle-avoidance trajectory planner,
    real-time Lidar + Artificial Potential Field (APF), and urban obstacle database ===== */
 var Sim = (function(){
   const P = {
-    mBase: 2.4, cargoMass: 1.5, m: 3.9, g: 9.81, L: 0.40,
-    Ixx: 0.048, Iyy: 0.048, Izz: 0.082, I0x: 0.048, I0y: 0.048, rCargo: 0.11,
+    mBase: 2.8, m: 2.8, g: 9.81, L: 0.40,
+    Ixx: 0.048, Iyy: 0.048, Izz: 0.082, I0x: 0.048, I0y: 0.048,
     fMax: 22.0, fIdle: 0.9, fMin: 0.35,
     km: 0.022, tauM: 0.04, kd: 0.55, kq: 0.045,
     rpmMax: 9200, capacity: 12000, cells: 6, rPack: 0.014, fenceAlt: 65,
@@ -1228,21 +1227,13 @@ var Sim = (function(){
 
   const params = {
     takeoffAlt: 10, rtlAlt: 14, vMax: 8, missionAlt: 12, missionEnd: 'RTL',
-    cargoMass: 1.5, autoAvoid: true, autoDrop: true, safeMargin: 4.5,
+    autoAvoid: true, safeMargin: 4.5,
     windOn: true, windSpeed: 4, windDir: 270, gust: 0.3, drain: 5, linkLost: false, adaptive: true,
-    // task: 'delivery' | 'patrol' | 'orbit' | 'scan'; loops: patrol laps (0 = until recalled); orbit: { e, n, r, u, dir, v, laps, lookU, name }
-    task: 'delivery', loops: 1, orbit: null
-  };
-
-  // Delivery Hubs in the urban environment
-  const HUBS = {
-    A: { code:'A', name:'Hub A (Chung Cư Bắc)', e: 6,   n: 54,  u: 12 },
-    B: { code:'B', name:'Hub B (TTTM Đông)',    e: 56,  n: 10,  u: 12 },
-    C: { code:'C', name:'Hub C (Bệnh Viện Nam)',e: -46, n: -48, u: 12 }
+    // task: 'patrol' | 'orbit' | 'scan' | 'bomber'; loops: patrol laps (0 = until recalled); orbit: { e, n, r, u, dir, v, laps, lookU, name }
+    task: 'patrol', loops: 1, orbit: null
   };
 
   // Urban + Factory Obstacles: { id, name, e (center East), n (center North), rx (half-width E), ry (half-depth N), h (height Up), kind }
-  // Carefully laid out around Factory (0,0) and along corridors to Hubs A, B, C so straight paths intersect buildings!
   const obstacles = [
     // Compact Manufacturing Factory structures near Home (0,0) - leaving (0,0) launch pad wide open
     { id:'F1', name:'Xưởng Lắp Ráp Chính', e:-8,  n: 2,   rx:2.6, ry:3.2, h:4.8, kind:'factory' },
@@ -1255,7 +1246,7 @@ var Sim = (function(){
   const JAM_AFTER = 10;
 
   // Primary destinations requested by user/presets vs full expanded mission (with A* avoidance waypoints)
-  let destinations = [ { e: HUBS.A.e, n: HUBS.A.n, u: 12, label: 'Hub A', role: 'drop' } ];
+  let destinations = [];
   const mission = [];
   const blockedSegments = []; // [{ from:[e,n,u], to:[e,n,u], hitName }]
   let rtlPath = [];
@@ -1269,11 +1260,9 @@ var Sim = (function(){
   let S;
 
   function syncMass(){
-    P.cargoMass = clamp(params.cargoMass, 0, 3.5);
-    P.m = P.mBase + P.cargoMass;
-    // the parcel hangs ~0.11 m below the centre of mass and adds roll/pitch inertia m·r²
-    P.Ixx = P.I0x + P.cargoMass * P.rCargo * P.rCargo;
-    P.Iyy = P.I0y + P.cargoMass * P.rCargo * P.rCargo;
+    P.m = P.mBase;
+    P.Ixx = P.I0x;
+    P.Iyy = P.I0y;
   }
   // Adaptive-control settings (shown in the dashboard)
   const EST = { tauM: 1.0, tauD: 0.5, tauWind: 2.0 };
@@ -1290,9 +1279,9 @@ var Sim = (function(){
       rtlPhase:'climb', rtlAlt:14, wpIdx:0, touchT:0, braking:false,
       windNow:[0,0,0], flags:{ low:false }, fsReason:'',
       windSpd: params.windOn ? params.windSpeed : 0, windDirNow: params.windDir,
-      est:{ mHat: P.mBase + clamp(params.cargoMass, 0, 3.5), dHat:[0,0], wHat:[0,0], IHat: P.I0x + clamp(params.cargoMass, 0, 3.5) * P.rCargo * P.rCargo, valid:false },
+      est:{ mHat: P.mBase, dHat:[0,0], wHat:[0,0], IHat: P.I0x, valid:false },
       ctl:{ aH:[0,0], tiltCmd:0, T:0 },
-      minObsDist: 12.0, nearObsName: '', hitObs: null, lidarRays: [], lidarT: -1, apfVec: [0,0], cargoDelivered: false,
+      minObsDist: 12.0, nearObsName: '', hitObs: null, lidarRays: [], lidarT: -1, apfVec: [0,0],
       destDone: 0, legFrom: null, dwell: 0, rtlVer: 0, windWarnT: -99,
       lap: 1, orbPhase: 'approach', orbTrav: 0, orbPrev: 0,
       nfzIn: null, nfzT: 0, nfzDist: 999, nfzNear: null, nfzWarned: false, nfzMark: 0, jammed: false, jam: null
@@ -1493,7 +1482,7 @@ var Sim = (function(){
     return { points, blockedBy: directHit.name };
   }
 
-  // Rebuild the delivery trajectory from the drone's position through the destinations not yet served
+  // Rebuild the mission trajectory from the drone's position through the destinations not yet served
   function rebuildTrajectory(silent){
     mission.length = 0;
     blockedSegments.length = 0;
@@ -1520,9 +1509,9 @@ var Sim = (function(){
       const clean = sanitizePoint(rawDest.e, rawDest.n, rawDest.u, params.safeMargin * 0.7);
       if (clean.adjusted){
         rawDest.e = clean.e; rawDest.n = clean.n;
-        if (!silent) emit({ type:'info', msg:'Điểm giao trùng vào ' + clean.hitName + ', đã dịch ra rìa an toàn (' + clean.e + ', ' + clean.n + ')' });
+        if (!silent) emit({ type:'info', msg:'Điểm mốc trùng vào ' + clean.hitName + ', đã dịch ra rìa an toàn (' + clean.e + ', ' + clean.n + ')' });
       }
-      const target = { e: rawDest.e, n: rawDest.n, u: rawDest.u, kind: 'dest', destIdx: i, label: rawDest.label || ('Đích ' + (i + 1)), role: rawDest.role || 'drop' };
+      const target = { e: rawDest.e, n: rawDest.n, u: rawDest.u, kind: 'dest', destIdx: i, label: rawDest.label || ('Đích ' + (i + 1)), role: rawDest.role || 'pass' };
 
       if (params.autoAvoid){
         const res = planSegmentAStar(prev, target, params.safeMargin);
@@ -1697,7 +1686,7 @@ var Sim = (function(){
       }
       case 'MANUAL': S.hold = [p[0], p[1], Math.max(1.0, p[2])]; S.yawSp = S.att[2]; S.braking = true; break;
       case 'MISSION':
-        // Resume from where the drone is, skipping hubs already served on this run
+        // Resume from where the drone is, skipping waypoints already reached on this run
         S.dwell = 0;
         if (params.task === 'orbit' && params.orbit){ S.orbPhase = 'approach'; destinations = [orbitEntry()]; S.destDone = 0; }
         rebuildTrajectory(true);
@@ -1768,10 +1757,10 @@ var Sim = (function(){
       E.wHat = [S.vel[0] - vr[0], S.vel[1] - vr[1]];
       E.valid = true;
     }
-    E.IHat = P.I0x + Math.max(0, E.mHat - P.mBase) * P.rCargo * P.rCargo;
+    E.IHat = P.I0x;
   }
 
-  const TASK_NAME = { delivery:'chuyến giao hàng', patrol:'tuần tra', orbit:'bay vòng', scan:'quét khu vực', bomber:'oanh tạc ném bom' };
+  const TASK_NAME = { patrol:'tuần tra', orbit:'bay vòng', scan:'quét khu vực', bomber:'oanh tạc ném bom' };
   function finishTask(why){
     S.wpIdx = 0; S.destDone = 0;
     const end = params.missionEnd;
@@ -1907,18 +1896,9 @@ var Sim = (function(){
             emit({ type:'info', msg:'Đã tới ' + (w.label || ('Đích ' + (w.destIdx + 1))) });
             S.destDone = w.destIdx + 1;
             S.dwell = w.role === 'stop' ? 0.3 : 0.6;
-            if (w.role === 'drop' && params.autoDrop && params.cargoMass > 0.001){
-              // Split the load evenly over the hubs still to be served on this route
-              const share = params.cargoMass / Math.max(1, destinations.length - w.destIdx);
-              params.cargoMass = Math.max(0, params.cargoMass - share);
-              if (params.cargoMass < 0.001) params.cargoMass = 0;
-              syncMass(); S.cargoDelivered = params.cargoMass === 0;
-              S.dwell = 1.8;
-              emit({ type:'delivery', msg:'Đã thả ' + share.toFixed(2) + ' kg hàng tại ' + (w.label || 'Trạm đích') + (params.cargoMass > 0 ? ' · còn ' + params.cargoMass.toFixed(2) + ' kg' : '') });
-            }
             if (w.role === 'bomb' && !w.dropped){
               w.dropped = true;
-              if (window.dropBomb) window.dropBomb();
+              if (typeof window !== 'undefined' && window.dropBomb) window.dropBomb();
               emit({ type:'bomb', msg:'💣 ĐÃ CẮT BOM OANH TẠC ' + (w.label || 'MỤC TIÊU') });
             }
             return { xy:[w.e, w.n], z:w.u, yaw:S.yawSp };
@@ -1926,7 +1906,7 @@ var Sim = (function(){
         } else if ((tr.toB < 1.8 || legPassed(tr)) && dz < 1.4){
           if (w.role === 'bomb' && !w.dropped){
             w.dropped = true;
-            if (window.dropBomb) window.dropBomb();
+            if (typeof window !== 'undefined' && window.dropBomb) window.dropBomb();
             emit({ type:'bomb', msg:'💣 CẮT BOM TRÊN KHÔNG: ' + (w.label || 'MỤC TIÊU') + ' (v = ' + (gs || params.vMax).toFixed(1) + ' m/s)' });
           }
           if (isDest){ S.destDone = w.destIdx + 1; emit({ type:'pass', msg:'Đã qua ' + (w.label || ('điểm ' + (w.destIdx + 1))) }); }
@@ -2177,12 +2157,12 @@ var Sim = (function(){
   }
 
   function setDestinations(list, silent){
-    destinations = list.map(d => ({ e: d.e, n: d.n, u: d.u, label: d.label || '', role: d.role || 'drop' }));
+    destinations = list.map(d => ({ e: d.e, n: d.n, u: d.u, label: d.label || '', role: d.role || 'pass' }));
     S.destDone = 0; S.lap = 1;
     return rebuildTrajectory(silent);
   }
   function addDestination(d, silent){
-    destinations.push({ e: d.e, n: d.n, u: d.u, label: d.label || '', role: d.role || 'drop' });
+    destinations.push({ e: d.e, n: d.n, u: d.u, label: d.label || '', role: d.role || 'pass' });
     return rebuildTrajectory(silent);
   }
   function removeDestination(i, silent){
@@ -2205,7 +2185,7 @@ var Sim = (function(){
   updateLidarAndAPF();
 
   return {
-    P, K, MOT, AIR, CMDS, HUBS, obstacles, params, mission, blockedSegments, sticks,
+    P, K, MOT, AIR, CMDS, obstacles, params, mission, blockedSegments, sticks,
     on, step, command, check, setLink, reset, syncMass,
     rebuildTrajectory, setDestinations, addDestination, removeDestination, sanitizePoint, setOrbit, pointInObs, NFZ, JAM_AFTER, nfzAt,
     planSegmentAStar, clearanceAt, windLimit, EST,
@@ -2231,14 +2211,14 @@ const tstamp = t => { const m = Math.floor(t/60), s = t - m*60; return String(m)
 const hdgOf = psi => ((90 - psi*DEG) % 360 + 360) % 360;
 
 const META = {
-  DISARMED: { cls:'idle',  sub:'tắt động cơ',    top:'Tại Nhà Máy Sản Xuất — Động cơ tắt', desc:'Drone giám sát đang đỗ trên bãi phóng H của Nhà Máy Sản Xuất (0,0). Bấm ARM hoặc "Chạy Demo Giao Hàng" để khởi hành.' },
-  ARMED:    { cls:'armed', sub:'chờ tại xưởng',  top:'Động cơ quay không tải — Sẵn sàng cất cánh', desc:'4 động cơ heavy-lift quay không tải, kiện hàng đã khóa dưới bụng. Sẵn sàng TAKEOFF. Tự DISARM sau 12 giây nếu không cất cánh.' },
-  TAKEOFF:  { cls:'air',   sub:'cất cánh tải',   top:'Đang cất cánh khỏi Nhà Máy Sản Xuất', desc:'Leo thẳng đứng lên độ cao hành trình an toàn trước khi rời khuôn viên Nhà Máy. Tới độ cao đặt sẽ tự chuyển sang HOVER.' },
-  HOVER:    { cls:'air',   sub:'treo giữ vị trí', top:'Treo giữ vị trí ổn định', desc:'Giữ cố định toạ độ E/N/U và hướng mũi, tự động bù tải trọng kiện hàng và gió đô thị. Bấm MISSION để bay giao hàng.' },
+  DISARMED: { cls:'idle',  sub:'tắt động cơ',    top:'Tại Nhà Máy Sản Xuất — Động cơ tắt', desc:'Drone giám sát đang đỗ trên bãi phóng H của Nhà Máy Sản Xuất (0,0). Bấm ARM để khởi hành.' },
+  ARMED:    { cls:'armed', sub:'chờ tại xưởng',  top:'Động cơ quay không tải — Sẵn sàng cất cánh', desc:'4 động cơ quay không tải. Sẵn sàng TAKEOFF hoặc MISSION. Tự DISARM sau 12 giây nếu không cất cánh.' },
+  TAKEOFF:  { cls:'air',   sub:'cất cánh',       top:'Đang cất cánh khỏi Nhà Máy Sản Xuất', desc:'Leo thẳng đứng lên độ cao hành trình an toàn trước khi rời khuôn viên Nhà Máy. Tới độ cao đặt sẽ tự chuyển sang HOVER.' },
+  HOVER:    { cls:'air',   sub:'treo giữ vị trí', top:'Treo giữ vị trí ổn định', desc:'Giữ cố định toạ độ E/N/U và hướng mũi, tự động bù gió đô thị. Bấm MISSION để bay nhiệm vụ.' },
   MANUAL:   { cls:'air',   sub:'lái tay + APF',  top:'Lái bằng tay (có trường lực APF bảo vệ)', desc:'Lái tự do bằng bàn phím hoặc cần ảo. Khi bật né vật cản, cảm biến Lidar 360° tạo lực đẩy APF giúp hạn chế va vào cao ốc.' },
-  MISSION:  { cls:'air',   sub:'bay nhiệm vụ',   top:'Đang bay nhiệm vụ tự động', desc:'Bay qua chuỗi điểm dẫn đường đã được thuật toán A* tối ưu hóa để vòng tránh các tòa nhà cao tầng và giao kiện hàng tới Hub.' },
+  MISSION:  { cls:'air',   sub:'bay nhiệm vụ',   top:'Đang bay nhiệm vụ tự động', desc:'Bay qua chuỗi điểm dẫn đường đã được thuật toán A* tối ưu hóa để vòng tránh các tòa nhà cao tầng.' },
   RTL:      { cls:'air',   sub:'về Nhà Máy',     top:'Quay về Nhà Máy Sản Xuất (có né cao ốc)', desc:'Tự động tính toán hành lang né các tòa nhà cao tầng từ vị trí hiện tại về lại bãi đáp Nhà Máy Sản Xuất (0,0) rồi hạ cánh.' },
-  LANDING:  { cls:'land',  sub:'hạ cánh',        top:'Đang hạ cánh chính xác', desc:'Hạ cánh tốc độ giảm dần để bảo vệ kiện hàng. Chạm đất ổn định 0,4 giây thì chuyển về ARMED.' },
+  LANDING:  { cls:'land',  sub:'hạ cánh',        top:'Đang hạ cánh chính xác', desc:'Hạ cánh tốc độ giảm dần êm ái và chính xác. Chạm đất ổn định 0,4 giây thì chuyển về ARMED.' },
   FAILSAFE: { cls:'fs',    sub:'tự bảo vệ',      top:'Failsafe — Tự động né vật cản về Nhà Máy', desc:'Kích hoạt khi pin dưới 15% hoặc mất sóng. Drone tự lập đường né cao ốc về Nhà Máy; nếu pin dưới 6% sẽ đáp khẩn cấp tại chỗ.' },
   EMERGENCY:{ cls:'emg',   sub:'ngắt khẩn cấp',  top:'Động cơ bị ngắt khẩn cấp', desc:'Cả 4 động cơ bị ngắt do lệnh KILL hoặc va chạm công trình. Khi nằm yên trên mặt đất sẽ về DISARMED.' },
 };
@@ -2255,7 +2235,6 @@ const SV = window.SV = {
 };
 let lastActiveWp = -2;
 let replanTimer = 0;
-let cargoLocked = null;
 function readTokens(){
   const cs = getComputedStyle(document.documentElement);
   ['bg','panel','panel-2','line','line-2','fg','muted','faint','accent','accent-ink','tele','good','warn','bad','scene-sky','scene-ground','scene-grid','scene-grid2',
@@ -2292,7 +2271,7 @@ const EDGES = [
   { k:'HOVER>MISSION', off:-7, label:'MISSION' }, { k:'MISSION>HOVER', off:-7, label:'xong · HOLD' },
   { k:'MANUAL>MISSION', off:-7, label:'MISSION' }, { k:'MISSION>MANUAL', off:-7, label:'MANUAL' },
   { k:'HOVER>RTL', off:-7, label:'RTL' }, { k:'RTL>HOVER', off:-7, label:'HOLD' },
-  { k:'MISSION>RTL', off:0, label:'giao xong · RTL', side:-1 },
+  { k:'MISSION>RTL', off:0, label:'xong · RTL', side:-1 },
   { k:'HOVER>LANDING', off:-7, label:'LAND' }, { k:'LANDING>HOVER', off:-7, label:'HOLD' },
   { k:'RTL>LANDING', off:0, label:'về Nhà máy', side:-1 },
   { k:'LANDING>ARMED', d:'M704 295 H240 V207', lx:470, ly:287, label:'chạm đất' },
@@ -2407,22 +2386,11 @@ function refreshValidity(force){
 }
 
 /* ---------- sim events ---------- */
-let deliveryBannerTimer = 0;
-let deliveryBannerText = '';
 Sim.on(ev => {
   if (ev.type === 'transition'){
     addLog(ev.kind === 'fail' ? 'fail' : 'tr', ev.from + ' → ' + ev.to, ev.reason, ev.t);
     onStateChanged();
     if (ev.to === 'MISSION'){ renderMission(); svDraw3D(); }
-  } else if (ev.type === 'delivery'){
-    const left = Sim.params.cargoMass;
-    addLog('info', ev.msg, left > 0 ? 'Tải trọng giảm, bay tiếp tới trạm sau' : 'Đã giao hết hàng', ev.t);
-    $('#pCargo').value = String(left);
-    $('#oCargo').textContent = left.toFixed(2) + ' kg';
-    updateCargoSpecUI();
-    deliveryBannerText = ev.msg;
-    clearTimeout(deliveryBannerTimer);
-    deliveryBannerTimer = setTimeout(() => { deliveryBannerText = ''; }, 5000);
   } else if (ev.type === 'lap'){ addLog('info', ev.msg, '', ev.t); renderMission(); }
   else if (ev.type === 'pass'){ /* patrol and scan points: shown in the route table, not the log */ }
   else if (ev.type === 'info') addLog('info', ev.msg, '', ev.t);
@@ -2431,39 +2399,12 @@ Sim.on(ev => {
   else if (ev.type === 'reset'){ addLog('info', ev.msg, '', ev.t); }
 });
 
-/* ---------- demo sequence ---------- */
-const demo = { on:false, step:0, t0:0 };
-function startDemo(){
-  const st = Sim.S.state;
-  if (st === 'DISARMED') demo.step = 0; else if (st === 'ARMED') demo.step = 1; else if (st === 'HOVER') demo.step = 2;
-  else { addLog('rej', 'Demo cần drone ở DISARMED, ARMED hoặc HOVER', '', Sim.S.t); return; }
-  if (Sim.params.cargoMass <= 0 && Sim.S.grounded){
-    Sim.params.cargoMass = 1.5; Sim.syncMass();
-    $('#pCargo').value = '1.5'; $('#oCargo').textContent = '1.50 kg'; updateCargoSpecUI();
-  }
-  if (!Sim.destinations.length) loadHubPreset('A');
-  else replanAndRender();
-  demo.on = true; demo.t0 = Sim.S.t; if (atest.on) stopAdaptTest('bắt đầu Demo giao hàng');
-  addLog('info', 'Bắt đầu Demo Giao Hàng tự động từ Nhà Máy Sản Xuất', '', Sim.S.t);
-}
-function demoTick(){
-  if (!demo.on) return;
-  const S = Sim.S, st = S.state;
-  if (st === 'EMERGENCY' || st === 'FAILSAFE'){ demo.on = false; return; }
-  if (demo.step === 0){ if (Sim.command('ARM', 'demo')){ demo.step = 1; demo.t0 = S.t; } else demo.on = false; }
-  else if (demo.step === 1 && st === 'ARMED' && S.stateT > 0.9){ Sim.command('TAKEOFF', 'demo'); demo.step = 2; }
-  else if (demo.step === 2 && st === 'HOVER' && S.stateT > 1.0){ Sim.command('MISSION', 'demo'); demo.step = 3; }
-  else if (demo.step === 3){ if (st === 'HOVER' && S.stateT > 1.3){ Sim.command('RTL', 'demo'); demo.step = 4; } else if (st === 'RTL' || st === 'LANDING') demo.step = 4; }
-  else if (demo.step === 4 && (st === 'ARMED' || st === 'DISARMED')){ demo.on = false; addLog('info', 'Hoàn tất chu trình Giao Hàng & Quay về Nhà Máy!', '', S.t); }
-}
-
 /* ---------- commands ---------- */
 let killArm = false, killTimer = 0;
 function resetKill(){ killArm = false; clearTimeout(killTimer); $('#killBtn').classList.remove('confirm'); $('#killTxt').textContent = 'Ngắt động cơ khẩn cấp'; }
 
 function setFlightMode(mode){
   const st = Sim.S.state;
-  demo.on = false;
   if (mode === 'manual'){
     if (st === 'DISARMED' || st === 'ARMED'){
       addLog('warn', 'Hãy cất cánh (TAKEOFF) trước khi chuyển chế độ Lái tay', '', Sim.S.t);
@@ -2496,7 +2437,6 @@ $('#cmdModeBox')?.addEventListener('click', e => {
 $$('.cmd').forEach(b => b.addEventListener('click', () => {
   if (b.id === 'cmdModeBox') return;
   const c = b.dataset.cmd;
-  demo.on = false;
   if (atest.on) stopAdaptTest('người điều khiển ra lệnh ' + c);
   if (c === 'KILL'){
     if (Sim.check('KILL')){ Sim.command('KILL'); return; }
@@ -2511,7 +2451,7 @@ $$('.cmd').forEach(b => b.addEventListener('click', () => {
   Sim.command(c);
 }));
 
-/* ---------- parameters & cargo ---------- */
+/* ---------- parameters & environment ---------- */
 function compassDirVN(deg){
   const dirs = ['Bắc','Đông Bắc','Đông','Đông Nam','Nam','Tây Nam','Tây','Tây Bắc'];
   return dirs[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
@@ -2624,12 +2564,6 @@ function updateWindHudUI(){
     limEl.classList.toggle('over', wNow > 0.92 * lim);
   }
 }
-function updateCargoSpecUI(){
-  const cm = Sim.params.cargoMass;
-  const m = document.getElementById('metaCargo'); if (m) m.textContent = cm.toFixed(2) + ' kg';
-  const bs = document.getElementById('brandSpec');
-  if (bs) bs.textContent = 'X4 giám sát · camera gimbal 3 trục · khung 800 mm · tự trọng 2,4 kg · pin 6S 12000 mAh · Lidar 360°';
-}
 function bindRange(id, outId, fmt, apply){
   const i = document.getElementById(id), o = document.getElementById(outId);
   if (!i || !o) return;
@@ -2637,7 +2571,6 @@ function bindRange(id, outId, fmt, apply){
   i.addEventListener('input', up); up();
 }
 const P = Sim.params;
-bindRange('pCargo', 'oCargo', v => v.toFixed(2) + ' kg', v => { P.cargoMass = v; Sim.syncMass(); updateCargoSpecUI(); });
 bindRange('pSafe', 'oSafe', v => v.toFixed(1) + ' m', v => { P.safeMargin = v; scheduleReplan(); });
 bindRange('pTo', 'oTo', v => v + ' m', v => P.takeoffAlt = v);
 bindRange('pRtl', 'oRtl', v => v + ' m', v => P.rtlAlt = v);
@@ -2668,17 +2601,9 @@ $('#pAutoAvoid').addEventListener('change', e => {
   replanAndRender();
   addLog('info', P.autoAvoid ? 'Đã bật tự động sinh quỹ đạo né tòa nhà (A* + APF)' : 'Đã tắt tự động né vật cản (đường bay thẳng)', '', Sim.S.t);
 });
-$('#pAutoDrop').addEventListener('change', e => { P.autoDrop = e.target.checked; });
 $('#btnReplan').addEventListener('click', () => {
   const st = replanAndRender();
   addLog('info', 'Tái lập quỹ đạo A*: ' + st.destCount + ' đích, ' + st.avoidCount + ' điểm né cao ốc', '', Sim.S.t);
-});
-$('#btnReloadCargo').addEventListener('click', () => {
-  if (!Sim.S.grounded){ addLog('rej', 'Chỉ nạp hàng khi drone đang đỗ trên mặt đất', '', Sim.S.t); return; }
-  P.cargoMass = 1.5; Sim.syncMass();
-  $('#pCargo').value = '1.5'; $('#oCargo').textContent = '1.50 kg';
-  updateCargoSpecUI();
-  addLog('info', 'Đã nạp lại kiện hàng 1.50 kg tại Nhà máy', '', Sim.S.t);
 });
 $('#pWindOn').addEventListener('change', e => {
   P.windOn = e.target.checked;
@@ -2690,12 +2615,11 @@ $('#btnLink').addEventListener('click', e => {
   const lost = !P.linkLost; Sim.setLink(lost);
   e.currentTarget.setAttribute('aria-pressed', String(lost));
   e.currentTarget.textContent = lost ? 'Khôi phục liên kết' : 'Mô phỏng mất liên kết';
-  demo.on = false; refreshValidity(true);
+  refreshValidity(true);
 });
 function syncLinkBtn(){ const b = $('#btnLink'); b.setAttribute('aria-pressed', String(P.linkLost)); b.textContent = P.linkLost ? 'Khôi phục liên kết' : 'Mô phỏng mất liên kết'; }
 $('#btnReset').addEventListener('click', () => {
-  demo.on = false; resetKill();
-  P.cargoMass = 1.5; $('#pCargo').value = '1.5'; $('#oCargo').textContent = '1.50 kg'; updateCargoSpecUI();
+  resetKill();
   Sim.reset(); syncLinkBtn(); clearHistory();
   if (R3 && R3.advanceFlightRun) R3.advanceFlightRun();
   renderMission();
@@ -2710,21 +2634,7 @@ $$('#speedSeg button').forEach(b => b.addEventListener('click', () => {
   $$('#speedSeg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
 }));
 
-/* ---------- urban delivery mission & obstacle avoidance UI ---------- */
-function loadHubPreset(code){
-  const u = P.missionAlt;
-  const H = Sim.HUBS;
-  if (code === 'A') Sim.setDestinations([{ e:H.A.e, n:H.A.n, u, label:'Hub A (Bắc)' }]);
-  else if (code === 'B') Sim.setDestinations([{ e:H.B.e, n:H.B.n, u, label:'Hub B (Đông)' }]);
-  else if (code === 'C') Sim.setDestinations([{ e:H.C.e, n:H.C.n, u, label:'Hub C (Nam)' }]);
-  else if (code === 'MULTI') Sim.setDestinations([
-    { e:H.A.e, n:H.A.n, u, label:'Hub A (Bắc)' },
-    { e:H.B.e, n:H.B.n, u, label:'Hub B (Đông)' },
-    { e:H.C.e, n:H.C.n, u, label:'Hub C (Nam)' }
-  ]);
-  renderMission();
-  addLog('info', 'Đã lập tuyến giao hàng (' + Sim.mission.length + ' mốc dẫn đường, né ' + Sim.blockedSegments.length + ' cụm cao ốc chắn ngang)', '', Sim.S.t);
-}
+/* ---------- mission trajectory & obstacle avoidance UI ---------- */
 function scheduleReplan(){ clearTimeout(replanTimer); replanTimer = setTimeout(() => replanAndRender(true), 90); }
 function replanAndRender(silent){
   const stats = Sim.rebuildTrajectory(silent);
@@ -2749,7 +2659,7 @@ function renderMission(stats){
     const isAvoid = w.kind === 'avoid';
     const tag = isAvoid
       ? '<span class="wp-tag avoid">NÉ A*</span>'
-      : '<span class="wp-tag hub">' + (w.label || ('ĐÍCH ' + (w.destIdx + 1))) + '</span>';
+      : '<span class="wp-tag dest">' + (w.label || ('ĐÍCH ' + (w.destIdx + 1))) + '</span>';
     if (isAvoid){
       return '<tr class="wp-avoid" data-i="' + i + '"><td class="wp-n">' + (i+1) + '</td>'
         + '<td>' + tag + '</td>'
@@ -2786,15 +2696,10 @@ $('#wpBody').addEventListener('click', e => {
   Sim.removeDestination(+b.dataset.del, true);
   renderMission();
 });
-$('#btnHubA').addEventListener('click', () => loadHubPreset('A'));
-$('#btnHubB').addEventListener('click', () => loadHubPreset('B'));
-$('#btnHubC').addEventListener('click', () => loadHubPreset('C'));
-$('#btnMultiHub').addEventListener('click', () => loadHubPreset('MULTI'));
 $('#btnClear').addEventListener('click', () => { Sim.setDestinations([], true); renderMission(); });
-$('#btnDemo').addEventListener('click', startDemo);
 $('#wpMode').addEventListener('change', e => {
   $('#hint').textContent = e.target.checked
-    ? 'Kéo: xoay · cuộn chuột, chụm 2 ngón hoặc +/−: thu phóng · click mặt đất: thêm điểm tuần tra / giao hàng'
+    ? 'Kéo: xoay · cuộn chuột, chụm 2 ngón hoặc +/−: thu phóng · click mặt đất: thêm điểm tuần tra'
     : 'Kéo: xoay · cuộn chuột, chụm 2 ngón hoặc +/−: thu phóng';
 });
 function addWaypointAt(e, n){
@@ -2817,65 +2722,51 @@ function addWaypointAt(e, n){
 $$('#adSec .tag.ad').forEach(t => { t.dataset.k = t.textContent; });
 function setSlider(id, v){ const el = $('#' + id); el.value = String(v); el.dispatchEvent(new Event('input')); }
 function setWindOn(on){ const c = $('#pWindOn'); if (c.checked !== on){ c.checked = on; c.dispatchEvent(new Event('change')); } }
-function dropCargo(kg){
-  const P = Sim.params;
-  if (P.cargoMass <= 0.001){ addLog('rej', 'Không còn hàng để thả', '', Sim.S.t); return; }
-  const d = Math.min(kg, P.cargoMass);
-  P.cargoMass = Math.round((P.cargoMass - d) * 100) / 100; Sim.syncMass();
-  $('#pCargo').value = String(P.cargoMass); $('#oCargo').textContent = P.cargoMass.toFixed(2) + ' kg'; updateCargoSpecUI();
-  addLog('info', 'Thả ' + d.toFixed(2) + ' kg hàng · còn ' + P.cargoMass.toFixed(2) + ' kg', 'khối lượng đổi đột ngột, bộ ước lượng m̂ học lại', Sim.S.t);
-}
 $$('[data-step]').forEach(b => b.addEventListener('click', () => {
   const P = Sim.params, k = b.dataset.step;
   if (k === 'dir90'){ setWindOn(true); if (P.windSpeed < 1) setSlider('pWind', 5); setSlider('pWdir', (P.windDir + 90) % 360); }
   else if (k === 'spdUp') setSlider('pWind', Math.min(12, P.windSpeed + 4));
   else if (k === 'spdDown') setSlider('pWind', Math.max(0, P.windSpeed - 4));
-  else if (k === 'drop') dropCargo(0.5);
 }));
 
-// Test-flight programme (TESTPLAN / testSteps in analysis-core): flown live, one recorded flight per payload
+// Test-flight programme (TESTPLAN / testSteps in analysis-core): flown live
 const atest = { on:false, phase:0, t0:0, next:0, label:'', pi:0, steps:[], drain0:null };
-function setCargoGround(kg){ Sim.params.cargoMass = kg; Sim.syncMass(); $('#pCargo').value = String(kg); $('#oCargo').textContent = kg.toFixed(2) + ' kg'; updateCargoSpecUI(); }
 function applyStep(st){
   if (st.set){
     if (st.set.windSpeed != null){ setWindOn(true); setSlider('pWind', st.set.windSpeed); }
     if (st.set.windDir != null) setSlider('pWdir', st.set.windDir);
     if (st.set.gust != null) setSlider('pGust', Math.round(st.set.gust * 100));
   }
-  if (st.drop) dropCargo(Sim.params.cargoMass);
   if (st.land) Sim.command('LAND', 'test');
 }
 function renderAtSteps(){
   const n = TESTPLAN.payloads.length;
   $('#atSteps').innerHTML = TESTPLAN.payloads.map((p, i) => {
     const cls = !atest.on ? '' : i < atest.pi ? 'done' : i === atest.pi ? 'now' : '';
-    const kg = String(p).replace('.', ',') + ' kg';
     const now = atest.on && i === atest.pi ? ' · đang: ' + atest.label + (atest.phase === 3 ? ' (' + atest.next + '/' + atest.steps.length + ')' : '') : '';
-    return '<li class="' + cls + '"><b>' + (i + 1) + '/' + n + '</b><span>Tải ' + kg + now + '</span></li>';
+    return '<li class="' + cls + '"><b>' + (i + 1) + '/' + n + '</b><span>Chuyến bay ' + (i + 1) + now + '</span></li>';
   }).join('');
   if (typeof anRunBtn === 'function') anRunBtn();
 }
 renderAtSteps();
 function beginLeg(){
-  const p = TESTPLAN.payloads[atest.pi], S = Sim.S, kg = String(p).replace('.', ',') + ' kg';
-  // On the pad between flights: load this flight's cargo and fit a full battery, as a real test crew would
-  setCargoGround(p); setSlider('pGust', 0); setWindOn(true); setSlider('pWind', 0); setSlider('pWdir', 270);
+  const S = Sim.S;
+  setSlider('pGust', 0); setWindOn(true); setSlider('pWind', 0); setSlider('pWdir', 270);
   S.mAh = 0; S.soc = 1; S.flags.low = false;
-  addLog('info', 'Chuyến bay thử ' + (atest.pi + 1) + '/' + TESTPLAN.payloads.length + ': nạp ' + kg + ' hàng, thay pin đầy', 'lặng gió trước khi cất cánh', S.t);
-  atest.steps = testSteps(p); atest.next = 0; atest.phase = S.state === 'DISARMED' ? 0 : 1;
-  atest.label = 'cất cánh với ' + kg;
+  addLog('info', 'Chuyến bay thử ' + (atest.pi + 1) + '/' + TESTPLAN.payloads.length, 'lặng gió trước khi cất cánh', S.t);
+  atest.steps = testSteps(); atest.next = 0; atest.phase = S.state === 'DISARMED' ? 0 : 1;
+  atest.label = 'cất cánh';
   renderAtSteps();
 }
 function startAdaptTest(){
   const S = Sim.S;
   if (atest.on) return;
   if (!(S.state === 'DISARMED' || S.state === 'ARMED') || !S.grounded){ addLog('rej', 'Chương trình bay thử cần drone đang đỗ trên mặt đất', 'bấm LAND hoặc Đặt lại về Nhà máy trước', S.t); return; }
-  demo.on = false;
   atest.on = true; atest.pi = 0;
-  // The battery drain multiplier only speeds up demos; test flights use the real discharge rate
+  // The battery drain multiplier only speeds up simulations; test flights use the real discharge rate
   atest.drain0 = Sim.params.drain;
   if (atest.drain0 !== 1) setSlider('pDrain', 1);
-  addLog('info', 'Bắt đầu chương trình bay thử: ' + TESTPLAN.payloads.length + ' chuyến', 'mỗi chuyến: gió 0 → 12 m/s, đổi hướng, giật, thả hàng' + (atest.drain0 !== 1 ? '; hệ số xả pin tạm về ×1 như thật' : ''), S.t);
+  addLog('info', 'Bắt đầu chương trình bay thử: ' + TESTPLAN.payloads.length + ' chuyến', 'mỗi chuyến: gió 0 → 12 m/s, đổi hướng, giật' + (atest.drain0 !== 1 ? '; hệ số xả pin tạm về ×1 như thật' : ''), S.t);
   beginLeg();
 }
 function atestEnd(){
@@ -3144,7 +3035,7 @@ function drawChart(){
 
 /* ---------- DOM telemetry (10 Hz) ---------- */
 const E = id => document.getElementById(id);
-const els = {}; ['roAlt','roVs','roGs','roHdg','roHome','roObs','kvRoll','kvRollSp','kvPitch','kvPitchSp','kvMass','kvCargoSub','kvT','kvTW',
+const els = {}; ['roAlt','roVs','roGs','roHdg','roHome','roObs','kvRoll','kvRollSp','kvPitch','kvPitchSp','kvMass','kvPayloadSub','kvT','kvTW',
   'batPct','batFill','batBar','batV','batCell','batI','batUsed','batRem','batFt','metaTime','metaBat','smTime',
   'cSpE','cSpN','cSpU','cPE','cPN','cPU','cVE','cVN','cVU','hudAlt','hudGs','hudObs','hudWp','banner'].forEach(k => els[k] = E(k));
 const motEls = [E('m1'), E('m2'), E('m3'), E('m4')].map(m => ({ bar:m.querySelector('.m-bar'), fill:m.querySelector('.m-bar span'), rpm:m.querySelector('.m-v b'), pct:m.querySelector('.m-v span') }));
@@ -3165,7 +3056,7 @@ function updateDom(){
   els.kvRollSp.textContent = S.sp ? 'đặt ' + fx(S.tgtAtt[0]*DEG, 1) + '°' : '';
   els.kvPitchSp.textContent = S.sp ? 'đặt ' + fx(-S.tgtAtt[1]*DEG, 1) + '°' : '';
   els.kvMass.textContent = Pp.m.toFixed(2) + ' kg';
-  els.kvCargoSub.textContent = 'gimbal + Lidar';
+  els.kvPayloadSub.textContent = 'gimbal + Lidar';
   els.kvT.textContent = fx(S.T, 1) + ' N';
   els.kvTW.textContent = 'T/W ' + (S.T/(Pp.m*Pp.g)).toFixed(2);
   const pct = S.soc*100;
@@ -3206,12 +3097,10 @@ function updateDom(){
   else if (P.linkLost) { msg = 'Mất liên kết: drone tự né cao ốc về Nhà Máy'; cls = 'bad'; }
   else if (S.nfzNear && !S.grounded) { msg = 'Gần ' + S.nfzNear.name + ': còn ' + S.nfzDist.toFixed(0) + ' m tới vùng cấm bay'; cls = 'warn'; }
   else if (S.state === 'EMERGENCY') { msg = 'Khẩn cấp: Động cơ đã ngắt'; cls = 'bad'; }
-  else if (deliveryBannerText) { msg = deliveryBannerText; cls = 'good'; }
   else if (S.state === 'FAILSAFE') msg = 'Failsafe: ' + S.fsReason + ', đang về Nhà Máy';
   else if (!S.grounded && obsD < 4.2) { msg = 'Lidar APF: Đang né ' + S.nearObsName + ' (' + fx(obsD, 1) + ' m)'; cls = 'warn'; }
   else if (S.soc < 0.25 && S.state !== 'DISARMED') msg = 'Pin yếu ' + Math.ceil(pct) + '%';
   else if (atest.on) { msg = 'Bay thử ' + (atest.pi + 1) + '/' + TESTPLAN.payloads.length + ': ' + atest.label; cls = 'warn'; }
-  else if (demo.on) { msg = 'Đang chạy Demo Giao Hàng Đô Thị'; cls = 'warn'; }
   else if (SV.track && Sim.S.state !== 'DISARMED') { msg = 'Camera đang bám ' + (SV.track[0] === 'P' ? 'người ' : 'xe ') + SV.track; cls = 'good'; }
   els.banner.hidden = !msg; if (msg){ els.banner.textContent = msg; els.banner.className = 'ov ov-banner ' + cls; }
 
@@ -3219,11 +3108,6 @@ function updateDom(){
   if (act !== lastActiveWp){
     lastActiveWp = act;
     $$('#wpBody tr').forEach((tr, i) => { tr.classList.toggle('active', i === act); tr.classList.toggle('done', act >= 0 && i < act); });
-  }
-  if (cargoLocked !== !S.grounded){
-    cargoLocked = !S.grounded;
-    $('#pCargo').disabled = cargoLocked; $('#btnReloadCargo').disabled = cargoLocked;
-    $('#pCargo').title = cargoLocked ? 'Chỉ đổi khối lượng hàng khi drone đang đỗ' : '';
   }
   const live = (S.state === 'HOVER' || S.state === 'MANUAL') && !P.linkLost;
   $('#stickL').classList.toggle('dim', !live); $('#stickR').classList.toggle('dim', !live);
@@ -3280,11 +3164,9 @@ function init3D(){
   const ewRoads = [-42, -6, 14, 44];
   const nsRoads = [-44, -20, 10, 46];
 
-  // Helper to check if a point (e, n) overlaps factory compound, hubs, or obstacles
+  // Helper to check if a point (e, n) overlaps factory compound or obstacles
   function isZoneFree(e, n, padR){
     if (e > -21 - padR && e < 7 + padR && n > -16 - padR && n < 12 + padR) return false;
-    const hubs = Object.values(Sim.HUBS);
-    for (let i = 0; i < hubs.length; i++) if (Math.hypot(e - hubs[i].e, n - hubs[i].n) < 5.5 + padR) return false;
     for (let i = 0; i < Sim.obstacles.length; i++){
       const o = Sim.obstacles[i];
       if (Math.abs(e - o.e) < o.rx + padR + 1.2 && Math.abs(n - o.n) < o.ry + padR + 1.2) return false;
@@ -3476,23 +3358,6 @@ function init3D(){
     cityEnvGroup.add(cMesh);
   }
 
-  // Delivery Hubs (Hub A, Hub B, Hub C)
-  const hubColors = { A:'#0b7ba0', B:'#1c8748', C:'#d9483b' };
-  Object.values(Sim.HUBS).forEach(h => {
-    const col = hubColors[h.code];
-    const hTex = canvasTex(256, (x, s) => {
-      x.fillStyle = 'rgba(20,28,35,0.92)'; x.beginPath(); x.arc(s/2, s/2, s/2 - 6, 0, Math.PI*2); x.fill();
-      x.lineWidth = 14; x.strokeStyle = col; x.beginPath(); x.arc(s/2, s/2, s/2 - 20, 0, Math.PI*2); x.stroke();
-      x.fillStyle = '#ffffff'; x.font = '700 84px "Barlow Condensed", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-      x.fillText('HUB ' + h.code, s/2, s/2 + 4);
-    });
-    const hp = new THREE.Mesh(new THREE.CircleGeometry(1.6, 36), new THREE.MeshBasicMaterial({ map:hTex, transparent:true, opacity:0.55, depthWrite:false }));
-    hp.rotation.x = -Math.PI/2; hp.position.copy(toV(h.e, h.n, 0.025)); cityEnvGroup.add(hp);
-    const sp = textSprite('HUB ' + h.code, '#ffffff', col, 0.026);
-    sp.material.opacity = 0.6;
-    sp.position.copy(toV(h.e, h.n, 2.6)); cityEnvGroup.add(sp);
-  });
-
   const north = textSprite('BẮC (N)', '#ffffff', 'rgba(20,32,42,0.82)', 0.028); north.material.opacity = 0.6; north.position.copy(toV(0, 74, 2.5)); cityEnvGroup.add(north);
 
   // Build procedural window facade textures for urban skyscrapers
@@ -3641,10 +3506,6 @@ function init3D(){
   // Status LED on nose
   const ledM = new THREE.MeshBasicMaterial({ color:0x7a8590 });
   const led = new THREE.Mesh(new THREE.SphereGeometry(0.012*k, 10, 8), ledM); led.position.set(0.05*k, yFrame + 0.06*k, 0); drone.add(led);
-
-  // Surveillance Payload Group
-  const cargoGroup = new THREE.Group(); cargoGroup.position.set(0, 0.065*k, 0); drone.add(cargoGroup);
-  cargoGroup.visible = false;
 
   // Bomb Payload (Bomber Mission) under drone
   function makeBombModel(){
@@ -4397,9 +4258,6 @@ function init3D(){
     drone.position.copy(toV(p[0], p[1], p[2]));
     drone.rotation.set(S.att[0], S.att[2], -S.att[1], 'YZX');
 
-    // Cargo box hidden for surveillance drone
-    cargoGroup.visible = false;
-
     const t = performance.now()/1000;
     lidarTurret.rotation.y = S.t * 8.0;
     props.forEach((pr, i) => {
@@ -4670,7 +4528,7 @@ function init3D(){
   function asCamera(draw, at){
     lensAt.copy(at);
     const off = [], hide = o => { if (o.visible){ o.visible = false; off.push(o); } };
-    drone.children.forEach(c => { if (c !== cargoGroup) hide(c); });
+    drone.children.forEach(c => hide(c));
     hide(lidarGroup); hide(bufferGroup); hide(spMark); camHide.forEach(hide);
     if (!GB.ar){ hide(wpGroup); hide(rtlGroup); hide(trail); }
     else [wpGroup, rtlGroup].forEach(g => g.children.forEach(o => { if (o.isMesh && o.position.distanceTo(lensAt) < 4) hide(o); }));
@@ -4957,8 +4815,8 @@ function recSample(force){
   if (!force && S.t - REC.lastT < 0.2) return;
   REC.lastT = S.t; f.samples.push(recPoint());
 }
-// Weather / payload settings watched during a flight; slider drags within 1.5 s merge into one change
-const ENV_KEYS = [['windDir', 'dir'], ['windSpeed', 'spd'], ['gust', 'gust'], ['windOn', 'on'], ['cargoMass', 'cargo'], ['adaptive', 'adapt']];
+// Weather settings watched during a flight; slider drags within 1.5 s merge into one change
+const ENV_KEYS = [['windDir', 'dir'], ['windSpeed', 'spd'], ['gust', 'gust'], ['windOn', 'on'], ['adaptive', 'adapt']];
 function envSnapshot(){ const o = {}; ENV_KEYS.forEach(([k]) => { o[k] = Sim.params[k]; }); return o; }
 function recEnv(){
   const f = REC.cur; if (!f) return;
@@ -4968,7 +4826,7 @@ function recEnv(){
     if (v === old) return;
     f.envState[k] = v;
     const last = f.env.length ? f.env[f.env.length - 1] : null;
-    if (last && last.kind === kind && t - last.t1 < 1.5 && kind !== 'cargo'){ last.to = v; last.t1 = t; }
+    if (last && last.kind === kind && t - last.t1 < 1.5){ last.to = v; last.t1 = t; }
     else f.env.push({ t, t1:t, kind, from:old, to:v });
   });
 }
@@ -4977,7 +4835,7 @@ function recStart(){
   REC.n++;
   REC.cur = { id:REC.n, t0:S.t, t1:null, st0:S.state, outcome:'', kind:'live', live:true,
     samples:[], events:[], plans:[], drops:[], env:[], envState:envSnapshot(), mAh0:S.mAh, soc0:S.soc*100,
-    cargo0:Sim.params.cargoMass, safe:Sim.params.safeMargin, adaptive:Sim.params.adaptive };
+    safe:Sim.params.safeMargin, adaptive:Sim.params.adaptive };
   REC.flights.push(REC.cur);
   if (REC.flights.length > 12) REC.flights.shift();
   REC.sel = REC.cur; REC.lastT = -1; rpIdx = null;
@@ -5025,10 +4883,6 @@ Sim.on(ev => {
     } else if (ev.to === 'DISARMED'){
       recFinish('Đã tắt động cơ', 'idle');
     }
-  } else if (ev.type === 'delivery' && REC.cur){
-    const m = ev.msg.match(/thả ([\d.]+) kg/);
-    REC.cur.drops.push({ t:ev.t, e:S.pos[0], n:S.pos[1], kg: m ? parseFloat(m[1]) : 0, msg:ev.msg });
-    recSample(true);
   } else if (ev.type === 'reset' && REC.cur){
     recFinish('Đặt lại giữa chừng', 'idle', true);
   }
@@ -5110,13 +4964,13 @@ function rpDownload(name, blob){
 }
 $('#rpCsv').addEventListener('click', () => {
   const f = REC.sel; if (!f) return;
-  const rows = [['t_s','state','e_m','n_m','u_m','ground_speed_mps','vertical_speed_mps','roll_deg','pitch_deg','heading_deg','battery_pct','cargo_kg','clearance_m','wind_mps',
+  const rows = [['t_s','state','e_m','n_m','u_m','ground_speed_mps','vertical_speed_mps','roll_deg','pitch_deg','heading_deg','battery_pct','clearance_m','wind_mps',
     'wind_from_deg','wind_est_mps','wind_est_from_deg','mass_kg','mass_est_kg','thrust_N','weight_N','tilt_deg','tilt_cmd_deg','inertia_est_kgm2','pos_err_m','alt_err_m'].join(',')];
   const o = (v, d) => v == null ? '' : v.toFixed(d);
   f.samples.forEach(p => rows.push([(p.t - f.t0).toFixed(2), p.st, p.e.toFixed(2), p.n.toFixed(2), p.u.toFixed(2), p.gs.toFixed(2), p.vs.toFixed(2),
-    p.roll.toFixed(1), p.pitch.toFixed(1), hdgOf(p.psi).toFixed(0), p.soc.toFixed(1), p.cargo.toFixed(2), Math.min(p.clr, 99).toFixed(2), p.wind.toFixed(1),
+    p.roll.toFixed(1), p.pitch.toFixed(1), hdgOf(p.psi).toFixed(0), p.soc.toFixed(1), Math.min(p.clr, 99).toFixed(2), p.wind.toFixed(1),
     o(p.wTd, 0), o(p.wE, 2), o(p.wEd, 0), o(p.mT, 2), o(p.mE, 3), o(p.T, 2), o(p.W, 2), o(p.tilt, 2), o(p.tiltC, 2), o(p.IE, 4), o(p.herr, 3), o(p.verr, 3)].join(',')));
-  rpDownload('chuyen-bay-' + f.id + '.csv', new Blob(['﻿' + rows.join('\n')], { type:'text/csv;charset=utf-8' }));
+  rpDownload('chuyen-bay-' + f.id + '.csv', new Blob(['\ufeff' + rows.join('\n')], { type:'text/csv;charset=utf-8' }));
 });
 $('#rpPng').addEventListener('click', () => {
   if (!REC.sel) return;
@@ -5149,14 +5003,13 @@ function rpDrawMap(f, idx){
     ctx.strokeStyle = TK.muted; ctx.lineWidth = 1; ctx.strokeRect(X(o.e - o.rx) + 0.5, Y(o.n + o.ry) + 0.5, o.rx*2*k - 1, o.ry*2*k - 1);
     if (o.rx*2*k > 22){ ctx.fillStyle = TK.fg; ctx.fillText(o.id, X(o.e), Y(o.n) - 5); ctx.fillStyle = TK.muted; ctx.fillText(o.h + 'm', X(o.e), Y(o.n) + 6); }
   });
-  // factory pad and hubs
+  // factory pad
   const ring = (e, n, txt) => {
     ctx.beginPath(); ctx.arc(X(e), Y(n), 7, 0, Math.PI*2); ctx.fillStyle = TK.panel; ctx.fill();
     ctx.strokeStyle = TK.fg; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.fillStyle = TK.fg; ctx.font = '700 10px "Barlow Condensed", Arial, sans-serif'; ctx.fillText(txt, X(e), Y(n) + 0.5);
   };
   ring(0, 0, 'H');
-  Object.values(Sim.HUBS).forEach(hb => ring(hb.e, hb.n, hb.code));
   // planned routes (dashed)
   ctx.lineWidth = 1.5; ctx.strokeStyle = TK.fg; ctx.globalAlpha = 0.5; ctx.setLineDash([6, 4]);
   f.plans.forEach(pl => { ctx.beginPath(); pl.pts.forEach((p, i) => i ? ctx.lineTo(X(p.e), Y(p.n)) : ctx.moveTo(X(p.e), Y(p.n))); ctx.stroke(); });
@@ -5179,17 +5032,6 @@ function rpDrawMap(f, idx){
   f.events.forEach(ev => {
     ctx.beginPath(); ctx.arc(X(ev.e), Y(ev.n), 4, 0, Math.PI*2);
     ctx.fillStyle = stCol(ev.to); ctx.fill(); ctx.strokeStyle = TK['panel-2']; ctx.lineWidth = 2; ctx.stroke();
-  });
-  // deliveries
-  ctx.font = '600 10px "JetBrains Mono", monospace'; ctx.textAlign = 'left';
-  f.drops.forEach(d => {
-    const x = X(d.e), y = Y(d.n);
-    ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 7, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 7, y); ctx.closePath();
-    ctx.fillStyle = TK.accent; ctx.fill(); ctx.strokeStyle = TK['panel-2']; ctx.lineWidth = 2; ctx.stroke();
-    const txt = '−' + d.kg.toFixed(2) + ' kg', tw = ctx.measureText(txt).width;
-    const lx = x + 10 + tw > w - 4 ? x - 10 - tw : x + 10;
-    ctx.fillStyle = TK.panel; ctx.fillRect(lx - 3, y - 8, tw + 6, 15);
-    ctx.fillStyle = TK.fg; ctx.fillText(txt, lx, y);
   });
   // end marker (crash = X)
   if (!f.live && P.length){
@@ -5399,10 +5241,8 @@ function rpResponse(f){
     let out = null; win.forEach(p => { if ((p.herr || 0) > 0.3 || Math.abs(p.verr || 0) > 0.3) out = p.t; });
     const settle = out == null ? 0 : out - tA;
     const settled = win.length && (win[win.length - 1].t - (out == null ? tA : out) > 1.0);
-    // estimator convergence after a payload change: first time |m̂ − m| < 0.05 kg and staying there
     // estimator convergence: from the change until the estimate stays within tolerance to the end of the window
-    const ok = e.kind === 'cargo' ? (p => Math.abs(p.mE - p.mT) < 0.05)
-      : (e.kind === 'adapt' || e.kind === 'on') ? null
+    const ok = (e.kind === 'adapt' || e.kind === 'on') ? null
       : (p => p.wE != null && Math.abs(p.wE - p.wT) < Math.max(0.5, 0.1 * p.wT) && (p.wT < 1 || (p.wEd != null && p.wTd != null && Math.abs(((p.wEd - p.wTd + 540) % 360) - 180) < 15)));
     let conv = null;
     if (ok && win.length && f.adaptive !== false){
@@ -5422,9 +5262,7 @@ function rpRenderResponse(f){
   const n1 = v => v == null ? '—' : v.toFixed(1), n2 = v => v == null ? '—' : v.toFixed(2);
   $('#rpRespBody').innerHTML = rows.map(r => {
     const L = r.last;
-    const est = r.e.kind === 'cargo'
-      ? 'm̂ ' + (L ? n2(L.mE) : '—') + ' kg (thật ' + (L ? n2(L.mT) : '—') + ')' + (r.conv != null ? ' · khớp sau ' + n1(r.conv) + ' s' : '')
-      : r.e.kind === 'adapt' ? '—'
+    const est = r.e.kind === 'adapt' ? '—'
       : L && L.wE == null ? 'không ước lượng (PID cố định)'
       : 'ŵ ' + (L ? n1(L.wE) : '—') + ' m/s từ ' + (L && L.wEd != null ? pad3(L.wEd) + '°' : '—') + ' (thật ' + (L ? n1(L.wT) : '—') + ' từ ' + (L && L.wTd != null ? pad3(L.wTd) + '°' : '—') + ')' + (r.conv != null ? ' · khớp sau ' + n1(r.conv) + ' s' : '');
     return '<tr data-t="' + r.tA + '"><td>' + mmss(r.tA - f.t0) + '</td><td>' + rpEsc(envLong(r.e)) + '<div class="rp-dim">' + rpEsc(r.during) + '</div></td>' +
@@ -5447,7 +5285,6 @@ function rpReadout(f, idx){
     '<span><span class="k">E/N/U</span> <b>' + fx(p.e, 1) + ' / ' + fx(p.n, 1) + ' / ' + fx(p.u, 1) + ' m</b></span>' +
     '<span><span class="k">GS</span> <b>' + fx(p.gs, 1) + ' m/s</b></span>' +
     '<span><span class="k">Pin</span> <b>' + p.soc.toFixed(1) + '%</b></span>' +
-    '<span><span class="k">Hàng</span> <b>' + p.cargo.toFixed(2) + ' kg</b></span>' +
     '<span><span class="k">Cách tường</span> <b>' + (p.air ? (p.clr > 40 ? '> 40' : fx(p.clr, 1)) + ' m' : '—') + '</b></span>' +
     (rpTab === 'ctrl' ?
       '<span><span class="k">Gió</span> <b>' + p.wT.toFixed(1) + (p.wTd != null ? ' từ ' + pad3(p.wTd) + '°' : '') + '</b></span>' +
@@ -5479,12 +5316,11 @@ function rpRenderInner(light){
     rpTile('Kết quả', f.live ? 'Đang bay' : rpEsc(f.outcome.split(' · ')[0]), f.live ? 'cập nhật trong lúc bay' : rpEsc(f.outcome.split(' · ').slice(1).join(' · ')) || 'Chuyến ' + f.id, resCls) +
     rpTile('Tổng thời gian', mmss(st.total), 'trên không ' + mmss(st.air)) +
     rpTile('Quãng đường bay', Math.round(st.dist) + ' m', st.air > 0 ? 'TB ' + (st.dist / st.air).toFixed(1) + ' m/s' : '') +
-    rpTile('Hàng', f.drops.length ? 'giao ' + f.drops.length + ' trạm' : (f.cargo0 - st.last.cargo > 0.001 ? 'đã thả' : 'chưa giao'), (f.cargo0 - st.last.cargo).toFixed(2) + ' / ' + f.cargo0.toFixed(2) + ' kg rời drone') +
     rpTile('Pin đã dùng', Math.round(st.mAh) + ' mAh', st.socUsed.toFixed(1) + '% · còn ' + st.last.soc.toFixed(0) + '%') +
     rpTile('Cách tường gần nhất', st.clr > 40 ? '> 40 m' : st.clr.toFixed(2) + ' m', st.clrAt ? 'lúc T+' + mmss(st.clrAt.t - f.t0) + ' · ' + st.clrAt.st : '', clrCls) +
     rpTile('Tốc độ tối đa', st.gsMax.toFixed(1) + ' m/s', 'nghiêng tối đa ' + st.tilt.toFixed(0) + '°') +
     rpTile('Chuyển trạng thái', f.events.length + ' lần', f.plans.length + ' tuyến được lập') +
-    rpTile('Bộ điều khiển', f.adaptive ? 'Thích nghi' : 'PID cố định', envList(f).length + ' thay đổi gió/tải');
+    rpTile('Bộ điều khiển', f.adaptive ? 'Thích nghi' : 'PID cố định', envList(f).length + ' thay đổi gió');
   const tot = Math.max(1e-6, st.total);
   $('#rpDur').innerHTML = ST_ORDER.filter(s => st.dur[s] > 0).map(s =>
     '<div class="rp-d"><i style="background:' + stCol(s) + '"></i><span>' + s + '</span><span class="bar"><span style="width:' + (st.dur[s] / tot * 100).toFixed(1) + '%;background:' + stCol(s) + '"></span></span><span class="t">' + mmss(st.dur[s]) + ' · ' + Math.round(st.dur[s] / tot * 100) + '%</span></div>').join('');
@@ -5492,7 +5328,7 @@ function rpRenderInner(light){
     '<tr data-t="' + ev.t + '"><td>' + mmss(ev.t - f.t0) + '</td><td class="rp-ft"><i style="background:' + stCol(ev.from) + '"></i>' + ev.from + ' → <i style="background:' + stCol(ev.to) + '"></i>' + ev.to + '</td><td>' + rpEsc(ev.reason) + '</td></tr>').join('');
   const used = ST_ORDER.filter(s => st.dur[s] > 0 && s !== 'DISARMED' && s !== 'ARMED');
   $('#rpLegend').innerHTML = used.map(s => '<span><i style="border-color:' + stCol(s) + '"></i>' + s + '</span>').join('') +
-    '<span><i class="dash"></i>tuyến dự kiến (A*)</span><span><b class="rp-dia"></b>điểm thả hàng</span><span><b class="rp-dot"></b>đổi trạng thái</span>';
+    '<span><i class="dash"></i>tuyến dự kiến (A*)</span><span><b class="rp-dot"></b>đổi trạng thái</span>';
 }
 $$('#rpTab button').forEach(b => b.addEventListener('click', () => {
   rpTab = b.dataset.tab;
@@ -5691,18 +5527,14 @@ function anSpecs(A){
     { label:'Gió tăng 3 m/s', f: r => r.kind === 'wind' && r.to.wind > r.from.wind && r.to.dir === r.from.dir && r.to.gust === r.from.gust },
     { label:'Gió giảm 3 m/s', f: r => r.kind === 'wind' && r.to.wind < r.from.wind && r.to.dir === r.from.dir && r.to.gust === r.from.gust },
     { label:'Đổi hướng gió', f: r => r.kind === 'wind' && r.to.dir !== r.from.dir },
-    { label:'Gió giật 30%', f: r => r.kind === 'wind' && r.to.gust > r.from.gust },
-    { label:'Thả hàng', f: r => r.kind === 'drop' },
+    { label:'Gió giật 30%', f: r => r.kind === 'wind' && r.to.gust > r.from.gust }
   ];
   const dotRows = kinds.map(k => {
     const rs = A.resp.filter(k.f), g = {};
-    rs.forEach(r => { const key = r.from.cargo + '|' + r.ad, v = Math.max(r.peakH, r.kind === 'drop' ? r.peakV : 0); if (!g[key] || v > g[key].v) g[key] = { v, name: kgTxt(r.from.cargo) + (r.ad ? '' : ' PID'), tok: plTok(r.from.cargo) }; });
+    rs.forEach(r => { const key = String(r.ad), v = r.peakH; if (!g[key] || v > g[key].v) g[key] = { v, name: (r.ad ? 'Thích nghi' : 'PID'), tok: 'pl-0' }; });
     return { label: k.label, vals: Object.values(g) };
   }).filter(r => r.vals.length);
-  // 4) altitude trace after each load drop
-  const drops = A.resp.filter(r => r.kind === 'drop');
-  const dropSeries = drops.map(r => ({ name: kgTxt(r.from.cargo) + (r.ad ? '' : ' · PID') + ' (c.' + r.flight + ')', tok: plTok(r.from.cargo), dash: !r.ad,
-    pts: r.trace.map(q => [q[0], q[2]]) }));
+  const dropSeries = [];
   return { leanSeries, endSeries, dotRows, dropSeries };
 }
 function anRender(light){
@@ -5717,17 +5549,11 @@ function anRenderInner(light){
   anRunBtn();
   if (!has) return;
   const sp = anSpecs(A);
-  $('#anLead').textContent = 'Tổng hợp từ ' + A.flown.length + ' chuyến bay đã ghi trong báo cáo hành trình (' + flightsTxt(A.flown.map(f => f.id)) + '). Mỗi điểm đo là một đoạn drone treo ổn định ít nhất ' + (TESTPLAN.settle + 3) + ' s với gió và tải không đổi; ' + TESTPLAN.settle + ' s đầu sau mỗi thay đổi bị bỏ để drone ổn định. Bấm một dòng trong bảng để tua lại đúng đoạn đó.';
+  $('#anLead').textContent = 'Tổng hợp từ ' + A.flown.length + ' chuyến bay đã ghi trong báo cáo hành trình (' + flightsTxt(A.flown.map(f => f.id)) + ').';
   if (sp.leanSeries.length) lineChart('anLean', { xTitle:'tốc độ gió (m/s)', xTicks:[0, 3, 6, 9, 12], xMin:0, xMax:12, markers:true, yMin:0, yMinTop:36, refs:[{ y:34, label:'giới hạn nghiêng 34°' }],
     xFmtTip: v => 'gió ' + v + ' m/s', tip: v => nv(v, 1) + '°', yFmt: v => v + '°', series: sp.leanSeries });
   else chartNote('anLean', 'Chưa có đoạn treo ổn định nào không có gió giật');
-  if (sp.endSeries.length) lineChart('anEnd', { xTitle:'tải trọng (kg)', xTicks:[0, 0.75, 1.5, 2.25, 3], xMin:0, xMax:3, markers:true, yMin:0, endW:64,
-    xFmt: v => String(v).replace('.', ','), xFmtTip: v => 'tải ' + kgTxt(v), tip: v => nv(v, 1) + ' phút', yFmt: v => v + ' ph', series: sp.endSeries });
-  else chartNote('anEnd', 'Cần đo ở ít nhất 2 mức tải với cùng tốc độ gió');
-  if (sp.dotRows.length) dotPlot('anStep', sp.dotRows); else chartNote('anStep', 'Chưa có thay đổi gió hoặc tải nào lúc drone đang treo');
-  if (sp.dropSeries.length) lineChart('anDrop', { xTitle:'giây sau khi thả hàng', xMin:0, xTicks:[0, 2, 4, 6, 8, 10, 12], continuous:true, endW:118,
-    xFmtTip: v => 't = ' + nv(v, 1) + ' s', tip: v => (v >= 0 ? '+' : '') + nv(v, 2) + ' m', yFmt: v => nv(v, 1), series: sp.dropSeries });
-  else chartNote('anDrop', 'Chưa có lần thả hàng nào lúc drone đang treo');
+  if (sp.dotRows.length) dotPlot('anStep', sp.dotRows); else chartNote('anStep', 'Chưa có thay đổi gió nào lúc drone đang treo');
   if (light) return;
   anConclusions(A); anTables(A);
 }
@@ -5736,51 +5562,23 @@ function anConclusions(A){
   const item = (t, body) => '<div class="an-c"><h4>' + t + '</h4><p>' + body + '</p></div>';
   const src = arr => '<span class="an-src">Nguồn: ' + flightsTxt(arr.flatMap(p => p.src ? p.src.map(s => s.flight) : [p.flight])) + '</span>';
   const out = [];
-  // wind effect at one payload
-  const byP = {}; flat.forEach(p => (byP[p.payload] = byP[p.payload] || []).push(p));
-  const pl = Object.keys(byP).map(Number).sort((a, b) => (byP[b].length - byP[a].length) || (Math.abs(a - 1.5) - Math.abs(b - 1.5)))[0];
-  if (pl != null && byP[pl].length >= 2){
-    const g = byP[pl].sort((a, b) => a.wind - b.wind), lo = g[0], hi = g[g.length - 1];
-    out.push(item('Gió mạnh lên', 'Chở ' + kgTxt(pl) + ', gió ' + g.map(p => p.wind).join(' → ') + ' m/s: drone nghiêng vào gió <b>' + g.map(p => nv(p.lean, 1) + '°').join(' → ') + '</b> để đứng yên. Lực đẩy ' + nv(lo.thrust, 1) + ' → ' + nv(hi.thrust, 1) + ' N, dòng điện ' + nv(lo.current, 1) + ' → ' + nv(hi.current, 1) + ' A, thời gian bay ' + nv(lo.endurance, 1) + ' → ' + nv(hi.endurance, 1) + ' phút. ' + src(g)));
-  } else out.push(item('Gió mạnh lên', 'Chưa đủ dữ liệu: cần ít nhất 2 mức gió với cùng một mức tải.'));
-  // payload effect at one wind
-  const byW = {}; flat.forEach(p => (byW[p.wind] = byW[p.wind] || []).push(p));
-  const wsel = Object.keys(byW).map(Number).sort((a, b) => (byW[b].length - byW[a].length) || a - b)[0];
-  if (wsel != null && byW[wsel].length >= 2){
-    const g = byW[wsel].sort((a, b) => a.payload - b.payload), lo = g[0], hi = g[g.length - 1];
-    out.push(item('Tải nặng lên', 'Gió ' + wsel + ' m/s, tải ' + kgTxt(lo.payload) + ' → ' + kgTxt(hi.payload) + ': lực đẩy <b>' + nv(lo.thrust, 0) + ' → ' + nv(hi.thrust, 0) + ' N</b>, ga động cơ ' + Math.round(lo.motor) + '% → ' + Math.round(hi.motor) + '%, dòng điện ' + nv(lo.current, 0) + ' → ' + nv(hi.current, 0) + ' A, thời gian bay <b>' + nv(lo.endurance, 1) + ' → ' + nv(hi.endurance, 1) + ' phút</b>. ' + src(g)));
-  } else out.push(item('Tải nặng lên', 'Chưa đủ dữ liệu: cần ít nhất 2 mức tải ở cùng một tốc độ gió.'));
-  // light vs heavy in the strongest wind measured at 2+ payloads
-  const wHi = Object.keys(byW).map(Number).filter(w => w > 0 && byW[w].length >= 2).sort((a, b) => b - a)[0];
-  if (wHi != null){
-    const g = byW[wHi].sort((a, b) => a.payload - b.payload), lo = g[0], hi = g[g.length - 1];
-    const gust = A.agg.filter(p => p.gust > 0).sort((a, b) => a.payload - b.payload);
-    const gTxt = gust.length >= 2 ? ' Khi gió giật ' + Math.round(gust[0].gust * 100) + '%, lệch khỏi điểm treo: ' + gust.map(p => kgTxt(p.payload) + ' ' + nv(p.drift, 2) + ' m').join(', ') + '.' : '';
-    out.push(item('Drone nhẹ chịu gió kém hơn', 'Cùng gió ' + wHi + ' m/s: ' + kgTxt(lo.payload) + ' phải nghiêng <b>' + nv(lo.lean, 1) + '°</b>, ' + kgTxt(hi.payload) + ' chỉ nghiêng <b>' + nv(hi.lean, 1) + '°</b>. Lực cản như nhau nhưng trọng lượng lớn hơn: tan(nghiêng) = lực cản / (m·g).' + gTxt + ' ' + src(g.concat(gust))));
-  } else out.push(item('Drone nhẹ chịu gió kém hơn', 'Chưa đủ dữ liệu: cần ít nhất 2 mức tải ở cùng một tốc độ gió khác 0.'));
-  // sudden changes
-  const dirs = A.resp.filter(r => r.kind === 'wind' && r.to.dir !== r.from.dir).sort((a, b) => a.from.cargo - b.from.cargo);
-  const drops = A.resp.filter(r => r.kind === 'drop').sort((a, b) => b.from.cargo - a.from.cargo);
-  if (dirs.length || drops.length){
-    let t = '';
-    if (dirs.length) t += 'Gió đổi hướng 90°: lệch khỏi điểm treo ' + dirs.map(r => kgTxt(r.from.cargo) + (r.ad ? '' : ' (PID)') + ' <b>' + nv(r.peakH, 2) + ' m</b>').join(', ') + '. ';
-    if (drops.length) t += 'Thả hàng: drone vọt lên ' + drops.map(r => kgTxt(r.from.cargo) + (r.ad ? '' : ' (PID)') + ' <b>' + nv(r.peakV, 2) + ' m</b>' + (r.settle > 0 ? ', ổn định sau ' + nv(r.settle, 1) + ' s' : '')).join('; ') + '. ';
-    out.push(item('Thay đổi đột ngột', t + src(dirs.concat(drops))));
-  } else out.push(item('Thay đổi đột ngột', 'Chưa có thay đổi gió hoặc tải nào trong lúc drone đang treo.'));
+  const dirs = A.resp.filter(r => r.kind === 'wind' && r.to.dir !== r.from.dir);
+  if (dirs.length){
+    let t = 'Gió đổi hướng 90°: lệch khỏi điểm treo ' + dirs.map(r => (r.ad ? 'thích nghi' : 'PID') + ' <b>' + nv(r.peakH, 2) + ' m</b>').join(', ') + '. ';
+    out.push(item('Thay đổi đột ngột', t + src(dirs)));
+  } else out.push(item('Thay đổi đột ngột', 'Chưa có thay đổi gió nào trong lúc drone đang treo.'));
   $('#anConcl').innerHTML = out.join('');
 }
 function anTables(A){
   const pts = A.points.slice().sort((a, b) => a.flight - b.flight || a.t - b.t);
   $('#anTbl').innerHTML = pts.map(p =>
-    '<tr data-f="' + p.flight + '" data-t="' + p.absT + '"><td>' + p.flight + '</td><td>' + mmss(p.t) + '–' + mmss(p.t1) + '</td><td>' + kgTxt(p.payload) + '</td><td>' + p.wind + '</td><td>' + Math.round(p.gust * 100) + '%</td><td>' + pad3(p.dir) + '°</td><td>' + (p.ad ? 'thích nghi' : 'PID') + '</td>' +
+    '<tr data-f="' + p.flight + '" data-t="' + p.absT + '"><td>' + p.flight + '</td><td>' + mmss(p.t) + '–' + mmss(p.t1) + '</td><td>' + p.wind + ' m/s</td><td>' + Math.round(p.gust * 100) + '%</td><td>' + pad3(p.dir) + '°</td><td>' + (p.ad ? 'thích nghi' : 'PID') + '</td>' +
     '<td>' + nv(p.lean, 1) + '°</td><td>' + nv(p.thrust, 1) + '</td><td>' + Math.round(p.motor) + '%</td><td>' + nv(p.current, 1) + '</td><td>' + nv(p.endurance, 1) + '</td><td' + (p.drift > 1 ? ' class="an-bad"' : '') + '>' + nv(p.drift, 2) + '</td></tr>').join('');
-  const kindTxt = r => r.kind === 'drop' ? 'Thả ' + kgTxt(r.from.cargo - r.to.cargo) + ' hàng'
-    : r.kind === 'load' ? 'Thêm hàng'
-    : r.to.dir !== r.from.dir ? 'Gió đổi hướng ' + pad3(r.from.dir) + '° → ' + pad3(r.to.dir) + '°'
+  const kindTxt = r => r.to.dir !== r.from.dir ? 'Gió đổi hướng ' + pad3(r.from.dir) + '° → ' + pad3(r.to.dir) + '°'
     : r.to.gust !== r.from.gust ? 'Giật ' + Math.round(r.from.gust * 100) + '% → ' + Math.round(r.to.gust * 100) + '%'
     : 'Gió ' + r.from.wind + ' → ' + r.to.wind + ' m/s';
   $('#anResp').innerHTML = A.resp.slice().sort((a, b) => a.flight - b.flight || a.t - b.t).map(r =>
-    '<tr data-f="' + r.flight + '" data-t="' + r.absT + '"><td>' + r.flight + '</td><td>' + mmss(r.t) + '</td><td>' + kindTxt(r) + '</td><td>' + kgTxt(r.from.cargo) + '</td><td>' + (r.ad ? 'thích nghi' : 'PID') + '</td>' +
+    '<tr data-f="' + r.flight + '" data-t="' + r.absT + '"><td>' + r.flight + '</td><td>' + mmss(r.t) + '</td><td>' + kindTxt(r) + '</td><td>' + (r.ad ? 'thích nghi' : 'PID') + '</td>' +
     '<td>' + nv(r.peakH, 2) + ' m</td><td>' + nv(r.peakV, 2) + ' m</td><td>' + (r.settle < 0.05 ? 'không vượt ngưỡng' : (r.settled ? nv(r.settle, 1) + ' s' : '> ' + nv(r.settle, 1) + ' s')) + '</td></tr>').join('');
 }
 // a table row opens that flight in the flight report at that moment
@@ -6061,10 +5859,6 @@ function svAim(){
       }
       return { tilt: -25, pan: 0 };
     }
-    if (P_.task === 'delivery'){
-      const w = Sim.mission[S.wpIdx];
-      if (w && w.kind === 'dest' && w.role === 'drop' && Math.hypot(w.e - S.pos[0], w.n - S.pos[1]) < 14) return { tilt:-90, pan:0 };
-    }
   }
   return { tilt:-15, pan:0 };
 }
@@ -6073,7 +5867,6 @@ function svAim(){
 function svOrbitTarget(){
   const k = SV.orbit.target;
   if (k === 'pick' && SV.orbitPick) return { e:SV.orbitPick.e, n:SV.orbitPick.n, lookU:1, name:'điểm chọn (' + SV.orbitPick.e + ', ' + SV.orbitPick.n + ')', r:SV.orbit.r };
-  if (k.startsWith('hub')){ const h = Sim.HUBS[k.slice(3)]; return { e:h.e, n:h.n, lookU:1, name:h.name }; }
   const o = Sim.obstacles.find(x => x.id === k) || Sim.obstacles[0];
   return SURV.orbitFor(o);
 }
@@ -6116,7 +5909,7 @@ function svStart(){
   if (!svApply(false)) return;
   if (R3 && R3.advanceFlightRun) R3.advanceFlightRun();
   if (SV.task === 'scan' && SV.cov) SV.cov.scan.fill(0);
-  demo.on = false; if (atest.on) stopAdaptTest('bắt đầu nhiệm vụ ' + TASK_LABEL[SV.task]);
+  if (atest.on) stopAdaptTest('bắt đầu nhiệm vụ ' + TASK_LABEL[SV.task]);
   const st = Sim.S.state;
   SV.launch = { on:true, step: st === 'DISARMED' ? 0 : st === 'ARMED' ? 1 : (st === 'HOVER' || st === 'MANUAL') ? 2 : st === 'MISSION' || st === 'RTL' || st === 'TAKEOFF' ? 9 : -1 };
   if (SV.launch.step < 0){ SV.launch.on = false; addLog('rej', 'Không bắt đầu được nhiệm vụ ở ' + st, '', Sim.S.t); return; }
@@ -6605,7 +6398,7 @@ svSetTask('patrol', { silent:true });
 
 Sim.on(ev => {
   if (ev.type === 'jam'){
-    SV.launch.on = false; demo.on = false;
+    SV.launch.on = false;
     addLog('fail', ev.msg, 'drone hạ cánh tại chỗ; mọi lệnh tiếp theo bị chặn', ev.t);
     SV.incident = ev.jam;
     syncLinkBtn();
@@ -6656,7 +6449,7 @@ function rqEval(){
     CC1_N02: air && (st === 'HOVER' || S.dwell > 0),
     CC1_N03: air && ['MANUAL','MISSION','RTL','FAILSAFE'].includes(st),
     CC1_N04: air && wind > 0.5 && (st === 'HOVER' || S.dwell > 0),
-    CC1_N05: st === 'TAKEOFF' || (air && P_.cargoMass > 0.001),
+    CC1_N05: st === 'TAKEOFF' || air,
     CC1_N06: air && gs > 1,
     CC1_N07: air && S.pos[2] > 5,
     CC2_N01: air && S.minObsDist < 15,
@@ -6673,7 +6466,7 @@ function rqEval(){
     V1_VC1_N03: cam && photoAge < 8,
     V1_VC1_N04: video,
     V1_VC1_N05: cam && GB_.zoom > 1.05,
-    V1_VC1_N06: air && P_.task !== 'delivery'
+    V1_VC1_N06: air
   };
 }
 function rqBuild(){
@@ -6862,7 +6655,6 @@ function foldPanelBtn(panel){
 function foldOpen(el){ const sec = el && el.closest('.sec.folded'); if (sec){ foldSet(sec, false); foldSave(); foldPanelBtn(sec.closest('.panel')); } }
 
 /* ---------- main loop ---------- */
-updateCargoSpecUI();
 updateWindHudUI();
 renderMission();
 onStateChanged();
@@ -6876,7 +6668,6 @@ function frame(now){
 function frameBody(now){
   const fdt = Math.min(0.1, (now - last)/1000); last = now;
   updateSticks(fdt);
-  demoTick();
   atestTick();
   accT += fdt*simSpeed; let n = 0;
   while (accT >= DT && n < 240){ Sim.step(DT); accT -= DT; n++; }
