@@ -125,7 +125,7 @@ h3{font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.1
 .cmd:hover{border-color:var(--fg)}
 .cmd.off{opacity:.42;border-color:var(--line)}
 .cmd.off:hover{border-color:var(--line-2)}
-.cmd.cmd-mode{padding:4px 6px;justify-content:space-between;cursor:default}
+.cmd.cmd-mode{grid-column:1/-1;padding:5px 8px;justify-content:space-between;cursor:default}
 .mode-seg{display:flex;width:100%;background:var(--line);border-radius:4px;padding:2px;gap:2px}
 .mode-btn{flex:1;border:0;border-radius:3px;padding:4px 2px;font-family:var(--f-display);font-weight:700;font-size:12px;letter-spacing:.05em;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;text-align:center;line-height:1.2}
 .mode-btn:hover{color:var(--fg);background:rgba(255,255,255,0.08)}
@@ -289,10 +289,11 @@ table.ctl thead th{font-family:var(--f-display);font-weight:600;letter-spacing:.
 table.ctl thead th:first-child{text-align:left}
 
 /* state machine */
-.sm-body{display:grid;grid-template-columns:minmax(0,1.85fr) minmax(0,1fr);gap:0}
-.sm-dia{padding:12px 14px;border-right:1px solid var(--line);min-width:0}
+.sm-body{display:block}
+.sm-dia{padding:12px 14px;min-width:0}
 .sm-scroll{overflow-x:auto}
 #smSvg{display:block;width:100%;min-width:720px;height:auto}
+.sm-side-sec{display:flex;flex-direction:column;gap:10px}
 .sm-side{padding:12px 14px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .sm-card{border:1px solid var(--line);border-radius:4px;padding:10px 12px;background:var(--panel-2)}
 .sm-cur{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -694,6 +695,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
             <button class="cmd" data-cmd="TAKEOFF"><span class="cn">TAKEOFF</span><small>Cất cánh tại Nhà máy</small></button>
             <button class="cmd" data-cmd="LAND"><span class="cn">LAND</span><small>Hạ cánh tại chỗ</small></button>
             <button class="cmd" data-cmd="HOLD"><span class="cn">HOLD</span><small>Treo giữ vị trí</small></button>
+            <button class="cmd" data-cmd="RTL"><span class="cn">RTL</span><small>Về Nhà Máy (né vật cản)</small></button>
             <div class="cmd cmd-mode" id="cmdModeBox" data-cmd="MANUAL" role="group" aria-label="Chọn chế độ bay: Tự động hoặc Lái tay">
               <div class="mode-seg">
                 <button type="button" class="mode-btn" id="btnModeAuto" title="Bay Tự động (Mission / Giữ vị trí)">AUTO</button>
@@ -701,8 +703,6 @@ table.an-t tr.on td{background:var(--accent-soft)}
               </div>
               <small id="cmdModeSub">Lái tay (có APF bảo vệ)</small>
             </div>
-            <button class="cmd" data-cmd="MISSION"><span class="cn">MISSION</span><small>Bay nhiệm vụ tự động</small></button>
-            <button class="cmd" data-cmd="RTL"><span class="cn">RTL</span><small>Về Nhà Máy (né vật cản)</small></button>
             <button class="cmd kill" data-cmd="KILL" id="killBtn"><span class="cn">KILL</span><small id="killTxt">Ngắt động cơ khẩn cấp</small></button>
           </div>
           <div class="valid"><span>Hợp lệ lúc này:</span><span id="validFn" class="row"></span></div>
@@ -730,6 +730,25 @@ table.an-t tr.on td{background:var(--accent-soft)}
               <button class="btn primary" id="btnBomberStart" style="background:#dc2626;border-color:#b91c1c;color:#fff;font-weight:700">💣 Xuất kích ném bom</button>
               <button class="btn" id="btnManualDrop" title="Thả bom ngay tại chỗ (phím B)">Thả bom ngay (B)</button>
             </div>
+          </div>
+        </div>
+
+        <div class="sec sm-side-sec">
+          <div class="sec-h" style="margin-bottom:8px">
+            <h3>Trạng thái &amp; Nhật ký điều hành</h3>
+          </div>
+          <div class="sm-card">
+            <div class="sm-cur"><span class="pill s-idle" id="smPill">DISARMED</span><span class="sm-t" id="smTime">0.0 s</span></div>
+            <p id="smDesc"></p>
+            <div class="sm-prev" id="smPrev">Chưa có chuyển trạng thái.</div>
+            <div class="valid"><span>Lệnh hợp lệ:</span><span id="validSm" class="row"></span></div>
+          </div>
+          <div style="margin-top:10px">
+            <div class="sec-h" style="margin-bottom:6px">
+              <h3 style="margin:0;font-size:12px">Nhật ký điều hành &amp; Cảm biến</h3>
+              <button class="btn mini" id="btnClearLog" title="Xoá nhật ký" style="padding:1px 6px;font-size:11px">Xoá</button>
+            </div>
+            <ol class="log" id="log" aria-live="polite"></ol>
           </div>
         </div>
 
@@ -796,7 +815,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
         <label class="chk"><input type="checkbox" id="optTrail" checked> Vệt bay</label>
         <label class="chk"><input type="checkbox" id="optLidar" checked> Tia Lidar &amp; Vùng đệm</label>
         <label class="chk"><input type="checkbox" id="optSp" checked> Điểm đặt</label>
-        <label class="chk"><input type="checkbox" id="optCity" checked> Tòa nhà &amp; Nhà máy</label>
+        <label class="chk"><input type="checkbox" id="optCity" checked> Công trình căn cứ</label>
         <button class="linkbtn" id="clearTrail">Xoá vệt</button>
         <span class="sub">Home (0,0) = NHÀ MÁY</span>
       </div>
@@ -955,19 +974,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
       <div class="sm-body">
         <div class="sm-dia">
           <div class="sm-scroll"><svg id="smSvg" viewBox="0 0 1020 340" role="img" aria-label="Sơ đồ máy trạng thái của drone giám sát"></svg></div>
-          <p class="note">Ô cam là trạng thái hiện tại, viền đứt là trạng thái ngay trước, mũi tên sáng là lần chuyển gần nhất. Khi vào RTL hoặc FAILSAFE, drone tự động sinh quỹ đạo né các vật cản để quay về Nhà Máy Sản Xuất.</p>
-        </div>
-        <div class="sm-side">
-          <div class="sm-card">
-            <div class="sm-cur"><span class="pill s-idle" id="smPill">DISARMED</span><span class="sm-t" id="smTime">0.0 s</span></div>
-            <p id="smDesc"></p>
-            <div class="sm-prev" id="smPrev">Chưa có chuyển trạng thái.</div>
-            <div class="valid"><span>Lệnh hợp lệ:</span><span id="validSm" class="row"></span></div>
-          </div>
-          <div>
-            <h3>Nhật ký điều hành &amp; Cảm biến</h3>
-            <ol class="log" id="log" aria-live="polite"></ol>
-          </div>
+          <p class="note">Ô cam là trạng thái hiện tại, viền đứt là trạng thái ngay trước, mũi tên sáng là lần chuyển gần nhất. Khi vào RTL hoặc FAILSAFE, drone tự động sinh quỹ đạo né các vật cản để quay về Nhà Máy Sản Xuất. Nhật ký điều hành và thẻ trạng thái chi tiết hiển thị trực tiếp ở bảng Điều hành nhiệm vụ (bên cạnh màn hình 3D).</p>
         </div>
       </div>
     </section>
@@ -2270,6 +2277,7 @@ function addLog(kind, main, sub, t){
   logEl.prepend(li);
   while (logEl.children.length > 80) logEl.lastChild.remove();
 }
+$('#btnClearLog')?.addEventListener('click', () => { if (logEl) logEl.innerHTML = ''; });
 
 /* ---------- state machine diagram ---------- */
 const NODES = { DISARMED:[75,185], ARMED:[240,185], TAKEOFF:[400,185], HOVER:[560,185], MANUAL:[560,75],
@@ -4282,8 +4290,10 @@ function init3D(){
     ledM.color.setHex(ledColors[cls]);
     led.visible = (cls === 'armed' || cls === 'fs') ? (t % 0.6) < 0.35 : true;
 
-    // Lidar rays & safety buffer visibility
-    const showLidar = $('#optLidar').checked;
+    const isTraj = cam && cam.mode === 'traj';
+
+    // Lidar rays & safety buffer visibility: chỉ hiển thị khi ở chế độ xem quỹ đạo (traj)
+    const showLidar = isTraj && $('#optLidar').checked;
     bufferGroup.visible = showLidar;
     lidarGroup.visible = showLidar && !S.grounded;
     if (lidarGroup.visible){
@@ -4305,8 +4315,8 @@ function init3D(){
     shadow.position.set(p[0], 0.02, -p[1]);
     const sc = 1.0 + p[2]*0.06; shadow.scale.set(sc, sc, 1);
     shadow.material.opacity = Math.max(0.12, 1 - p[2]/40);
-    if ($('#optTrail').checked && !S.grounded && S.t - lastTrailT > 0.08){ pushTrail(p, S.lap || 1); lastTrailT = S.t; }
-    trail.visible = $('#optTrail').checked;
+    if (!S.grounded && S.t - lastTrailT > 0.08){ pushTrail(p, S.lap || 1); lastTrailT = S.t; }
+    trail.visible = isTraj && $('#optTrail').checked;
     const sp = S.sp;
     if (sp && sp.xy && $('#optSp').checked){ spMark.visible = true; spMark.position.copy(toV(sp.xy[0], sp.xy[1], sp.z != null ? sp.z : p[2])); }
     else spMark.visible = false;
@@ -4316,7 +4326,6 @@ function init3D(){
     if (inRtl && S.rtlVer !== rtlVerDrawn){ rtlVerDrawn = S.rtlVer; drawRtl(); }
 
     const act = S.state === 'MISSION' ? S.wpIdx : -1;
-    const isTraj = cam && cam.mode === 'traj';
     const ca = new THREE.Color(0xf59e0b);
     const ct = new THREE.Color(0x10b981);
     const cf = isTraj ? new THREE.Color(0x64748b) : new THREE.Color(TK.faint);
