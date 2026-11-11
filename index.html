@@ -726,9 +726,16 @@ table.an-t tr.on td{background:var(--accent-soft)}
             </div>
           </div>
           <div class="sv-opt" id="optPatrol" data-for="patrol">
-            <div class="row"><label for="svPatrol">Tuyến</label><select id="svPatrol"><option value="fence">Hàng rào Nhà máy</option><option value="center">Trục đường trung tâm</option><option value="city">Vòng ngoài căn cứ</option><option value="custom">Tự vẽ: click mặt đất 3D</option></select></div>
+            <div class="row" style="align-items:center;justify-content:space-between;margin-bottom:6px">
+              <label style="font-weight:600">Tuyến tuần tra:</label>
+              <span class="chip" style="background:var(--accent-soft);color:var(--accent);font-weight:600">Click khu vực 3D</span>
+            </div>
+            <input type="hidden" id="svPatrol" value="custom">
             <div class="field"><label for="svPu">Độ cao tuần tra</label><output id="oSvPu"></output><input type="range" id="svPu" min="10" max="40" step="1" value="16"></div>
-            <p class="sv-info">Chế độ: <b>Auto bay 1 vòng</b> theo tuyến rồi tự động quay về Nhà máy (RTL). Camera tự quét hai bên ±55°.</p>
+            <p class="sv-info">📍 <b>Cách dùng:</b> Click chuột vào các vị trí trên <b>mặt đất 3D</b> để tạo điểm tuần tra. Drone tự lập quỹ đạo né vật cản A*, bay 1 vòng và tự động quay về Nhà máy (RTL).</p>
+            <div class="row" style="margin:4px 0 8px">
+              <button class="btn mini" id="btnPatrolClear" type="button" style="width:100%" title="Xoá tất cả các điểm tuần tra đã chọn">Xoá các điểm đã chọn</button>
+            </div>
             <div class="sv-go"><button class="btn primary" id="svStart">Auto bay 1 vòng</button><button class="btn" id="svStop" title="Dừng nhiệm vụ, bay về Nhà máy">Gọi về (RTL)</button></div>
           </div>
           <div class="sv-opt" id="optBomber" style="display:none" data-for="bomber">
@@ -767,7 +774,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
           <button data-cam="orbit" aria-pressed="true">Xoay 3D</button><button data-cam="follow">Bám đuôi</button><button data-cam="traj">Xem quỹ đạo</button><button data-cam="fpv" title="Góc nhìn camera gắn trên drone (phím C)">Camera<span class="wide-only"> drone</span></button>
         </div>
       </div>
-      <div class="stage" id="stage">
+      <div class="stage custom-mode" id="stage">
         <canvas id="gl" aria-label="Cảnh 3D căn cứ và nhà máy"></canvas>
         <div class="ov ov-hint" id="hint" style="display:none!important"></div>
         <div class="ov ov-hud" id="hud">
@@ -2386,7 +2393,7 @@ let TK = {};
 let R3 = null;
 const TASK_LABEL = window.TASK_LABEL = { patrol:'Tuần tra', bomber:'Oanh tạc Bomber' };
 const SV = window.SV = {
-  task:'patrol', patrol:'fence', pu:16, loops:1,
+  task:'patrol', patrol:'custom', pu:16, loops:1,
   orbit:{ target:'F3', r:14, u:22, laps:1, dir:1, v:4 }, orbitPick:null,
   area:'factory', su:31, areaPick:null, pick:null, pickA:null,
   agents:[], dets:[], seen:{}, uniq:{ p:new Set(), v:new Set() }, track:null, now:0,
@@ -2906,6 +2913,7 @@ function addWaypointAt(e, n){
   Sim.addDestination({ e, n, u: alt, label: 'Điểm ' + newIdx, role: 'pass' });
   addLog('info', 'Đã thêm điểm #' + newIdx + ' tại (' + e + ', ' + n + ', ' + alt + 'm)', 'Bấm "Auto bay 1 vòng" để drone cất cánh bay!', Sim.S.t);
   renderMission();
+  if (window.svDraw3D) window.svDraw3D();
 }
 
 
@@ -4607,7 +4615,7 @@ function init3D(){
     if (single && moved < 10 && downAt && e.type === 'pointerup'){
       const g = groundAt(e.clientX, e.clientY);
       if (g && !svGroundClick(g.e, g.n)){
-        if (window.SV && SV.patrol === 'custom'){
+        if (window.SV && SV.task === 'patrol' && SV.patrol === 'custom'){
           showClickRipple(g.e, g.n);
           addWaypointAt(g.e, g.n);
         }
@@ -6286,15 +6294,17 @@ function svApply(silent){
   SV.loops = 1;
   P_.task = 'patrol';
   P_.loops = 1;
-  if (SV.patrol !== 'custom') Sim.setDestinations(SURV.patrolPts(SV.patrol, SV.pu), true);
-  else {
+  if (SV.patrol !== 'custom' && window.SURV && SURV.PATROLS && SURV.PATROLS[SV.patrol]){
+    Sim.setDestinations(SURV.patrolPts(SV.patrol, SV.pu), true);
+  } else {
     if (!Sim.destinations.length){
-      addLog('warn', 'Chưa có điểm nào trên tuyến tự vẽ! Hãy click mặt đất 3D để tạo điểm.', '', Sim.S.t);
+      if (!silent) addLog('warn', 'Chưa có điểm nào trên tuyến tuần tra! Hãy click khu vực trên mặt đất 3D để tạo điểm.', '', Sim.S.t);
+      renderMission(); svDraw3D(); svRenderForm();
       return false;
     }
     Sim.setDestinations(Sim.destinations.map(d => Object.assign({}, d, { role:'pass', u:SV.pu })), true);
   }
-  if (!silent) addLog('info', 'Đã nạp tuyến tuần tra: ' + (SV.patrol === 'custom' ? 'tự vẽ' : SURV.PATROLS[SV.patrol].name), Sim.destinations.length + ' điểm · cao ' + SV.pu + ' m · Auto bay 1 vòng', Sim.S.t);
+  if (!silent) addLog('info', 'Đã nạp tuyến tuần tra click khu vực', Sim.destinations.length + ' điểm · cao ' + SV.pu + ' m · Auto bay 1 vòng', Sim.S.t);
   renderMission(); svDraw3D(); svRenderForm();
   return true;
 }
@@ -6573,18 +6583,24 @@ function svRenderForm(){
 }
 function svBindForm(){
   const re = () => { svApply(true); svRenderForm(); };
-  $('#svPatrol').addEventListener('change', e => {
+  $('#svPatrol')?.addEventListener('change', e => {
     SV.patrol = e.target.value;
     const stage = $('#stage');
     if (SV.patrol === 'custom'){
       if (stage) stage.classList.add('custom-mode');
       Sim.setDestinations([], true);
-      addLog('info', 'Tuần tra tự vẽ: click mặt đất 3D để thêm điểm', 'tối đa 15 điểm', Sim.S.t);
+      addLog('info', 'Tuần tra: click khu vực trên mặt đất 3D để thêm điểm', 'tối đa 15 điểm', Sim.S.t);
       renderMission();
     } else {
       if (stage) stage.classList.remove('custom-mode');
       svApply(false);
     }
+  });
+  $('#btnPatrolClear')?.addEventListener('click', () => {
+    Sim.setDestinations([], true);
+    renderMission();
+    if (window.svDraw3D) window.svDraw3D();
+    addLog('info', 'Đã xoá các điểm tuần tra', 'Hãy click khu vực mặt đất 3D để chọn điểm mới', Sim.S.t);
   });
   $('#svPu').addEventListener('input', e => { SV.pu = +e.target.value; svRenderForm(); });
   $('#svPu').addEventListener('change', re);
@@ -6638,6 +6654,8 @@ function svBindForm(){
     $('#optPatrol').style.display = 'block';
     $('#optBomber').style.display = 'none';
     SV.task = 'patrol'; Sim.params.task = 'patrol';
+    const stage = $('#stage');
+    if (stage) stage.classList.add('custom-mode');
     svApply(true);
   });
   $('#tabTaskBomber')?.addEventListener('click', () => {
@@ -6646,6 +6664,12 @@ function svBindForm(){
     $('#optBomber').style.display = 'block';
     $('#optPatrol').style.display = 'none';
     SV.task = 'bomber'; Sim.params.task = 'bomber';
+    const stage = $('#stage');
+    if ($('#bomberTarget')?.value === 'custom'){
+      if (stage) stage.classList.add('custom-mode');
+    } else {
+      if (stage) stage.classList.remove('custom-mode');
+    }
     const key = $('#bomberTarget')?.value || 'depot';
     let tgt = BOMBER_TARGETS[key] || BOMBER_TARGETS.depot;
     if (key === 'custom') tgt = bomberCustomTarget;
@@ -7056,7 +7080,7 @@ function foldOpen(el){ const sec = el && el.closest('.sec.folded'); if (sec){ fo
 updateWindHudUI();
 renderMission();
 onStateChanged();
-addLog('info', 'Sẵn sàng tại Nhà Máy Sản Xuất (0,0). Camera gimbal & Lidar 360° sẵn sàng.', 'Nhiệm vụ mặc định: Auto bay 1 vòng Hàng rào Nhà máy. Bấm "Auto bay 1 vòng" để xem!', 0);
+addLog('info', 'Sẵn sàng tại Nhà Máy Sản Xuất (0,0). Camera gimbal & Lidar 360° sẵn sàng.', 'Tuần tra: Click vào khu vực trên mặt đất 3D để chọn điểm tuần tra, sau đó bấm "Auto bay 1 vòng".', 0);
 const DT = 1/250;
 let last = performance.now(), accT = 0, lastDom = 0;
 function frame(now){

@@ -72,7 +72,7 @@ Chọn nhiệm vụ ở phần **Nhiệm vụ bay** (bảng Điều hành):
 
 | Nhiệm vụ | Cách bay | Camera & Tác chiến |
 |---|---|---|
-| **Tuần tra** | Tuyến quanh khu vực: Hàng rào Nhà máy, Trục đường trung tâm, Vòng ngoài căn cứ, hoặc tự vẽ bằng click mặt đất 3D. Drone tự cất cánh, bay 1 vòng theo tuyến và tự động quay về Nhà máy (RTL). | Chúc −32°, quét qua lại hai bên ±55°. |
+| **Tuần tra** | Tuyến tuần tra tự chọn bằng cách click vào khu vực trên mặt đất 3D. Drone tự động lập tuyến né vật cản A*, cất cánh bay 1 vòng theo các điểm đã chọn và tự động quay về Nhà máy (RTL). | Chúc −32°, quét qua lại hai bên ±55°. |
 | **Bomber (Oanh tạc)** | Chọn mục tiêu (Kho quân khí, Trạm radar phòng không, Đoàn xe cơ giới, Boongke, hoặc tự click mặt đất). Drone cất cánh, tiếp cận mục tiêu, tính toán điểm cắt bom quán tính tốc độ cao, bay thoát ly thẳng qua vùng nguy hiểm, lượn vòng chiến thuật và tự động bay về hạ cánh tại Nhà máy. | Camera chúc hướng vào mục tiêu; hiệu ứng bom rơi quán tính và vụ nổ 3D sinh động. |
 
 ### Nhận diện mục tiêu
