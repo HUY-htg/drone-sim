@@ -21,7 +21,7 @@ Mô phỏng drone giám sát & tác chiến, chạy hoàn toàn trên trình duy
 Mở `index.html` bằng trình duyệt (cần mạng để tải Three.js và font từ CDN). Không cần cài đặt hay build gì.
 
 - **Tuần tra tự động:** Bấm **Auto bay 1 vòng** trong phần Tuần tra: drone tự ARM → TAKEOFF → MISSION, bay 1 vòng theo tuyến rồi tự động RTL về Nhà máy và hạ cánh.
-- **Nhiệm vụ Bomber:** Chọn mục tiêu, khối lượng bom (0,25–2 kg) và bấm **💣 Xuất kích ném bom**: drone cất cánh, bay thẳng qua mục tiêu, máy tính trên drone giải đạn đạo liên tục và tự cắt bom (CCRP), bay thoát ly rồi tự RTL về căn cứ. **Mỗi chuyến chỉ mang 1 quả**: thả xong thì mọi lệnh thả tiếp đều bị từ chối; bom chỉ được nạp lại khi drone đã hạ cánh trên bãi Nhà máy và tắt động cơ (hoặc khi Đặt lại).
+- **Nhiệm vụ Bomber:** Chọn mục tiêu, khối lượng bom (0,25–2 kg) và bấm **💣 Xuất kích ném bom**: drone cất cánh, bay thẳng qua mục tiêu, máy tính trên drone giải đạn đạo liên tục và tự cắt bom (CCRP), bay thoát ly rồi tự RTL về căn cứ. **Mỗi chuyến chỉ mang 1 quả và luôn phải ném**: CCRP cắt bom kể cả khi lời giải lệch xa, qua điểm ngắm mà chưa cắt thì thả ngay, gọi RTL/LAND hoặc FAILSAFE khi còn bom thì thả tại chỗ trước khi về. Trượt thì hệ thống báo **NÉM BOM TRƯỢT** kèm độ lệch. Thả xong mọi lệnh thả tiếp bị từ chối; bom chỉ được nạp lại khi drone đã hạ cánh trên bãi Nhà máy và tắt động cơ (hoặc khi Đặt lại).
 
 | Phím | Tác dụng (khi ở HOVER hoặc MANUAL) |
 |---|---|
@@ -160,15 +160,14 @@ Toàn bộ chuyển động tích phân với bước cố định, không phụ
 - **Bộ điều khiển:** PID xếp tầng vị trí → vận tốc → lực riêng mong muốn → trục z thân mong muốn (giới hạn nghiêng 34°, ưu tiên độ cao) → sai số tư thế trên SO(3) (tách nghiêng và hướng mũi như PX4) → mô-men có bù `ω×Iω` và con quay rôto → bộ trộn. Tích phân chống bão hoà kiểu tích phân có điều kiện.
 - **Gió:** một trường gió chung cho drone, bom, khói, mảnh vỡ, vệt gió, cây, cờ và mây. Gió nền theo profile logarit lớp sát mặt đất (tham chiếu 10 m, z₀ = 3 cm); gió giật là nhiễu loạn "đông cứng" (giả thuyết Taylor) trôi theo gió.
 - **Bom (đạn đạo chất điểm 3 bậc tự do):** `ẍ = −(ρ(z)·C_d·A/2m)·|v−w|·(v−w) − g·ẑ`, C_d = 0,30, đường kính tỉ lệ `m^(1/3)` (Ø 9 cm ở 1 kg), mật độ khí theo khí quyển chuẩn ISA; tích phân RK4. Bom tách ra bảo toàn động lượng (drone nhẹ đi, m̂ tự hội tụ lại). Bom chạm đất hoặc chạm mái nhà.
-- **CCRP:** mỗi chu kỳ điều khiển, drone mô phỏng trước quỹ đạo bom từ trạng thái thật và gió ước lượng ŵ, rồi cắt bom khi điểm rơi dự đoán vượt qua mục tiêu theo hướng bay. Nếu lệch ngang quá 6 m thì huỷ lượt và giữ bom.
+- **CCRP:** mỗi chu kỳ điều khiển, drone mô phỏng trước quỹ đạo bom từ trạng thái thật và gió ước lượng ŵ, rồi cắt bom khi điểm rơi dự đoán vượt qua mục tiêu theo hướng bay. Lệch ngang lớn thì vẫn cắt bom và cảnh báo có thể trượt.
 - **Vụ nổ:** TNT tương đương W = 0,4·m. Mặt sóng xung kích theo Sedov–Taylor `R = 1,033·(E·t²/ρ)^(1/5)` cho tới khi chậm còn 343 m/s. Quả cầu lửa ≈ 1,93·W^0,32 m, hố bom ≈ 0,8·W^(1/3) m. Mảnh vỡ bay đạn đạo có cản và nảy trên đất. Khói bốc lên theo lực nổi, loe rộng theo lý thuyết luồng phụt Morton–Taylor–Turner và trôi theo gió.
-- **Giao thông mặt đất:** xe theo mô hình xe đạp động học (`ψ̇ = v·tan δ/L`), bám đường bằng pure pursuit, góc lái ≤ 35°, gia tốc ngang ≤ 3 m/s², +2,5/−4 m/s², giữ khoảng cách xe trước. Người đi bộ ≤ 1,4 m/s, gia tốc ≤ 1 m/s².
 - **Hồ nước:** sóng lan theo hệ thức tán sắc nước sâu `ω = √(g·k)`, phản xạ bầu trời theo hệ số Fresnel (Schlick).
 - **Pin:** 6S 12000 mAh, dòng tính từ lực đẩy từng động cơ.
 
 ## Môi trường 3D
 
-Bầu trời có mặt trời và quầng tán xạ Henyey–Greenstein, mây trôi theo gió; ban đêm có sao, trăng, đèn căn cứ, đèn xe. Bóng đổ thật từ mặt trời (hoặc trăng). Vùng bay ±175 m phẳng đúng như giả định của mô hình vật lý, bên ngoài là đồi núi, rừng thông và cây lá rộng (cây uốn theo áp suất động của gió ∝ U²), hồ nước, ruộng lúa, quốc lộ và đường vành đai có xe chạy. Căn cứ có hàng rào, cổng, chốt gác, tháp canh, cột đèn, cờ bay theo gió. Bốn mục tiêu Bomber có mô hình riêng (kho có hầm đất và hòm đạn, xe radar quay 6 vòng/phút, đoàn xe quân sự, boongke bê tông) và chuyển sang trạng thái cháy rụi khi bị đánh trúng.
+Bầu trời có mặt trời và quầng tán xạ Henyey–Greenstein, mây trôi theo gió; ban đêm có sao, trăng, đèn căn cứ, đèn xe. Bóng đổ thật từ mặt trời (hoặc trăng). Vùng bay ±175 m phẳng đúng như giả định của mô hình vật lý, bên ngoài là đồi núi, rừng thông và cây lá rộng (cây uốn theo áp suất động của gió ∝ U²), hồ nước, ruộng lúa, quốc lộ và đường vành đai (không có người đi đường hay xe cộ). Drone được vẽ phóng to, sơn cam tự phát sáng, đèn hàng hải có quầng sáng, kèm dấu định vị luôn hiện độ cao, đường thả dọc và vòng chiếu xuống đất. Căn cứ có hàng rào, cổng, chốt gác, tháp canh, cột đèn, cờ bay theo gió. Bốn mục tiêu Bomber có mô hình riêng (kho có hầm đất và hòm đạn, xe radar quay 6 vòng/phút, đoàn xe quân sự, boongke bê tông) và chuyển sang trạng thái cháy rụi khi bị đánh trúng.
 
 ## Máy trạng thái
 
@@ -193,12 +192,12 @@ Lõi mô phỏng không phụ thuộc DOM, chạy kiểm thử tự động vớ
 node tests/run-scenarios.js
 ```
 
-Bộ kiểm thử gồm 36 kiểm tra:
+Bộ kiểm thử gồm 37 kiểm tra:
 
 - Các kịch bản bay: waypoint, cua 14 m/s, HOLD rồi MISSION, FAILSAFE, A*, tuần tra, quét, bay vòng, điều khiển thích nghi.
 - Vật lý: đạn đạo không cản trùng nghiệm giải tích, vận tốc tới hạn của bom khớp √(2mg/ρC_dA), lực đẩy treo = m·g, xoay mũi không trôi, KILL rơi đúng thời gian lý thuyết, đỗ trong gió không trôi.
-- Bomber: CCRP trúng trong 3 m với mọi khối lượng bom và gió tới 9 m/s, quy tắc 1 quả mỗi chuyến, giới hạn 2 kg.
-- Giao thông mặt đất: xe và người không vượt giới hạn động học.
+- Bomber: CCRP trúng trong 3 m với mọi khối lượng bom và gió tới 9 m/s, quy tắc 1 quả mỗi chuyến, giới hạn 2 kg, luôn ném bom (mục tiêu lệch tuyến vẫn ném và báo trượt, gọi RTL giữa chừng thì thả trước khi về).
+- Mô hình động học xe và người (giữ trong lõi để dùng sau, hiện không hiển thị trong cảnh).
 
 ## Cấu trúc
 

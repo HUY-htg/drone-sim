@@ -1959,11 +1959,13 @@ var Sim = (function(){
         rebuildTrajectory(true);
         break;
       case 'RTL': case 'FAILSAFE':
+        releaseBeforeReturn(st);
         S.rtlPhase = 'climb'; S.rtlAlt = Math.max(params.rtlAlt, p[2]);
         S.hold = [p[0], p[1], p[2]]; S.yawSp = S.att[2]; S.dwell = 0;
         buildRtlPath();
         break;
       case 'LANDING': {
+        releaseBeforeReturn(st);
         const nearHome = Math.hypot(p[0], p[1]) < 2.0 && (prev === 'RTL' || prev === 'FAILSAFE');
         S.landXY = nearHome ? [0,0] : [p[0] + v[0]*0.35, p[1] + v[1]*0.35];
         S.touchT = 0; S.yawSp = S.att[2]; break;
@@ -2203,9 +2205,13 @@ var Sim = (function(){
           }
         } else if ((tr.toB < 1.8 || legPassed(tr)) && dz < 1.4){
           if (w.role === 'bomb' && !w.dropped){
-            // Flew past the aim point without a valid release solution: keep the bomb, report it
+            // Flew past the aim point without a release solution: release now anyway, never bring the bomb home
             w.dropped = true;
-            if (S.bombs > 0) emit({ type:'warn', msg:'Lỡ điểm cắt bom tại ' + (w.label || 'mục tiêu') + ': bom vẫn trên drone, chỉ được thả 1 lần nên không thả mù' });
+            if (S.bombs > 0){
+              emit({ type:'warn', msg:'Chưa có lời giải cắt bom khi qua ' + (w.label || 'mục tiêu') + ': thả bom ngay theo lệnh' });
+              dropBomb('ccrp');
+              if (S.state !== 'MISSION') return guidance(dt);
+            }
           }
           if (isDest){ S.destDone = w.destIdx + 1; emit({ type:'pass', msg:'Đã qua ' + (w.label || ('điểm ' + (w.destIdx + 1))) }); }
           else emit({ type:'info', msg:'Đã qua điểm né vật cản (' + w.e + ', ' + w.n + ')' });
@@ -2651,19 +2657,25 @@ var Sim = (function(){
     S.ccrp = { along, cross: xt, tof: imp.tof, imp, aim };
     S.ccrpPrev = along;
     if (prev == null || prev <= 0 || along > 0) return false;
-    if (Math.abs(xt) > CCRP_MAX_CROSS){
-      emit({ type:'warn', msg:'Huỷ lượt cắt bom: điểm rơi dự đoán lệch ngang ' + Math.abs(xt).toFixed(1) + ' m (> ' + CCRP_MAX_CROSS + ' m). Giữ bom, không thả.' });
-      return true;
-    }
+    // the order to bomb is always carried out: even with a large cross-track error the bomb goes now and the result is reported
+    if (Math.abs(xt) > CCRP_MAX_CROSS) emit({ type:'warn', msg:'Điểm rơi dự đoán lệch ngang ' + Math.abs(xt).toFixed(1) + ' m (> ' + CCRP_MAX_CROSS + ' m): vẫn cắt bom theo lệnh, có thể trượt mục tiêu' });
     return dropBomb('ccrp');
   }
 
+  // A bomber sortie never brings its bomb home: if the drone is ordered back (RTL, FAILSAFE, LAND) with the bomb
+  // still on the rack, it is released at once where the drone is, and the result (usually a miss) is reported.
+  function releaseBeforeReturn(st){
+    if (S.bombs < 1 || params.task !== 'bomber' || S.grounded || S.pos[2] < 3) return;
+    emit({ type:'warn', msg:'Lệnh ' + st + ' khi còn bom: thả bom ngay tại chỗ, không mang bom về Nhà máy' });
+    dropBomb('forced');
+  }
   function dropBomb(src){
     src = src || 'manual';
     const why = S.bombs < 1 ? (S.bombDropped ? 'đã thả quả bom duy nhất của chuyến bay này (nạp lại khi hạ cánh về Nhà máy và tắt động cơ)' : 'drone không mang bom (chỉ nhiệm vụ Bomber mới gắn bom, nạp trên bãi đáp)')
       : S.grounded || AIR.indexOf(S.state) < 0 ? 'drone chưa cất cánh'
       : S.pos[2] < 3 ? 'độ cao dưới 3 m, chưa an toàn để thả'
       : (src === 'manual' && params.linkLost) ? 'mất liên kết, lệnh không tới được drone' : null;
+    if (why && src === 'forced' && S.bombs > 0 && !S.grounded) why = null;
     if (why){ emit({ type:'reject', msg:'Thả bom bị từ chối: ' + why }); return false; }
     const rel = releaseState(), mb = S.bombMass, M = P.m, md = M - mb;
     const pred = predictImpact(rel.x, rel.v, mb, onboardWind(), params.bomberTarget && params.bomberTarget.h || 0);
@@ -2679,9 +2691,9 @@ var Sim = (function(){
     S.lastRelease = { t: S.t, x: rel.x.slice(), v: rel.v.slice(), m: mb, pred, src };
     const gsr = Math.hypot(rel.v[0], rel.v[1]);
     emit({ type:'bomb', src, bomb: b,
-      msg: '💣 ' + (src === 'ccrp' ? 'CẮT BOM TỰ ĐỘNG (CCRP)' : 'THẢ BOM THỦ CÔNG') + ': ' + mb.toFixed(2) + ' kg · cao ' + rel.x[2].toFixed(1) + ' m · v ' + gsr.toFixed(1) + ' m/s'
+      msg: '💣 ' + (src === 'ccrp' ? 'CẮT BOM TỰ ĐỘNG (CCRP)' : src === 'forced' ? 'THẢ BOM BẮT BUỘC TRƯỚC KHI VỀ' : 'THẢ BOM THỦ CÔNG') + ': ' + mb.toFixed(2) + ' kg · cao ' + rel.x[2].toFixed(1) + ' m · v ' + gsr.toFixed(1) + ' m/s'
         + (pred ? ' · rơi dự kiến sau ' + pred.tof.toFixed(2) + ' s tại (' + pred.e.toFixed(1) + ', ' + pred.n.toFixed(1) + ')' : '') });
-    if (params.linkLost || S.fsPendingDrop){
+    if ((params.linkLost || S.fsPendingDrop) && src !== 'forced'){
       S.fsPendingDrop = false;
       S.fsReason = 'đã hoàn thành cắt bom khi mất liên kết, tự động né vật cản về Nhà máy';
       emit({ type:'warn', kind:'link-lost',
@@ -2819,7 +2831,7 @@ var Sim = (function(){
       dist,
       target: tgt,
       msg: hit ? ('🎯 TRÚNG MỤC TIÊU: ' + tgt.name + ' (cách tâm ' + dist.toFixed(1) + 'm, bán kính diệt ≤ ' + killRadius.toFixed(1) + 'm)')
-               : ('⚠️ CHƯA TRÚNG MỤC TIÊU: ' + tgt.name + ' (lệch ' + dist.toFixed(1) + 'm, ngoài bán kính diệt ' + killRadius.toFixed(1) + 'm)')
+               : ('❌ NÉM BOM TRƯỢT: ' + tgt.name + ' (lệch ' + dist.toFixed(1) + 'm, ngoài bán kính diệt ' + killRadius.toFixed(1) + 'm)')
     });
     return { hit, dist, target: tgt, killRadius };
   }
@@ -3072,7 +3084,7 @@ Sim.on(ev => {
   else if (ev.type === 'bomb_impact') addLog('bad', ev.msg, ev.impact.obstacle ? 'Bom chạm công trình trước khi chạm đất' : '', ev.t);
   else if (ev.type === 'bomb_hit' || ev.type === 'bomb_miss'){
     addLog(ev.hit ? 'good' : 'warn', ev.msg, '', ev.t);
-    window.bombResultBanner = { text: ev.hit ? '🎯 TRÚNG MỤC TIÊU ' + ev.target.name + ' (lệch ' + ev.dist.toFixed(1) + ' m)' : '⚠️ CHƯA TRÚNG MỤC TIÊU (lệch ' + ev.dist.toFixed(1) + ' m)', cls: ev.hit ? 'good' : 'bad', until: ev.t + 6 };
+    window.bombResultBanner = { text: ev.hit ? '🎯 TRÚNG MỤC TIÊU ' + ev.target.name + ' (lệch ' + ev.dist.toFixed(1) + ' m)' : '❌ NÉM BOM TRƯỢT ' + ev.target.name + ' (lệch ' + ev.dist.toFixed(1) + ' m)', cls: ev.hit ? 'good' : 'bad', until: ev.t + 6 };
     if (window.svDraw3D) window.svDraw3D();
   }
   else if (ev.type === 'reset'){ addLog('info', ev.msg, '', ev.t); }
@@ -5316,10 +5328,12 @@ const hemi = new THREE.HemisphereLight(0x90c4f4, 0x476842, 0.88); scene.add(hemi
 
   // High-Visibility Surveillance Drone 3D Model (with 360° Lidar turret & 3-axis Gimbal Camera)
   // High-Visibility DJI Mavic-Style Surveillance Drone 3D Model (Safety Orange & Enlarged)
-  const k = 5.4;
+  const glowTex = canvasTex(64, (x, s) => { const g = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,255,255,0.5)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, s, s); });
+  const k = 6.8;   // drawn enlarged so the 0.8 m airframe stays visible over a large scene (physics uses the real size)
   const drone = new THREE.Group(); scene.add(drone);
-  const darkM = new THREE.MeshStandardMaterial({ color:0xff6600, roughness:0.35, metalness:0.20 }); // High-Visibility Rescue Orange
-  const plateM = new THREE.MeshStandardMaterial({ color:0xd95700, roughness:0.38, metalness:0.25 }); // Deep Satin Orange accent
+  // high-visibility orange with a self-lit component so the airframe reads clearly in shade, haze and at night
+  const darkM = new THREE.MeshStandardMaterial({ color:0xff6a00, emissive:0xff5a00, emissiveIntensity:0.55, roughness:0.35, metalness:0.15 });
+  const plateM = new THREE.MeshStandardMaterial({ color:0xffd23f, emissive:0xffb000, emissiveIntensity:0.45, roughness:0.38, metalness:0.2 });
   const metalM = new THREE.MeshStandardMaterial({ color:0xc5ccd6, roughness:0.20, metalness:0.80 });
   const goldM = new THREE.MeshStandardMaterial({ color:0xdfa328, roughness:0.30, metalness:0.55 });
   const blackM = new THREE.MeshStandardMaterial({ color:0x1e242b, roughness:0.55, metalness:0.20 });
@@ -5484,8 +5498,11 @@ const hemi = new THREE.HemisphereLight(0x90c4f4, 0x476842, 0.88); scene.add(hemi
     drone.add(prop); props.push({ prop, disc, dir: -M.s, ang: Math.random()*6 });
 
     // Front/Rear navigation lights
-    const nav = new THREE.Mesh(new THREE.SphereGeometry(0.015*k, 10, 8), new THREE.MeshBasicMaterial({ color: front ? (M.pos === 'FL' ? 0xff2222 : 0x00ff55) : 0x00e5ff }));
+    const navCol = front ? (M.pos === 'FL' ? 0xff2222 : 0x00ff55) : 0xffffff;
+    const nav = new THREE.Mesh(new THREE.SphereGeometry(0.022*k, 12, 10), new THREE.MeshBasicMaterial({ color: navCol }));
     nav.position.set(x, yFrame, z); drone.add(nav);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: navCol, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending }));
+    halo.scale.setScalar(0.22*k); nav.add(halo);
     if (M.x < 0) props[props.length-1].strobe = nav;
   });
 
@@ -5524,6 +5541,41 @@ const hemi = new THREE.HemisphereLight(0x90c4f4, 0x476842, 0.88); scene.add(hemi
   );
   lidarRing.rotation.x = -Math.PI/2; lidarGroup.add(lidarRing);
   const ringBase = Sim.params.safeMargin;
+
+  /* Locator: a screen-sized marker above the drone, a drop line and a ground ring that show where the drone is
+     and how high it flies. Overlay only: hidden in the drone's own camera picture and in the thermal image. */
+  const locator = new THREE.Group(); scene.add(locator);
+  const locTex = canvasTex(128, (x, s) => {
+    x.fillStyle = '#ff6a00'; x.strokeStyle = '#ffffff'; x.lineWidth = 10;
+    x.beginPath(); x.moveTo(s / 2, s - 10); x.lineTo(s - 22, 30); x.lineTo(22, 30); x.closePath(); x.fill(); x.stroke();
+  });
+  const locMark = new THREE.Sprite(new THREE.SpriteMaterial({ map: locTex, depthTest:false, depthWrite:false, transparent:true, sizeAttenuation:false }));
+  locMark.scale.set(0.06, 0.06, 1); locMark.renderOrder = 40; locator.add(locMark);
+  const locLabel = textSprite('UAV', '#ffffff', 'rgba(255,106,0,0.92)', 0.055); locLabel.material.depthTest = false; locLabel.renderOrder = 41; locator.add(locLabel);
+  let locTxt = '';
+  const locLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+    new THREE.LineDashedMaterial({ color:0xff6a00, dashSize:0.6, gapSize:0.4, transparent:true, opacity:0.9 }));
+  locator.add(locLine);
+  const locRing = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.6, 40), new THREE.MeshBasicMaterial({ color:0xff6a00, transparent:true, opacity:0.75, side:THREE.DoubleSide, depthWrite:false }));
+  locRing.rotation.x = -Math.PI / 2; locator.add(locRing);
+  function updateLocator(){
+    const S = Sim.S, p = S.pos, top = toV(p[0], p[1], p[2] + 1.6 + 0.012 * camera.position.distanceTo(drone.position));
+    locMark.position.copy(top);
+    locLabel.position.copy(top).add(new THREE.Vector3(0, 0.6 + 0.045 * camera.position.distanceTo(drone.position), 0));
+    const txt = 'UAV · ' + Math.max(0, p[2]).toFixed(0) + ' m';
+    if (txt !== locTxt){
+      locTxt = txt;
+      const old = locLabel.material.map;
+      locLabel.material.map = textSprite(txt, '#ffffff', 'rgba(255,106,0,0.92)', 0.03).material.map; old.dispose(); locLabel.material.needsUpdate = true;
+    }
+    const air = !S.grounded && p[2] > 0.6;
+    locLine.visible = locRing.visible = air;
+    if (air){
+      locLine.geometry.setFromPoints([toV(p[0], p[1], p[2]), toV(p[0], p[1], 0.1)]); locLine.computeLineDistances();
+      locRing.position.copy(toV(p[0], p[1], 0.08)); locRing.scale.setScalar(1 + 0.12 * Math.sin(performance.now() / 220));
+    }
+    locator.visible = !(cam && cam.mode === 'fpv');
+  }
 
   // Blob shadow
   const shTex = canvasTex(128, (x, s) => { const g = x.createRadialGradient(s/2, s/2, 2, s/2, s/2, s/2); g.addColorStop(0, 'rgba(0,0,0,0.58)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, s, s); });
@@ -6064,6 +6116,7 @@ const hemi = new THREE.HemisphereLight(0x90c4f4, 0x476842, 0.88); scene.add(hemi
     drone.position.copy(toV(rp[0], rp[1], rp[2]));
     if (q) drone.quaternion.set(q[1], q[3], -q[2], q[0]); else drone.rotation.set(S.att[0], S.att[2], -S.att[1], 'YZX');
     W.update(dt, dtSim);
+    updateLocator();
 
     const t = performance.now()/1000;
     lidarTurret.rotation.y = S.t * 8.0;
@@ -6195,7 +6248,7 @@ const hemi = new THREE.HemisphereLight(0x90c4f4, 0x476842, 0.88); scene.add(hemi
   const D2R = Math.PI / 180;
   const GB = { tilt:-15, pan:0, tiltT:-15, panT:0, zoom:1, zoom0:1, stab:true, ar:true, pip:true, ext:'orbit', auto:true, aimFn:null, viewFn:null };
   const camHide = [];   // AR objects never drawn in the camera picture (coverage tint, map-only marks)
-  camHide.push(fenceGroup);
+  camHide.push(fenceGroup, locator);
   const CAM_V = 56 * D2R, CAM_H = 2 * Math.atan(Math.tan(CAM_V / 2) * 16 / 9);
   const droneCam = new THREE.PerspectiveCamera(56, 16/9, 0.05, 800);
   const mapCam = new THREE.PerspectiveCamera(50, 16/9, 1, 900);
@@ -7324,7 +7377,7 @@ const D2R_ = Math.PI / 180;
 
 /* --- people and vehicles (deterministic, so every run looks the same) --- */
 function svRand(seed){ let x = seed >>> 0; return () => { x = (x * 1664525 + 1013904223) >>> 0; return x / 4294967296; }; }
-function svMakeAgents(){ return SURV.makeAgents(); }
+function svMakeAgents(){ return []; }   // no pedestrians or road traffic in the scene
 // kinematic bicycle (vehicles) / unicycle (people) in surv-core, fixed 50 ms steps
 function svMoveAgents(dt){ SURV.stepAgents(SV.agents, dt); }
 function svBuildMeshes(C){

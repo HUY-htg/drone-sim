@@ -465,6 +465,29 @@ function toHover(Sim, alt){
     `trôi ${(creep * 1000).toFixed(1)} mm · nghiêng ${tilt.toFixed(2)}° · phản lực ${S.contactN.toFixed(1)} N / m·g ${(Sim.P.m * Sim.P.g).toFixed(1)} N`);
 }
 
+// 24. The bomb is never brought home: a target far off the run-in line is still bombed (reported as a miss),
+//     and an RTL ordered before the aim point releases the bomb at once
+{
+  const run = (tgt, cut) => {
+    const Sim = makeSim(), P = Sim.params, ev = [];
+    Sim.on(e => ev.push(e));
+    Object.assign(P, { drain: 1, task: 'bomber', bombMass: 1, bomberTarget: tgt });
+    Sim.setDestinations([{ e: -20, n: -15, u: 20, role: 'pass' }, { e: 40, n: 30, u: 20, role: 'bomb' }, { e: 64, n: 48, u: 20, role: 'pass' }, { e: 0, n: 0, u: 20, role: 'stop' }], true);
+    toHover(Sim, 12); Sim.command('MISSION');
+    let rtl = false, landedLoaded = null;
+    Sim.on(e => { if (e.type === 'transition' && e.from === 'LANDING' && e.to === 'ARMED') landedLoaded = Sim.S.bombs > 0; });
+    runFor(Sim, 400, S => { if (cut && !rtl && S.state === 'MISSION' && S.pos[0] > 5){ Sim.command('RTL'); rtl = true; } return S.state === 'DISARMED' && S.stateT > 0.2; });
+    return { ev, S: Sim.S, landedLoaded };
+  };
+  const a = run({ e: 40, n: 52, name: 'Bia lệch', radius: 5 }, false);
+  const b = run({ e: 40, n: 30, name: 'Bia', radius: 5 }, true);
+  const missA = a.ev.some(e => e.type === 'bomb_miss'), dropsA = a.ev.filter(e => e.type === 'bomb').length;
+  const forcedB = b.ev.some(e => e.type === 'bomb' && e.src === 'forced'), resB = b.ev.some(e => e.type === 'bomb_miss' || e.type === 'bomb_hit');
+  check('Lệnh ném bom luôn được thực hiện: mục tiêu lệch tuyến vẫn ném và báo trượt; gọi RTL giữa chừng thì thả bom trước khi về, không mang bom về Nhà máy',
+    dropsA === 1 && missA && forcedB && resB && b.ev.filter(e => e.type === 'bomb').length === 1 && a.landedLoaded === false && b.landedLoaded === false,
+    `lệch tuyến: thả ${dropsA} lần, ${missA ? 'báo trượt' : 'không báo'} · RTL giữa chừng: ${forcedB ? 'thả bắt buộc' : 'không thả'}`);
+}
+
 // 23. Ground traffic: kinematic bicycle (vehicles) and unicycle (people) stay within their physical limits
 {
   const sc = html.match(/<script id="surv-core">([\s\S]*?)<\/script>/)[1];
