@@ -707,7 +707,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
             <button class="cmd" data-cmd="RTL"><span class="cn">RTL</span><small>Về Nhà Máy (né vật cản)</small></button>
             <div class="cmd cmd-mode" id="cmdModeBox" data-cmd="MANUAL" role="group" aria-label="Chọn chế độ bay: Tự động hoặc Lái tay">
               <div class="mode-seg">
-                <button type="button" class="mode-btn" id="btnModeAuto" title="Bay Tự động (Mission / Giữ vị trí)">AUTO</button>
+                <button type="button" class="mode-btn" id="btnModeAuto" title="Bay Tự động (Automatic / Giữ vị trí)">AUTO</button>
                 <button type="button" class="mode-btn active is-manual" id="btnModeManual" title="Lái tay tự do (APF bảo vệ)">MANUAL</button>
               </div>
               <small id="cmdModeSub">Lái tay (có APF bảo vệ)</small>
@@ -861,7 +861,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
             <span class="sub">10 trạng thái</span>
           </div>
           <div class="sm-scroll"><svg id="smSvg" viewBox="0 0 1020 340" role="img" aria-label="Sơ đồ máy trạng thái của drone giám sát"></svg></div>
-          <p class="note" style="margin-top:6px;font-size:11px">Ô cam là trạng thái hiện tại, viền đứt là trạng thái ngay trước, mũi tên sáng là lần chuyển gần nhất. Drone tự động né vật cản khi vào MISSION, RTL hoặc FAILSAFE.</p>
+          <p class="note" style="margin-top:6px;font-size:11px">Ô cam là trạng thái hiện tại, viền đứt là trạng thái ngay trước, mũi tên sáng là lần chuyển gần nhất. Drone tự động né vật cản khi vào AUTOMATIC, RTL hoặc FAILSAFE.</p>
         </div>
       </div>
     </section>
@@ -2899,9 +2899,9 @@ const hdgOf = psi => ((90 - psi*DEG) % 360 + 360) % 360;
 
 const META = {
   DISARMED: { cls:'idle',  sub:'tắt động cơ',    top:'Tại Nhà Máy Sản Xuất — Động cơ tắt', desc:'Drone giám sát đang đỗ trên bãi phóng H của Nhà Máy Sản Xuất (0,0). Bấm ARM để khởi hành.' },
-  ARMED:    { cls:'armed', sub:'chờ tại xưởng',  top:'Động cơ quay không tải — Sẵn sàng cất cánh', desc:'4 động cơ quay không tải. Sẵn sàng TAKEOFF hoặc MISSION. Tự DISARM sau 12 giây nếu không cất cánh.' },
+  ARMED:    { cls:'armed', sub:'chờ tại xưởng',  top:'Động cơ quay không tải — Sẵn sàng cất cánh', desc:'4 động cơ quay không tải. Sẵn sàng TAKEOFF hoặc AUTOMATIC. Tự DISARM sau 12 giây nếu không cất cánh.' },
   TAKEOFF:  { cls:'air',   sub:'cất cánh',       top:'Đang cất cánh khỏi Nhà Máy Sản Xuất', desc:'Leo thẳng đứng lên độ cao hành trình an toàn trước khi rời khuôn viên Nhà Máy. Tới độ cao đặt sẽ tự chuyển sang HOVER.' },
-  HOVER:    { cls:'air',   sub:'treo giữ vị trí', top:'Treo giữ vị trí ổn định', desc:'Giữ cố định toạ độ E/N/U và hướng mũi, tự động bù gió môi trường. Bấm MISSION để bay tự động.' },
+  HOVER:    { cls:'air',   sub:'treo giữ vị trí', top:'Treo giữ vị trí ổn định', desc:'Giữ cố định toạ độ E/N/U và hướng mũi, tự động bù gió môi trường. Bấm AUTOMATIC để bay tự động.' },
   MANUAL:   { cls:'air',   sub:'lái tay + APF',  top:'Lái bằng tay (có trường lực APF bảo vệ)', desc:'Lái tự do bằng bàn phím hoặc cần ảo. Khi bật né vật cản, cảm biến Lidar 360° tạo lực đẩy APF giúp hạn chế va vào vật cản.' },
   MISSION:  { cls:'air',   sub:'tự động',        top:'Đang bay tự động', desc:'Bay tự động qua chuỗi điểm dẫn đường đã được thuật toán A* tối ưu hóa để vòng tránh các vật cản.' },
   RTL:      { cls:'air',   sub:'về Nhà Máy',     top:'Quay về Nhà Máy Sản Xuất (có né vật cản)', desc:'Tự động tính toán hành lang né các vật cản từ vị trí hiện tại về lại bãi đáp Nhà Máy Sản Xuất (0,0) rồi hạ cánh.' },
@@ -2956,8 +2956,8 @@ const EDGES = [
   { k:'ARMED>TAKEOFF', off:0, label:'TAKEOFF', side:-1 },
   { k:'TAKEOFF>HOVER', off:0, label:'đạt độ cao', side:-1 },
   { k:'HOVER>MANUAL', off:-7, label:'cần/MANUAL' }, { k:'MANUAL>HOVER', off:-7, label:'HOLD' },
-  { k:'HOVER>MISSION', off:-7, label:'MISSION' }, { k:'MISSION>HOVER', off:-7, label:'xong · HOLD' },
-  { k:'MANUAL>MISSION', off:-7, label:'MISSION' }, { k:'MISSION>MANUAL', off:-7, label:'MANUAL' },
+  { k:'HOVER>MISSION', off:-7, label:'AUTOMATIC' }, { k:'MISSION>HOVER', off:-7, label:'xong · HOLD' },
+  { k:'MANUAL>MISSION', off:-7, label:'AUTOMATIC' }, { k:'MISSION>MANUAL', off:-7, label:'MANUAL' },
   { k:'HOVER>RTL', off:-7, label:'RTL' }, { k:'RTL>HOVER', off:-7, label:'HOLD' },
   { k:'MISSION>RTL', off:0, label:'xong · RTL', side:-1 },
   { k:'HOVER>LANDING', off:-7, label:'LAND' }, { k:'LANDING>HOVER', off:-7, label:'HOLD' },
@@ -2999,7 +2999,7 @@ function buildDiagram(){
   for (const k in NODES){
     const [x, y] = NODES[k];
     s += '<g class="nd' + (k === 'EMERGENCY' ? ' emg' : '') + '" id="n-' + k + '"><rect x="' + (x-NW/2) + '" y="' + (y-NH/2) + '" width="' + NW + '" height="' + NH + '" rx="4"/>'
-      + '<text class="nt" x="' + x + '" y="' + (y-1) + '" text-anchor="middle">' + k + '</text>'
+      + '<text class="nt" x="' + x + '" y="' + (y-1) + '" text-anchor="middle">' + (k === 'MISSION' ? 'AUTOMATIC' : k) + '</text>'
       + '<text class="ns" x="' + x + '" y="' + (y+13) + '" text-anchor="middle">' + META[k].sub + '</text></g>';
   }
   $('#smSvg').innerHTML = s;
@@ -3033,22 +3033,22 @@ function updateFlightModeUI(){
   btnAuto.classList.toggle('is-auto', !isMan);
   if (sub){
     if (isMan) sub.textContent = 'Đang lái tay (APF)';
-    else if (st === 'MISSION') sub.textContent = 'Tự động (Mission)';
+    else if (st === 'MISSION') sub.textContent = 'Tự động (Automatic)';
     else if (st === 'HOVER') sub.textContent = 'Tự động (Giữ vị trí)';
-    else if (isFlying) sub.textContent = 'Tự động (' + st + ')';
+    else if (isFlying) sub.textContent = 'Tự động (' + (st === 'MISSION' ? 'AUTOMATIC' : st) + ')';
     else sub.textContent = 'Lái tay (có APF bảo vệ)';
   }
 }
 
 /* ---------- state display ---------- */
-function setPill(el, st){ el.textContent = st; el.className = 'pill s-' + META[st].cls; }
+function setPill(el, st){ el.textContent = st === 'MISSION' ? 'AUTOMATIC' : st; el.className = 'pill s-' + META[st].cls; }
 function onStateChanged(){
   const S = Sim.S, st = S.state;
   const stPill = $('#statePill'); if (stPill) setPill(stPill, st);
   const smP = $('#smPill'); if (smP) setPill(smP, st);
   const stSub = $('#stateSub'); if (stSub) stSub.textContent = st === 'FAILSAFE' ? 'Failsafe: ' + S.fsReason + ', đang né vật cản về Nhà Máy' : META[st].top;
   const smD = $('#smDesc'); if (smD) smD.textContent = META[st].desc;
-  const smPr = $('#smPrev'); if (smPr) smPr.textContent = S.prevState ? 'Trước đó: ' + S.prevState + ' · lý do: ' + S.lastReason : 'Chưa có chuyển trạng thái.';
+  const smPr = $('#smPrev'); if (smPr) smPr.textContent = S.prevState ? 'Trước đó: ' + (S.prevState === 'MISSION' ? 'AUTOMATIC' : S.prevState) + ' · lý do: ' + S.lastReason : 'Chưa có chuyển trạng thái.';
   highlightDiagram(S.prevState, st);
   refreshValidity(true);
   updateFlightModeUI();
@@ -3069,7 +3069,7 @@ function refreshValidity(force){
   const key = valid.join(',');
   if (!force && key === lastValid) return;
   lastValid = key;
-  const html = valid.length ? valid.map(c => '<span class="chip">' + c + '</span>').join('')
+  const html = valid.length ? valid.map(c => '<span class="chip">' + (c === 'MISSION' ? 'AUTOMATIC' : c) + '</span>').join('')
     : '<span class="none">' + (Sim.params.linkLost ? 'không có (mất liên kết)' : 'không có, drone đang tự xử lý') + '</span>';
   const valFn = $('#validFn'); if (valFn) valFn.innerHTML = html;
   const valSm = $('#validSm'); if (valSm) valSm.innerHTML = html;
@@ -3078,7 +3078,7 @@ function refreshValidity(force){
 /* ---------- sim events ---------- */
 Sim.on(ev => {
   if (ev.type === 'transition'){
-    addLog(ev.kind === 'fail' ? 'fail' : 'tr', ev.from + ' → ' + ev.to, ev.reason, ev.t);
+    addLog(ev.kind === 'fail' ? 'fail' : 'tr', (ev.from === 'MISSION' ? 'AUTOMATIC' : ev.from) + ' → ' + (ev.to === 'MISSION' ? 'AUTOMATIC' : ev.to), ev.reason, ev.t);
     onStateChanged();
     if (ev.to === 'MISSION'){ renderMission(); svDraw3D(); }
   } else if (ev.type === 'lap'){ addLog('info', ev.msg, '', ev.t); renderMission(); }
@@ -6458,7 +6458,7 @@ const hemi = new THREE.HemisphereLight(0x90c4f4, 0x476842, 0.88); scene.add(hemi
       osdSet('osdHome', Math.hypot(S.pos[0], S.pos[1]).toFixed(0) + ' m');
       osdSet('osdGps', S.jammed ? 'MẤT GNSS' : fmtGps(S.pos[0], S.pos[1]));
     }
-    osdSet('osdState', S.state);
+    osdSet('osdState', S.state === 'MISSION' ? 'AUTOMATIC' : S.state);
     osdSet('osdBat', 'PIN ' + Math.round(soc) + '%', soc < 25 ? 'osd-warn' : '');
     const hd = bearing(S.att[2]), cb = bearing(S.att[2] + GB.pan * D2R);
     osdSet('osdHdg', 'MŨI ' + pad3(Math.round(hd) % 360) + '° ' + dirVN(hd) + (Math.abs(GB.pan) > 0.5 ? ' · CAMERA ' + pad3(Math.round(cb) % 360) + '°' : ''));
