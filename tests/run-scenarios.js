@@ -95,18 +95,20 @@ for (const [name, list] of [['Điểm 1', [WAYPOINTS[0]]], ['Điểm 2', [WAYPOI
     !r.crashed && r.home && r.events.some(e => e.to === 'FAILSAFE'), `cách tường gần nhất ${r.minClear.toFixed(2)} m`);
 }
 
-// 5. Bomber mission strike test: approaches target, cuts bomb in flight, egresses, loops back to Home
+// 5. Bomber mission strike test: approaches target, cuts bomb in flight (CCRP), egresses, loops back to Home
 {
   const bombDests = [
     { e: 15, n: 10, u: 16, label: 'Đường tiếp cận', role: 'pass' },
-    { e: 30, n: 25, u: 16, label: '🎯 Cắt bom (Kho quân khí)', role: 'bomb' },
+    { e: 30, n: 25, u: 16, label: '🎯 Điểm ngắm (Kho quân khí)', role: 'bomb' },
     { e: 45, n: 35, u: 18, label: '🚀 Thoát ly thẳng', role: 'pass' },
     { e: 20, n: 40, u: 18, label: '🔄 Vòng lượn thoát ly', role: 'pass' },
     { e: 0, n: 0, u: 14, label: 'Nhà máy Sản xuất (Hạ cánh)', role: 'stop' }
   ];
   const r = flyRoute(Sim => { Sim.params.task = 'bomber'; Sim.setDestinations(bombDests, true); }, { maxT: 900 });
+  const imp = r.events.find(e => e.type === 'bomb_impact');
+  const miss = imp ? Math.hypot(imp.impact.e - 30, imp.impact.n - 25) : 99;
   check('Bomber: tiếp cận, cắt bom trên không chính xác, thoát ly và về Nhà máy',
-    !r.crashed && r.home && r.bombs >= 1, `cách tường gần nhất ${r.minClear.toFixed(2)} m, số lần cắt bom: ${r.bombs}`);
+    !r.crashed && r.home && r.bombs === 1 && miss < 3, `cách tường gần nhất ${r.minClear.toFixed(2)} m, số lần cắt bom: ${r.bombs}, điểm rơi lệch ${miss.toFixed(2)} m`);
 }
 
 // 6. Planner: random click targets never produce a path through a building
@@ -313,6 +315,154 @@ function hoverSteps(adaptive){
       !r.crashed && r.home && hadBomb && hadFailsafe && blackboxSaved,
       `cắt bom: ${r.bombs} lần, hộp đen lưu: ${r.S.blackboxMB} MB, về bãi an toàn`);
   }
+}
+
+/* ===================== Physics: rigid body, contact, ballistics, one bomb per sortie ===================== */
+const runFor = (Sim, sec, cb) => { for (let i = 0; i < sec / DT; i++){ Sim.step(DT); if (cb && cb(Sim.S)) return true; } return false; };
+function toHover(Sim, alt){
+  if (alt) Sim.params.takeoffAlt = alt;
+  Sim.command('ARM'); runFor(Sim, 1); Sim.command('TAKEOFF');
+  runFor(Sim, 60, S => S.state === 'HOVER' && S.stateT > 4);
+}
+
+// 14. Exterior ballistics: with C_d = 0 the integrator must reproduce the vacuum solution
+{
+  const Sim = makeSim(), P = Sim.P, cd = P.bombCd;
+  P.bombCd = 0;
+  const imp = Sim.predictImpact([0, 0, 100], [10, 0, 0], 1, () => [0, 0, 0], 0);
+  P.bombCd = cd;
+  const tA = Math.sqrt(2 * 100 / 9.81);
+  check('Đạn đạo không lực cản trùng nghiệm giải tích (t = √(2h/g), tầm = v·t)',
+    Math.abs(imp.tof - tA) < 1e-3 && Math.abs(imp.e - 10 * tA) < 0.01,
+    `t ${imp.tof.toFixed(4)} / ${tA.toFixed(4)} s · tầm ${imp.e.toFixed(3)} / ${(10 * tA).toFixed(3)} m`);
+}
+
+// 15. Terminal velocity of the bomb equals √(2mg/(ρ·C_d·A)) for every allowed mass
+{
+  const Sim = makeSim(); let worst = 0; const rows = [];
+  for (const m of [0.25, 1, 2]){
+    const g = Sim.bombGeom(m), vt = Math.sqrt(2 * m * 9.81 / (1.225 * g.Cd * g.A));
+    const b = { x: [0, 0, 0], v: [0, 0, 0], kA: Sim.bombKA(m) };
+    for (let i = 0; i < 4000; i++){ Sim.bombStep(b, 0.02, 0, () => [0, 0, 0]); b.x[2] = 0; }   // hold at sea-level density
+    const err = Math.abs(-b.v[2] - vt) / vt; worst = Math.max(worst, err);
+    rows.push(`${m} kg: ${(-b.v[2]).toFixed(2)} / ${vt.toFixed(2)} m/s`);
+  }
+  check('Vận tốc tới hạn của bom khớp √(2mg/ρC_dA)', worst < 1e-3, rows.join(' · '));
+}
+
+// 16. One bomb per sortie: CCRP releases once, every later release is refused, reload only after landing at the Factory
+{
+  const Sim = makeSim(), P = Sim.params, ev = [];
+  Sim.on(e => ev.push(e));
+  Object.assign(P, { drain: 1, task: 'bomber', bombMass: 1.5, bomberTarget: { e: 40, n: 30, name: 'Bia', radius: 6 } });
+  Sim.setDestinations([
+    { e: -16, n: -12, u: 20, role: 'pass', label: 'IP' }, { e: 40, n: 30, u: 20, role: 'bomb', label: 'Ngắm' },
+    { e: 64, n: 48, u: 20, role: 'pass', label: 'Thoát' }, { e: 0, n: 0, u: 20, role: 'stop', label: 'Nhà máy' }], true);
+  const loaded = Sim.S.bombs === 0;            // nothing loaded before the first step on the pad
+  toHover(Sim, 12);
+  const m0 = Sim.P.m;
+  Sim.command('MISSION');
+  let triedAgain = null, reloadInAir = false;
+  runFor(Sim, 400, S => {
+    if (S.bombDropped && triedAgain == null && !S.grounded){
+      triedAgain = Sim.dropBomb('manual');
+      Sim.setDestinations(Sim.destinations, true);            // re-planning must not re-arm anything
+      Sim.syncLoadout();
+      reloadInAir = S.bombs > 0;
+    }
+    return S.state === 'DISARMED' && S.stateT > 0.2;
+  });
+  const releases = ev.filter(e => e.type === 'bomb').length;
+  const refused = ev.some(e => e.type === 'reject' && /Thả bom bị từ chối/.test(e.msg));
+  const S = Sim.S;
+  check('Mỗi chuyến chỉ 1 quả bom: thả lần 2 bị từ chối, không nạp lại trên không, nạp lại sau khi hạ cánh tại Nhà máy',
+    loaded && releases === 1 && triedAgain === false && refused && !reloadInAir && S.bombs === 1 && Math.abs(m0 - 4.3) < 1e-9 && Math.abs(Sim.P.m - 4.3) < 1e-9,
+    `thả ${releases} lần · lần 2: ${triedAgain ? 'được' : 'từ chối'} · khối lượng cất cánh ${m0.toFixed(2)} kg · sau hạ cánh mang ${S.bombs} quả`);
+}
+
+// 17. Bomb mass is capped at 2 kg
+{
+  const Sim = makeSim();
+  Object.assign(Sim.params, { task: 'bomber', bombMass: 5 });
+  Sim.step(DT);
+  check('Khối lượng bom tối đa 2 kg', Sim.S.bombMass === 2 && Math.abs(Sim.P.m - 4.8) < 1e-9, `nạp ${Sim.S.bombMass} kg · tổng ${Sim.P.m.toFixed(2)} kg`);
+}
+
+// 18. CCRP accuracy for every bomb mass in calm and gusty wind (wind blowing across and along the run-in)
+{
+  let worst = 0; const rows = [];
+  for (const [m, w, g, dir] of [[0.25, 0, 0, 270], [1, 6, 0.3, 270], [1, 6, 0.3, 0], [2, 9, 0.3, 270], [2, 9, 0.3, 0]]){
+    const Sim = makeSim(), P = Sim.params, ev = [];
+    Sim.on(e => ev.push(e));
+    const T = { e: 52, n: 38, name: 'Kho', radius: 6 }, d = Math.hypot(T.e, T.n), ux = T.e / d, uy = T.n / d;
+    Object.assign(P, { drain: 1, windOn: w > 0, windSpeed: w, gust: g, windDir: dir, task: 'bomber', bombMass: m, bomberTarget: T });
+    Sim.setDestinations([{ e: T.e - ux * 70, n: T.n - uy * 70, u: 20, role: 'pass' }, { e: T.e, n: T.n, u: 20, role: 'bomb' },
+      { e: T.e + ux * 30, n: T.n + uy * 30, u: 20, role: 'pass' }, { e: 0, n: 0, u: 20, role: 'stop' }], true);
+    toHover(Sim, 12); Sim.command('MISSION');
+    runFor(Sim, 300, () => ev.some(e => e.type === 'bomb_impact'));
+    const imp = ev.find(e => e.type === 'bomb_impact');
+    const miss = imp ? Math.hypot(imp.impact.e - T.e, imp.impact.n - T.n) : 99;
+    worst = Math.max(worst, miss);
+    rows.push(`${m} kg/${w} m/s/${dir}°: ${miss.toFixed(2)} m`);
+  }
+  check('CCRP: bom 0,25–2 kg, gió tới 9 m/s có giật, điểm rơi lệch < 3 m', worst < 3, rows.join(' · '));
+}
+
+// 19. Hover equilibrium: thrust = m·g with and without the 2 kg bomb; bomb release → m̂ re-converges, altitude holds
+{
+  const Sim = makeSim(), P = Sim.params;
+  Object.assign(P, { drain: 1, windOn: false, task: 'bomber', bombMass: 2 });
+  toHover(Sim, 15);
+  runFor(Sim, 6);
+  const tLoaded = Sim.S.T / (Sim.P.m * Sim.P.g);
+  const z0 = Sim.S.pos[2], tRel = Sim.S.t;
+  Sim.dropBomb('manual');
+  let dzMax = 0, tConv = 0;
+  runFor(Sim, 10, S => { dzMax = Math.max(dzMax, Math.abs(S.pos[2] - z0)); if (Math.abs(S.est.mHat - Sim.P.m) >= 0.05) tConv = S.t - tRel; return false; });
+  const tEmpty = Sim.S.T / (Sim.P.m * Sim.P.g);
+  check('Treo: lực đẩy = m·g (có và không có bom 2 kg); thả bom → m̂ hội tụ < 5 s, độ cao lệch < 1 m',
+    Math.abs(tLoaded - 1) < 0.005 && Math.abs(tEmpty - 1) < 0.005 && tConv < 5 && dzMax < 1,
+    `T/mg ${tLoaded.toFixed(4)} → ${tEmpty.toFixed(4)} · m̂ về ${Sim.S.est.mHat.toFixed(3)} kg sau ${tConv.toFixed(2)} s · lệch cao tối đa ${dzMax.toFixed(2)} m`);
+}
+
+// 20. Yaw 180° at hover: the rigid-body coupling must not push the drone off its spot
+{
+  const Sim = makeSim();
+  Object.assign(Sim.params, { drain: 1, windOn: false });
+  toHover(Sim, 10);
+  const S = Sim.S, p0 = S.pos.slice(); let drift = 0;
+  S.yawSp = S.att[2] + Math.PI;
+  runFor(Sim, 6, s => { drift = Math.max(drift, Math.hypot(s.pos[0] - p0[0], s.pos[1] - p0[1], s.pos[2] - p0[2])); });
+  check('Xoay mũi 180° khi treo: không trôi vị trí', drift < 0.1, `trôi tối đa ${drift.toFixed(3)} m`);
+}
+
+// 21. KILL at 30 m: free fall with drag, then the skids/arms hit the ground and the drone comes to rest
+{
+  const Sim = makeSim();
+  Object.assign(Sim.params, { drain: 1, windOn: false });
+  toHover(Sim, 30);
+  const S = Sim.S, z0 = S.xc[2], t0 = S.t;
+  Sim.command('KILL');
+  let tImp = null, vImp = 0;
+  runFor(Sim, 15, s => { if (tImp == null && s.grounded){ tImp = s.t - t0; vImp = -s.vel[2]; } return false; });
+  // reference: same drag law, no thrust, from the same height (motor spin-down neglected)
+  const m = Sim.P.m, kd = Sim.P.kd, kq = Sim.P.kq;
+  let z = z0, v = 0, t = 0;
+  while (z > Sim.P.hCg){ const a = -9.81 - (kd + kq * Math.abs(v)) * v / m; v += a * 1e-4; z += v * 1e-4; t += 1e-4; }
+  check('KILL ở 30 m: rơi tự do có cản, chạm đất đúng thời điểm (±5%), nằm yên và DISARMED',
+    tImp != null && Math.abs(tImp - t) / t < 0.05 && S.state === 'DISARMED' && Math.hypot(...S.vel) < 0.05,
+    `chạm đất sau ${tImp && tImp.toFixed(2)} s (lý thuyết ${t.toFixed(2)} s) · ${vImp.toFixed(1)} m/s`);
+}
+
+// 22. Parked on the pad in 6 m/s wind: static friction holds, no creep, airframe level on its skids
+{
+  const Sim = makeSim();
+  Object.assign(Sim.params, { windOn: true, windSpeed: 6, gust: 0.3 });
+  runFor(Sim, 30);
+  const S = Sim.S, creep = Math.hypot(S.pos[0], S.pos[1]), tilt = Math.acos(Math.cos(S.att[0]) * Math.cos(S.att[1])) * 180 / Math.PI;
+  check('Đỗ trên bãi khi gió 6 m/s: ma sát tĩnh giữ chặt (trôi < 1 cm), thân nằm ngang trên càng',
+    creep < 0.01 && tilt < 0.5 && Math.abs(S.contactN - Sim.P.m * Sim.P.g) < 0.05 * Sim.P.m * Sim.P.g,
+    `trôi ${(creep * 1000).toFixed(1)} mm · nghiêng ${tilt.toFixed(2)}° · phản lực ${S.contactN.toFixed(1)} N / m·g ${(Sim.P.m * Sim.P.g).toFixed(1)} N`);
 }
 
 console.log(failures ? `\n${failures} kiểm tra thất bại` : '\nTất cả kiểm tra đều đạt');

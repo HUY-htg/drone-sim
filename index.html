@@ -1226,18 +1226,61 @@ const SURV = (() => {
 </script>
 <script id="sim-core">
 /* ===== Tactical & Combat Drone Simulation Core:
-   Heavy-lift 6S dynamics, cascaded PID, 2.5D A* obstacle-avoidance trajectory planner,
-   real-time Lidar + Artificial Potential Field (APF), and obstacle database ===== */
+   6-DOF rigid-body dynamics (quaternion attitude, Newton–Euler, rotor gyroscopic coupling, ground contact),
+   cascaded geometric controller, 2.5D A* obstacle-avoidance planner, real-time Lidar + APF,
+   point-mass exterior ballistics for the bomb with a continuously computed release point (CCRP) ===== */
 var Sim = (function(){
   const P = {
-    mBase: 2.8, m: 2.8, g: 9.81, L: 0.40,
-    Ixx: 0.048, Iyy: 0.048, Izz: 0.082, I0x: 0.048, I0y: 0.048,
+    mBase: 2.8, m: 2.8, g: 9.81, L: 0.40, rho0: 1.225,
+    // inertia of the bare airframe about its own centre of mass (kg·m²), body axes x fwd / y left / z up
+    Ixx: 0.048, Iyy: 0.048, Izz: 0.082, I0x: 0.048, I0y: 0.048, I0z: 0.082,
+    hCg0: 0.17, hCg: 0.17,          // m: centre of mass of the bare airframe above the skid plane
     fMax: 22.0, fIdle: 0.9, fMin: 0.35,
     km: 0.022, tauM: 0.04, kd: 0.55, kq: 0.045,
-    rpmMax: 9200, capacity: 12000, cells: 6, rPack: 0.014, fenceAlt: 65,
-    rDrone: 0.6
+    rpmMax: 9200, Jr: 6.0e-5,       // kg·m²: one propeller + motor bell
+    capacity: 12000, cells: 6, rPack: 0.014, fenceAlt: 65,
+    rDrone: 0.6,
+    // ground contact (per contact point): progressive spring–damper normal force, spring-anchored Coulomb friction
+    kC: 2500, cC: 40, dC: 0.03, muC: 0.7, kTC: 1800, cTC: 25, cSlide: 120,
+    // bomb: point-mass ballistics, quadratic drag along the relative wind (fin-stabilised, nose into the airflow)
+    bombMin: 0.25, bombMax: 2.0, bombCd: 0.30, bombZ: 0.07, bombD1: 0.09, bombLD: 3.3
   };
   P.d = P.L / Math.SQRT2;
+  P.OmMax = P.rpmMax * 2 * Math.PI / 60;           // rad/s
+  P.kT = P.fMax / (P.OmMax * P.OmMax);              // N/(rad/s)²: thrust f = k_T·Ω²
+  const D2R = Math.PI / 180;
+
+  /* ----- small vector / quaternion toolkit. Quaternions [w,x,y,z] rotate body (FLU) into world (ENU) ----- */
+  const cross = (a, b) => [a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]];
+  const dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+  const qMul = (a, b) => [a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3], a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2],
+                          a[0]*b[2] - a[1]*b[3] + a[2]*b[0] + a[3]*b[1], a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + a[3]*b[0]];
+  const qNorm = q => { const n = Math.hypot(q[0], q[1], q[2], q[3]) || 1; return [q[0]/n, q[1]/n, q[2]/n, q[3]/n]; };
+  // Rotation matrix (row-major) of a unit quaternion; its columns are the body axes in world coordinates
+  function qToR(q){
+    const w = q[0], x = q[1], y = q[2], z = q[3];
+    return [1 - 2*(y*y + z*z), 2*(x*y - w*z), 2*(x*z + w*y),
+            2*(x*y + w*z), 1 - 2*(x*x + z*z), 2*(y*z - w*x),
+            2*(x*z - w*y), 2*(y*z + w*x), 1 - 2*(x*x + y*y)];
+  }
+  const rv  = (R, v) => [R[0]*v[0] + R[1]*v[1] + R[2]*v[2], R[3]*v[0] + R[4]*v[1] + R[5]*v[2], R[6]*v[0] + R[7]*v[1] + R[8]*v[2]];   // body → world
+  const rtv = (R, v) => [R[0]*v[0] + R[3]*v[1] + R[6]*v[2], R[1]*v[0] + R[4]*v[1] + R[7]*v[2], R[2]*v[0] + R[5]*v[1] + R[8]*v[2]];   // world → body
+  // ZYX (yaw ψ, pitch θ, roll φ) Euler angles ↔ quaternion
+  function qFromEuler(ph, th, ps){
+    const cr = Math.cos(ph/2), sr = Math.sin(ph/2), cp = Math.cos(th/2), sp = Math.sin(th/2), cy = Math.cos(ps/2), sy = Math.sin(ps/2);
+    return [cr*cp*cy + sr*sp*sy, sr*cp*cy - cr*sp*sy, cr*sp*cy + sr*cp*sy, cr*cp*sy - sr*sp*cy];
+  }
+  function eulerOf(q){
+    const w = q[0], x = q[1], y = q[2], z = q[3];
+    return [Math.atan2(2*(w*x + y*z), 1 - 2*(x*x + y*y)), Math.asin(Math.max(-1, Math.min(1, 2*(w*y - z*x)))), Math.atan2(2*(w*z + x*y), 1 - 2*(y*y + z*z))];
+  }
+
+  /* ----- atmosphere and wind ----- */
+  // ISA troposphere density (kg/m³) at height u above the pad (field elevation taken as sea level)
+  const airDensity = u => P.rho0 * Math.pow(Math.max(0.5, 1 - 2.25577e-5 * u), 4.2559);
+  // Neutral atmospheric surface layer: logarithmic wind profile, reference speed measured at 10 m over short grass
+  const Z0 = 0.03, ZREF = 10;
+  const windProfile = u => u >= ZREF ? 1 : u <= Z0 ? 0 : Math.log(u / Z0) / Math.log(ZREF / Z0);
 
   const K = {
     pXY: 1.05, pZ: 1.45, vXY: 2.5, iXY: 0.7, vZ: 4.2, iZ: 1.3,
@@ -1260,6 +1303,7 @@ var Sim = (function(){
     autoAvoid: true, safeMargin: 4.5,
     windOn: true, windSpeed: 4, windDir: 270, gust: 0.3, drain: 5, linkLost: false, adaptive: true,
     autoLinkFailOnPatrol: false, autoLinkFailOnBomber: false, bomberTarget: null,
+    bombMass: 1.0,   // kg, one bomb per sortie, 0.25 … 2.0 kg; loaded only on the pad with the motors off
     // task: 'patrol' | 'orbit' | 'scan' | 'bomber'; loops: patrol laps (0 = until recalled); orbit: { e, n, r, u, dir, v, laps, lookU, name }
     task: 'patrol', loops: 1, orbit: null
   };
@@ -1294,18 +1338,41 @@ var Sim = (function(){
   const wrap = a => { while (a > Math.PI) a -= 2*Math.PI; while (a < -Math.PI) a += 2*Math.PI; return a; };
   let S;
 
+  /* ----- mass properties: airframe + (optionally) one bomb hung under the belly ----- */
+  // Bomb of mass m: diameter scales with m^(1/3) from Ø 9 cm at 1 kg, length/diameter = 3.3
+  function bombGeom(m){
+    const D = P.bombD1 * Math.cbrt(m), len = P.bombLD * D;
+    return { D, len, A: Math.PI * D * D / 4, Cd: P.bombCd };
+  }
+  // Total mass, centre-of-mass height and inertia tensor (parallel-axis theorem) of the current configuration
   function syncMass(){
-    P.m = P.mBase;
-    P.Ixx = P.I0x;
-    P.Iyy = P.I0y;
+    const md = P.mBase, mb = S && S.bombs > 0 ? S.bombMass : 0, M = md + mb;
+    const zc = (md * P.hCg0 + mb * P.bombZ) / M;
+    let Ixx = P.I0x + md * (P.hCg0 - zc) ** 2, Iyy = P.I0y + md * (P.hCg0 - zc) ** 2, Izz = P.I0z;
+    if (mb > 0){
+      const b = bombGeom(mb), r = b.D / 2;   // slender cylinder lying along body x
+      Ixx += 0.5 * mb * r * r + mb * (P.bombZ - zc) ** 2;
+      Iyy += mb * (3 * r * r + b.len * b.len) / 12 + mb * (P.bombZ - zc) ** 2;
+      Izz += mb * (3 * r * r + b.len * b.len) / 12;
+    }
+    P.m = M; P.hCg = zc; P.Ixx = Ixx; P.Iyy = Iyy; P.Izz = Izz;
   }
   // Adaptive-control settings (shown in the dashboard)
   const EST = { tauM: 1.0, tauD: 0.5, tauWind: 2.0 };
 
+  // Contact points of the airframe, body coordinates measured from the skid plane centre: 4 skid feet, then the 4 motor bells
+  const CPTS = [[0.21, 0.19, 0], [0.21, -0.19, 0], [-0.21, 0.19, 0], [-0.21, -0.19, 0],
+                [P.d, -P.d, 0.20], [-P.d, P.d, 0.20], [P.d, P.d, 0.20], [-P.d, -P.d, 0.20]];
+
   function fresh(){
-    syncMass();
+    const q = qFromEuler(0, 0, Math.PI/2);
+    const settle = (P.mBase * P.g) / (4 * P.kC);   // static skid compression
     return {
-      t:0, pos:[0,0,0], vel:[0,0,0], acc:[0,0,0], att:[0,0,Math.PI/2], rate:[0,0,0],
+      t:0, pos:[0,0,-settle], vel:[0,0,0], acc:[0,0,0], att:[0,0,Math.PI/2], rate:[0,0,0],
+      // rigid-body state: centre of mass position / velocity (world), attitude quaternion, body rates, rotor speeds
+      xc:[0, 0, P.hCg0 - settle], vc:[0,0,0], q, Om:[0,0,0,0], anchors:[null,null,null,null,null,null,null,null],
+      refPos:[0,0,-settle], contactN:0, nContacts:4,
+      bombs:0, bombMass:0, bombsAir:[], lastRelease:null, lastImpact:null, ccrp:null, ccrpPrev:null, ccip:null, sortie:0,
       f:[0,0,0,0], fCmd:[0,0,0,0], rpm:[0,0,0,0], T:0, Tcmd:0,
       soc:1, mAh:0, I:0, V:25.2,
       state:'DISARMED', prevState:null, lastReason:'', stateT:0, armT:0, flightT:0,
@@ -1325,6 +1392,7 @@ var Sim = (function(){
     };
   }
   S = fresh();
+  syncMass();
 
   function on(fn){ listeners.push(fn); }
   function emit(ev){ ev.t = S.t; for (const f of listeners) f(ev); }
@@ -1613,6 +1681,8 @@ var Sim = (function(){
     }
     let vAlong = Math.min(vCap, Math.sqrt(vEnd*vEnd + 2*A_BRAKE*remain));
     if (stopAtB || !C) vAlong = Math.min(vAlong, 0.9*remain + 0.15);
+    // overshot a stop point (gust, tailwind): come back along the leg instead of creeping onwards
+    if ((stopAtB || !C) && L >= 0.5 && along > L) vAlong = -Math.min(vCap, 0.9*(along - L) + 0.15);
     const vX = clamp(-K_XT*xt, -3, 3);
     const frac = L < 0.5 ? 1 : clamp(along / L, 0, 1);
     return {
@@ -1714,7 +1784,7 @@ var Sim = (function(){
     const p = S.pos, v = S.vel;
     switch (st){
       case 'DISARMED': S.integ = [0,0,0]; break;
-      case 'ARMED': S.integ = [0,0,0]; S.touchT = 0; if (prev === 'LANDING') S.destDone = 0; break;
+      case 'ARMED': S.integ = [0,0,0]; S.touchT = 0; if (prev === 'LANDING') S.destDone = 0; if (prev === 'DISARMED') syncLoadout(); break;
       case 'TAKEOFF': S.toXY = [p[0], p[1]]; S.yawSp = S.att[2]; S.integ = [0,0,0]; break;
       case 'HOVER': {
         const xy = prev === 'TAKEOFF' ? S.toXY : [p[0] + v[0]*0.45, p[1] + v[1]*0.45];
@@ -1747,20 +1817,26 @@ var Sim = (function(){
     S.windSpd += ((params.windOn ? params.windSpeed : 0) - S.windSpd) * k;
     let dd = params.windDir - S.windDirNow; dd = ((dd + 540) % 360) - 180;
     S.windDirNow = (S.windDirNow + dd * k + 360) % 360;
-    if (S.windSpd < 0.02){ S.windNow = [0,0,0]; return; }
-    const t = S.t, g = params.gust;
-    const n = Math.sin(t*0.7)*0.5 + Math.sin(t*1.9 + 1.3)*0.3 + Math.sin(t*4.3 + 0.4)*0.2;
-    const sp = Math.max(0, S.windSpd * (1 + g*n));
-    const toward = (S.windDirNow + 180 + 12*Math.sin(t*0.37)) * Math.PI/180;
-    S.windNow = [sp*Math.sin(toward), sp*Math.cos(toward), 0.06*g*S.windSpd*Math.sin(t*1.3)];
+    S.windNow = windAt(S.xc[0], S.xc[1], S.xc[2]);
+  }
+
+  /* One wind field for everything that moves through the air (drone, bomb, smoke, debris, wind streaks).
+     Mean wind follows the logarithmic surface-layer profile; gusts are frozen turbulence (Taylor's hypothesis):
+     the gust pattern is carried downwind with the mean flow, so points further downwind meet the same gust later. */
+  function windAt(e, n, u, t){
+    const U = S.windSpd;
+    if (U < 0.02) return [0, 0, 0];
+    const g = params.gust, th = (S.windDirNow + 180) * D2R, de = Math.sin(th), dn = Math.cos(th);
+    const s = (t == null ? S.t : t) - (e * de + n * dn) / Math.max(U, 0.5);
+    const nz = Math.sin(s*0.7)*0.5 + Math.sin(s*1.9 + 1.3)*0.3 + Math.sin(s*4.3 + 0.4)*0.2;
+    const pr = windProfile(u);
+    const sp = Math.max(0, U * (1 + g*nz)) * pr;
+    const toward = th + 12 * D2R * Math.sin(s*0.37);
+    return [sp*Math.sin(toward), sp*Math.cos(toward), 0.06*g*U*Math.sin(s*1.3)*pr];
   }
 
   // Body z-axis in world frame for the current attitude
-  function zBody(){
-    const ph = S.att[0], th = S.att[1], ps = S.att[2];
-    const cph = Math.cos(ph), sph = Math.sin(ph), cth = Math.cos(th), sth = Math.sin(th), cps = Math.cos(ps), sps = Math.sin(ps);
-    return [cps*sth*cph + sps*sph, sps*sth*cph - cps*sph, cth*cph];
-  }
+  function zBody(){ const q = S.q, x = q[1], y = q[2], z = q[3], w = q[0]; return [2*(x*z + w*y), 2*(y*z - w*x), 1 - 2*(x*x + y*y)]; }
 
   /* Online estimators (what a real flight controller has to work with: thrust, attitude, IMU acceleration)
      - hover-thrust / mass estimator: m̂ ← T·z_b,z / (a_z + g), low-pass τ = EST.tauM, gated against climb drag
@@ -1794,7 +1870,7 @@ var Sim = (function(){
       E.wHat = [S.vel[0] - vr[0], S.vel[1] - vr[1]];
       E.valid = true;
     }
-    E.IHat = P.I0x;
+    E.IHat = P.Ixx;   // the flight controller knows its own configuration (it commands the bomb release)
   }
 
   const TASK_NAME = { patrol:'tuần tra', orbit:'bay vòng', scan:'quét khu vực', bomber:'oanh tạc ném bom' };
@@ -1952,6 +2028,9 @@ var Sim = (function(){
           advanceWaypoint();
           return guidance(dt);
         }
+        if (w.role === 'bomb' && !w.dropped && S.bombs > 0){
+          if (bombingRun(w)){ w.dropped = true; if (S.state !== 'MISSION') return guidance(dt); }
+        }
         const tr = trackLeg(S.legFrom, w, mission[S.wpIdx + 1] || null, params.vMax, isStop);
         if (tr.toB > 1.5) S.yawSp = tr.heading;
         const dz = Math.abs(w.u - p[2]);
@@ -1960,44 +2039,13 @@ var Sim = (function(){
             emit({ type:'info', msg:'Đã tới ' + (w.label || ('Đích ' + (w.destIdx + 1))) });
             S.destDone = w.destIdx + 1;
             S.dwell = w.role === 'stop' ? 0.3 : 0.6;
-            if (w.role === 'bomb' && !w.dropped){
-              w.dropped = true;
-              S.bombDropped = true;
-              if (typeof window !== 'undefined' && window.dropBomb) window.dropBomb();
-              emit({ type:'bomb', msg:'💣 ĐÃ CẮT BOM OANH TẠC ' + (w.label || 'MỤC TIÊU') });
-              if (params.linkLost || S.fsPendingDrop){
-                S.fsPendingDrop = false;
-                S.fsReason = 'đã hoàn thành cắt bom khi mất liên kết, tự động né vật cản về Nhà máy';
-                emit({
-                  type: 'warn',
-                  kind: 'link-lost',
-                  msg: '🎯 ĐÃ HOÀN THÀNH CẮT BOM KHI MẤT LIÊN KẾT → TỰ ĐỘNG CHUYỂN FAILSAFE VỀ CĂN CỨ!',
-                  sub: 'Drone đã hoàn thành thả bom tự hành. Lập tức kích hoạt FAILSAFE né vật cản quay về bãi đáp Nhà máy.'
-                });
-                setState('FAILSAFE', 'đã hoàn thành cắt bom khi mất liên kết, tự động né vật cản về Nhà máy', 'fail');
-                return guidance(dt);
-              }
-            }
             return { xy:[w.e, w.n], z:w.u, yaw:S.yawSp };
           }
         } else if ((tr.toB < 1.8 || legPassed(tr)) && dz < 1.4){
           if (w.role === 'bomb' && !w.dropped){
+            // Flew past the aim point without a valid release solution: keep the bomb, report it
             w.dropped = true;
-            S.bombDropped = true;
-            if (typeof window !== 'undefined' && window.dropBomb) window.dropBomb();
-            emit({ type:'bomb', msg:'💣 CẮT BOM TRÊN KHÔNG: ' + (w.label || 'MỤC TIÊU') + ' (v = ' + (gs || params.vMax).toFixed(1) + ' m/s)' });
-            if (params.linkLost || S.fsPendingDrop){
-              S.fsPendingDrop = false;
-              S.fsReason = 'đã hoàn thành cắt bom khi mất liên kết, tự động né vật cản về Nhà máy';
-              emit({
-                type: 'warn',
-                kind: 'link-lost',
-                msg: '🎯 ĐÃ HOÀN THÀNH CẮT BOM KHI MẤT LIÊN KẾT → TỰ ĐỘNG CHUYỂN FAILSAFE VỀ CĂN CỨ!',
-                sub: 'Drone đã hoàn thành thả bom tự hành. Lập tức kích hoạt FAILSAFE né vật cản quay về bãi đáp Nhà máy.'
-              });
-              setState('FAILSAFE', 'đã hoàn thành cắt bom khi mất liên kết, tự động né vật cản về Nhà máy', 'fail');
-              return guidance(dt);
-            }
+            if (S.bombs > 0) emit({ type:'warn', msg:'Lỡ điểm cắt bom tại ' + (w.label || 'mục tiêu') + ': bom vẫn trên drone, chỉ được thả 1 lần nên không thả mù' });
           }
           if (isDest){ S.destDone = w.destIdx + 1; emit({ type:'pass', msg:'Đã qua ' + (w.label || ('điểm ' + (w.destIdx + 1))) }); }
           else emit({ type:'info', msg:'Đã qua điểm né vật cản (' + w.e + ', ' + w.n + ')' });
@@ -2066,11 +2114,16 @@ var Sim = (function(){
     for (let i = 0; i < 4; i++) S.fCmd[i] = clamp(b[i] + MOT[i].s*y, 0, fmax);
   }
 
+  /* ===== Cascaded geometric controller =====
+     position → velocity (PI + disturbance feed-forward −d̂) → desired specific force a + g·ẑ
+     → desired body z-axis (tilt-limited, altitude has priority) + desired heading → attitude error on SO(3)
+     (reduced-attitude tilt error + separate yaw error, as in PX4) → body torques with ω×Iω and rotor-gyro
+     feed-forward → mixer. Thrust keeps the commanded vertical force for the ACTUAL tilt: T = m̂·(a_z + g)/z_b,z */
   function control(dt, g){
     const st = S.state;
     if (st === 'DISARMED' || st === 'EMERGENCY'){ S.fCmd.fill(0); S.tgtAtt = [0,0]; S.Tcmd = 0; S.sp = null; return; }
     if (st === 'ARMED' || !g){ S.fCmd.fill(P.fIdle); S.integ = [0,0,0]; S.tgtAtt = [0,0]; S.Tcmd = 4*P.fIdle; S.sp = null; return; }
-    const p = S.pos, v = S.vel, ps = S.att[2];
+    const p = S.pos, v = S.vel;
     const vd = [0,0,0];
     if (g.vxy){ vd[0] = g.vxy[0]; vd[1] = g.vxy[1]; }
     else {
@@ -2078,74 +2131,181 @@ var Sim = (function(){
       vd[1] = K.pXY*(g.xy[1] - p[1]) + S.apfVec[1];
     }
     if (S.nfzIn && !S.jammed){
-      const no = nfzOut(S.nfzIn, p[0], p[1]), dot = vd[0]*no[0] + vd[1]*no[1];
-      if (dot < 0){ vd[0] -= dot*no[0]; vd[1] -= dot*no[1]; }
+      const no = nfzOut(S.nfzIn, p[0], p[1]), d = vd[0]*no[0] + vd[1]*no[1];
+      if (d < 0){ vd[0] -= d*no[0]; vd[1] -= d*no[1]; }
     }
     const vh = Math.hypot(vd[0], vd[1]); if (vh > params.vMax){ vd[0] *= params.vMax/vh; vd[1] *= params.vMax/vh; }
     if (g.vz != null) vd[2] = g.vz; else vd[2] = clamp(K.pZ*(g.z - p[2]), -(g.vDown || 2.2), g.vUp || 3.2);
     const e = [vd[0]-v[0], vd[1]-v[1], vd[2]-v[2]];
-    for (let i = 0; i < 3; i++) if (Math.abs(e[i]) < 2.2) S.integ[i] = clamp(S.integ[i] + e[i]*dt, -K.iMax[i], K.iMax[i]);
-    if (S.grounded){ S.integ[0] = 0; S.integ[1] = 0; }
     const E = S.est;
     const a = [ K.vXY*e[0] + K.iXY*S.integ[0] - E.dHat[0],
                 K.vXY*e[1] + K.iXY*S.integ[1] - E.dHat[1],
                 K.vZ*e[2] + K.iZ*S.integ[2] ];
-    const ah = Math.hypot(a[0], a[1]); if (ah > K.aXY){ a[0] *= K.aXY/ah; a[1] *= K.aXY/ah; }
+    const azRaw = a[2];
     a[2] = clamp(a[2], -0.6*P.g, 6.5);
-    const az = a[2] + P.g, c = Math.cos(ps), s = Math.sin(ps);
-    const af = c*a[0] + s*a[1], al = -s*a[0] + c*a[1];
-    const an = Math.hypot(af, al, az);
-    let thD = clamp(Math.atan2(af, az), -K.tilt, K.tilt);
-    let phD = clamp(Math.asin(clamp(-al/an, -1, 1)), -K.tilt, K.tilt);
-    if (S.grounded && st === 'LANDING'){ thD = 0; phD = 0; }
-    const T = clamp(E.mHat*az/(Math.cos(phD)*Math.cos(thD)), 4*P.fMin, 4*P.fMax*0.98);
-    const yawD = g.yaw != null ? g.yaw : ps;
-    const ey = clamp(wrap(yawD - ps), -0.9, 0.9);
-    const tx = E.IHat*(K.att*(phD - S.att[0]) - K.attD*S.rate[0]);
-    const ty = E.IHat*(K.att*(thD - S.att[1]) - K.attD*S.rate[1]);
-    const tz = clamp(P.Izz*(K.yaw*ey - K.yawD*S.rate[2]), -0.35, 0.35);
+    // desired specific force; the horizontal part is limited by the tilt limit at the commanded vertical force
+    const az = a[2] + P.g;
+    const ahMax = Math.min(K.aXY, az*Math.tan(K.tilt)), ah = Math.hypot(a[0], a[1]);
+    const satH = ah > ahMax, satV = azRaw !== a[2];
+    if (satH){ a[0] *= ahMax/ah; a[1] *= ahMax/ah; }
+    // conditional-integration anti-windup: integrate only while the loop is not saturated (or when it unwinds)
+    for (let i = 0; i < 3; i++){
+      const sat = i < 2 ? satH : satV, unwind = e[i]*S.integ[i] < 0;
+      if (unwind || (!sat && Math.abs(e[i]) < 2.2)) S.integ[i] = clamp(S.integ[i] + e[i]*dt, -K.iMax[i], K.iMax[i]);
+    }
+    if (S.grounded){ S.integ[0] = 0; S.integ[1] = 0; }
+    let zd = [a[0], a[1], az];
+    if (S.grounded && st === 'LANDING') zd = [0, 0, 1];
+    const zn = Math.hypot(zd[0], zd[1], zd[2]); zd = [zd[0]/zn, zd[1]/zn, zd[2]/zn];
+    // desired attitude R_d = [x_d y_d z_d] with the nose on the desired heading
+    const yawD = g.yaw != null ? g.yaw : S.att[2];
+    const xc = [Math.cos(yawD), Math.sin(yawD), 0];
+    let yd = cross(zd, xc); const yn = Math.hypot(yd[0], yd[1], yd[2]) || 1; yd = [yd[0]/yn, yd[1]/yn, yd[2]/yn];
+    const xd = cross(yd, zd);
+    const phD = Math.atan2(yd[2], zd[2]), thD = -Math.asin(clamp(xd[2], -1, 1));
+    // attitude error in body axes
+    const R = qToR(S.q), zb = [R[2], R[5], R[8]];
+    const cz = cross(zb, zd), sA = Math.hypot(cz[0], cz[1], cz[2]), ang = Math.atan2(sA, dot(zb, zd));
+    const eW = sA > 1e-9 ? [cz[0]*ang/sA, cz[1]*ang/sA, cz[2]*ang/sA] : [0, 0, 0];
+    const eB = rtv(R, eW);                                     // tilt error (no body-z component)
+    const ey = clamp(wrap(yawD - Math.atan2(R[3], R[0])), -0.9, 0.9);
+    const w = S.rate, Ix = P.Ixx, Iy = P.Iyy, Iz = P.Izz;
+    // rotor angular momentum Σ s_i·Ω_i (rotor i spins opposite to s_i)
+    let hz = 0; for (let i = 0; i < 4; i++) hz += MOT[i].s*S.Om[i];
+    const tx = Ix*(K.att*eB[0] - K.attD*w[0]) + (Iz - Iy)*w[1]*w[2] - P.Jr*hz*w[1];
+    const ty = Iy*(K.att*eB[1] - K.attD*w[1]) + (Ix - Iz)*w[2]*w[0] + P.Jr*hz*w[0];
+    const tz = clamp(Iz*(K.yaw*ey - K.yawD*w[2]) + (Iy - Ix)*w[0]*w[1], -0.35, 0.35);
+    const T = clamp(E.mHat*az/Math.max(zb[2], 0.5), 4*P.fMin, 4*P.fMax*0.98);
     mix(T, tx, ty, tz);
     S.tgtAtt = [phD, thD]; S.Tcmd = T;
-    S.ctl = { aH:[a[0], a[1]], tiltCmd: Math.acos(clamp(Math.cos(phD)*Math.cos(thD), -1, 1)), T };
+    S.ctl = { aH:[a[0], a[1]], tiltCmd: Math.acos(clamp(zd[2], -1, 1)), T };
     S.sp = { xy: g.xy ? [g.xy[0], g.xy[1]] : null, z: g.z != null ? g.z : null, vd: vd, yaw: yawD };
   }
 
-  function physics(dt){
-    syncMass();
-    const f = S.f, a = Math.min(1, dt/P.tauM);
-    let T = 0, tx = 0, ty = 0, tz = 0;
+  /* ===== 6-DOF rigid-body dynamics =====
+     state X = [x_cg(3), v_cg(3), q(4), ω_body(3), Ω_rotor(4)], integrated with classical RK4 at the 250 Hz loop rate
+       ẋ = v
+       m·v̇ = R·[0,0,Σ k_T·Ω_i²] − (k_d + k_q·|v_r|)·v_r + Σ F_contact − m·g·ẑ,     v_r = v − wind
+       q̇ = ½·q ⊗ [0, ω]
+       I·ω̇ = Σ r_i × f_i + Σ s_i·(k_m·f_i + J_r·Ω̇_i)·ẑ + J_r·(Σ s_i·Ω_i)·(ω × ẑ) + Σ r_c × F_c − ω × I·ω
+       Ω̇_i = (Ω_cmd,i − Ω_i)/τ_m                                   (ESC + motor, first order)
+     Ground: every contact point is a progressive spring–damper in the normal direction with a spring-anchored
+     Coulomb friction model tangentially (true static friction, no creep), so landing, tipping and crashes follow
+     from the same equations. The wind is frozen over one step at the value at the centre of mass. */
+  const NX = 17;
+  const X0 = new Float64Array(NX), K1 = new Float64Array(NX), K2 = new Float64Array(NX), K3 = new Float64Array(NX), K4 = new Float64Array(NX), XT = new Float64Array(NX);
+  const U = { OmC:[0,0,0,0], wind:[0,0,0] };
+  let contactInfo = null;   // filled by deriv() when asked: per point { pen, N, p, vt }
+
+  function deriv(X, out, info){
+    let qw = X[6], qx = X[7], qy = X[8], qz = X[9];
+    const qn = Math.hypot(qw, qx, qy, qz) || 1;
+    const q = [qw/qn, qx/qn, qy/qn, qz/qn], R = qToR(q);
+    const w = [X[10], X[11], X[12]];
+    // rotors
+    let T = 0, tx = 0, ty = 0, tz = 0, hz = 0;
     for (let i = 0; i < 4; i++){
-      f[i] += (S.fCmd[i] - f[i])*a;
-      const M = MOT[i];
-      T += f[i]; tx += f[i]*M.y; ty -= f[i]*M.x; tz += P.km*M.s*f[i];
-      S.rpm[i] = P.rpmMax*Math.sqrt(Math.max(0, f[i])/P.fMax);
+      const Om = Math.max(0, X[13 + i]), dOm = (U.OmC[i] - Om) / P.tauM, f = P.kT*Om*Om, M = MOT[i];
+      out[13 + i] = dOm;
+      T += f; tx += f*M.y; ty -= f*M.x; tz += M.s*(P.km*f + P.Jr*dOm); hz += M.s*Om;
     }
-    S.T = T;
-    const ph = S.att[0], th = S.att[1], ps = S.att[2];
-    const cph = Math.cos(ph), sph = Math.sin(ph), cth = Math.cos(th), sth = Math.sin(th), cps = Math.cos(ps), sps = Math.sin(ps);
-    const zb = [cps*sth*cph + sps*sph, sps*sth*cph - cps*sph, cth*cph];
-    const w = S.pos[2] > 0.05 ? S.windNow : [0,0,0];
-    const vr = [S.vel[0]-w[0], S.vel[1]-w[1], S.vel[2]-w[2]];
-    const vrn = Math.hypot(vr[0], vr[1], vr[2]);
-    const acc = [0,0,0];
-    for (let i = 0; i < 3; i++) acc[i] = zb[i]*T/P.m - (P.kd + P.kq*vrn)*vr[i]/P.m;
-    acc[2] -= P.g;
-    const r = S.rate;
-    r[0] += (tx/P.Ixx - 0.8*r[0])*dt;
-    r[1] += (ty/P.Iyy - 0.8*r[1])*dt;
-    r[2] += (tz/P.Izz - 0.5*r[2])*dt;
-    S.att[0] += r[0]*dt; S.att[1] += r[1]*dt; S.att[2] = wrap(S.att[2] + r[2]*dt);
-    for (let i = 0; i < 3; i++){ S.vel[i] += acc[i]*dt; S.pos[i] += S.vel[i]*dt; }
-    S.acc = acc;
-    if (S.pos[2] <= 0){
-      S.pos[2] = 0;
-      if (S.vel[2] < 0){ if (-S.vel[2] > 0.5) S.impact = Math.max(S.impact, -S.vel[2]); S.vel[2] = 0; }
-      const k = Math.exp(-dt*8); S.vel[0] *= k; S.vel[1] *= k;
-      if (T*zb[2] <= P.m*P.g*1.02){
-        const kk = Math.exp(-dt*20); S.att[0] *= kk; S.att[1] *= kk; r[0] = 0; r[1] = 0; r[2] *= Math.exp(-dt*6);
+    tx += P.Jr*hz*w[1]; ty -= P.Jr*hz*w[0];                                  // gyroscopic coupling of the rotors
+    // aerodynamic drag of the airframe on the velocity relative to the air
+    const vr0 = X[3] - U.wind[0], vr1 = X[4] - U.wind[1], vr2 = X[5] - U.wind[2];
+    const kD = P.kd + P.kq*Math.hypot(vr0, vr1, vr2);
+    const F = [R[2]*T - kD*vr0, R[5]*T - kD*vr1, R[8]*T - kD*vr2];
+    // ground contact
+    let Nsum = 0;
+    for (let c = 0; c < CPTS.length; c++){
+      const r = [CPTS[c][0], CPTS[c][1], CPTS[c][2] - P.hCg];           // from the centre of mass, body axes
+      const rw = rv(R, r), pz = X[2] + rw[2];
+      if (pz >= 0){ if (info) info[c] = null; continue; }
+      const px = X[0] + rw[0], py = X[1] + rw[1];
+      const vw = rv(R, cross(w, r)), vx = X[3] + vw[0], vy = X[4] + vw[1], vz = X[5] + vw[2];
+      const pen = -pz;
+      const N = Math.max(0, P.kC*pen*(1 + pen/P.dC) - P.cC*vz);
+      let fx = 0, fy = 0;
+      if (N > 0){
+        const a = S.anchors[c], cap = P.muC*N;
+        if (a){ fx = -P.kTC*(px - a[0]) - P.cTC*vx; fy = -P.kTC*(py - a[1]) - P.cTC*vy; }
+        else { const vt = Math.hypot(vx, vy); if (vt > 1e-9){ const s = Math.min(cap, P.cSlide*vt) / vt; fx = -s*vx; fy = -s*vy; } }
+        const ft = Math.hypot(fx, fy); if (ft > cap){ fx *= cap/ft; fy *= cap/ft; }
       }
-      S.grounded = true;
-    } else S.grounded = false;
+      F[0] += fx; F[1] += fy; F[2] += N; Nsum += N;
+      const tb = cross(r, rtv(R, [fx, fy, N]));
+      tx += tb[0]; ty += tb[1]; tz += tb[2];
+      if (info) info[c] = { pen, N, px, py, vx, vy };
+    }
+    if (info) info.N = Nsum;
+    const m = P.m;
+    out[0] = X[3]; out[1] = X[4]; out[2] = X[5];
+    out[3] = F[0]/m; out[4] = F[1]/m; out[5] = F[2]/m - P.g;
+    // Euler's rotation equations in body axes
+    const Ix = P.Ixx, Iy = P.Iyy, Iz = P.Izz;
+    out[10] = (tx - (Iz - Iy)*w[1]*w[2]) / Ix;
+    out[11] = (ty - (Ix - Iz)*w[2]*w[0]) / Iy;
+    out[12] = (tz - (Iy - Ix)*w[0]*w[1]) / Iz;
+    // quaternion kinematics q̇ = ½ q ⊗ (0, ω)
+    out[6] = 0.5*(-qx*w[0] - qy*w[1] - qz*w[2]);
+    out[7] = 0.5*( qw*w[0] + qy*w[2] - qz*w[1]);
+    out[8] = 0.5*( qw*w[1] - qx*w[2] + qz*w[0]);
+    out[9] = 0.5*( qw*w[2] + qx*w[1] - qy*w[0]);
+    return T;
+  }
+
+  function packState(X){
+    X[0] = S.xc[0]; X[1] = S.xc[1]; X[2] = S.xc[2]; X[3] = S.vc[0]; X[4] = S.vc[1]; X[5] = S.vc[2];
+    X[6] = S.q[0]; X[7] = S.q[1]; X[8] = S.q[2]; X[9] = S.q[3];
+    X[10] = S.rate[0]; X[11] = S.rate[1]; X[12] = S.rate[2];
+    for (let i = 0; i < 4; i++) X[13 + i] = S.Om[i];
+  }
+  // Navigation outputs: centre-of-mass position with the altitude zeroed on the pad (like a barometer zeroed at take-off)
+  function deriveOutputs(){
+    const R = qToR(S.q);
+    S.att = eulerOf(S.q);
+    S.pos = [S.xc[0], S.xc[1], S.xc[2] - P.hCg];
+    S.vel = [S.vc[0], S.vc[1], S.vc[2]];
+    const r = rv(R, [0, 0, -P.hCg]);
+    S.refPos = [S.xc[0] + r[0], S.xc[1] + r[1], S.xc[2] + r[2]];   // skid-plane centre, where the 3D model is anchored
+  }
+
+  function physics(dt){
+    U.wind = S.windNow;
+    for (let i = 0; i < 4; i++) U.OmC[i] = Math.sqrt(Math.max(0, S.fCmd[i]) / P.kT);
+    packState(X0);
+    const v0 = [S.vc[0], S.vc[1], S.vc[2]];
+    deriv(X0, K1);
+    for (let i = 0; i < NX; i++) XT[i] = X0[i] + 0.5*dt*K1[i];
+    deriv(XT, K2);
+    for (let i = 0; i < NX; i++) XT[i] = X0[i] + 0.5*dt*K2[i];
+    deriv(XT, K3);
+    for (let i = 0; i < NX; i++) XT[i] = X0[i] + dt*K3[i];
+    deriv(XT, K4);
+    for (let i = 0; i < NX; i++) X0[i] += dt/6*(K1[i] + 2*K2[i] + 2*K3[i] + K4[i]);
+    S.xc = [X0[0], X0[1], X0[2]]; S.vc = [X0[3], X0[4], X0[5]];
+    S.q = qNorm([X0[6], X0[7], X0[8], X0[9]]);
+    S.rate = [X0[10], X0[11], X0[12]];
+    for (let i = 0; i < 4; i++){ S.Om[i] = Math.max(0, X0[13 + i]); S.f[i] = P.kT*S.Om[i]*S.Om[i]; S.rpm[i] = S.Om[i]*60/(2*Math.PI); }
+    S.T = S.f[0] + S.f[1] + S.f[2] + S.f[3];
+    S.acc = [(S.vc[0] - v0[0])/dt, (S.vc[1] - v0[1])/dt, (S.vc[2] - v0[2])/dt];
+    // contact bookkeeping at the end of the step: anchors for static friction, touchdown speed
+    const info = []; packState(XT); deriv(XT, K1, info);
+    let n = 0;
+    for (let c = 0; c < CPTS.length; c++){
+      const ci = info[c];
+      if (!ci || ci.N <= 0){ S.anchors[c] = null; continue; }
+      n++;
+      const a = S.anchors[c], cap = P.muC*ci.N;
+      if (!a){ if (Math.hypot(ci.vx, ci.vy) < 0.05) S.anchors[c] = [ci.px, ci.py]; continue; }
+      // sliding: drag the anchor along so the spring force stays on the friction cone
+      const dx = ci.px - a[0], dy = ci.py - a[1], d = Math.hypot(dx, dy), dMax = cap / P.kTC;
+      if (d > dMax){ a[0] = ci.px - dx/d*dMax; a[1] = ci.py - dy/d*dMax; }
+    }
+    const was = S.grounded;
+    S.contactN = info.N || 0; S.nContacts = n;
+    S.grounded = n > 0;
+    if (S.grounded && !was && -S.vc[2] > 0.5) S.impact = Math.max(S.impact, -S.vc[2]);
+    deriveOutputs();
   }
 
   function battery(dt){
@@ -2228,6 +2388,185 @@ var Sim = (function(){
     }
   }
 
+  /* ===== Ordnance: one bomb per sortie =====
+     The armourer hangs one bomb (params.bombMass, 0.25 … 2.0 kg) under the belly only while the drone sits on the
+     Factory pad with the motors off, and only for a Bomber sortie. Once released it is gone until the drone has
+     landed back on the pad and is disarmed (or the simulation is reset). */
+  function bombMassSetting(){ return clamp(+params.bombMass || 1, P.bombMin, P.bombMax); }
+  function setPayload(n, m){
+    const R = qToR(S.q), r0 = rv(R, [0, 0, -P.hCg]), ref = [S.xc[0] + r0[0], S.xc[1] + r0[1], S.xc[2] + r0[2]];
+    S.bombs = n; S.bombMass = n ? m : 0;
+    syncMass();
+    // the skids stay where they are; the centre of mass moves inside the airframe
+    const r1 = rv(R, [0, 0, P.hCg]);
+    S.xc = [ref[0] + r1[0], ref[1] + r1[1], ref[2] + r1[2]];
+    deriveOutputs();
+  }
+  function syncLoadout(){
+    if (!S.grounded || Math.hypot(S.pos[0], S.pos[1]) > 3) return;
+    const want = params.task === 'bomber' ? 1 : 0, m = bombMassSetting();
+    if (S.bombs === want && (!want || Math.abs(S.bombMass - m) < 1e-9)) return;
+    setPayload(want, m);
+    S.bombDropped = false; S.ccrp = null; S.ccrpPrev = null;
+    if (want) emit({ type:'info', msg:'Đã nạp 1 quả bom ' + m.toFixed(2).replace('.', ',') + ' kg dưới bụng drone (khối lượng cất cánh ' + P.m.toFixed(2).replace('.', ',') + ' kg)' });
+  }
+
+  /* ===== Exterior ballistics (3-DOF point mass) =====
+       ẍ = −(ρ(z)·C_d·A / 2m)·|v − w(x,t)|·(v − w(x,t)) − g·ẑ
+     The fins keep the bomb pointing into the relative wind, so the drag acts along −v_r. Speeds stay far below
+     Mach 0.3, so C_d is constant; Coriolis (< 1 cm over these ranges) is neglected. */
+  function bombAcc(x, v, kA, wind, out){
+    const vr0 = v[0] - wind[0], vr1 = v[1] - wind[1], vr2 = v[2] - wind[2];
+    const k = kA * airDensity(Math.max(0, x[2])) * Math.hypot(vr0, vr1, vr2);
+    out[0] = -k*vr0; out[1] = -k*vr1; out[2] = -k*vr2 - P.g;
+  }
+  // One RK4 step for a bomb state {x, v}; windFn(x, t) gives the air velocity
+  function bombStep(b, h, t, windFn){
+    const kA = b.kA, a1 = [0,0,0], a2 = [0,0,0], a3 = [0,0,0], a4 = [0,0,0];
+    const x = b.x, v = b.v;
+    bombAcc(x, v, kA, windFn(x, t), a1);
+    const x2 = [x[0] + 0.5*h*v[0], x[1] + 0.5*h*v[1], x[2] + 0.5*h*v[2]], v2 = [v[0] + 0.5*h*a1[0], v[1] + 0.5*h*a1[1], v[2] + 0.5*h*a1[2]];
+    bombAcc(x2, v2, kA, windFn(x2, t + 0.5*h), a2);
+    const x3 = [x[0] + 0.5*h*v2[0], x[1] + 0.5*h*v2[1], x[2] + 0.5*h*v2[2]], v3 = [v[0] + 0.5*h*a2[0], v[1] + 0.5*h*a2[1], v[2] + 0.5*h*a2[2]];
+    bombAcc(x3, v3, kA, windFn(x3, t + 0.5*h), a3);
+    const x4 = [x[0] + h*v3[0], x[1] + h*v3[1], x[2] + h*v3[2]], v4 = [v[0] + h*a3[0], v[1] + h*a3[1], v[2] + h*a3[2]];
+    bombAcc(x4, v4, kA, windFn(x4, t + h), a4);
+    for (let i = 0; i < 3; i++){
+      x[i] += h/6*(v[i] + 2*v2[i] + 2*v3[i] + v4[i]);
+      v[i] += h/6*(a1[i] + 2*a2[i] + 2*a3[i] + a4[i]);
+    }
+  }
+  const bombKA = m => { const g = bombGeom(m); return g.Cd * g.A / (2*m); };   // per unit air density
+
+  // Where the bomb would hang right now: position and velocity of the rack point (v_cg + ω × r)
+  function releaseState(){
+    const R = qToR(S.q), r = [0, 0, P.bombZ - P.hCg], rw = rv(R, r), vw = rv(R, cross(S.rate, r));
+    return { x:[S.xc[0] + rw[0], S.xc[1] + rw[1], S.xc[2] + rw[2]], v:[S.vc[0] + vw[0], S.vc[1] + vw[1], S.vc[2] + vw[2]] };
+  }
+  // The flight controller's own wind model for the fall: estimated wind ŵ at the drone, scaled down the log profile
+  function onboardWind(){
+    const E = S.est;
+    if (!E.valid) return () => [0, 0, 0];
+    const p0 = Math.max(0.05, windProfile(S.xc[2]));
+    return x => { const k = windProfile(x[2]) / p0; return [E.wHat[0]*k, E.wHat[1]*k, 0]; };
+  }
+  // Predict the impact point on the plane z = zGround (RK4, h = 20 ms, linear interpolation at the crossing)
+  function predictImpact(x0, v0, m, windFn, zGround){
+    const b = { x:[x0[0], x0[1], x0[2]], v:[v0[0], v0[1], v0[2]], kA: bombKA(m) }, h = 0.02;
+    let t = 0;
+    for (let k = 0; k < 2000; k++){
+      const px = b.x.slice();
+      bombStep(b, h, t, windFn); t += h;
+      if (b.x[2] <= zGround){
+        const f = (px[2] - zGround) / Math.max(1e-9, px[2] - b.x[2]);
+        return { e: px[0] + (b.x[0] - px[0])*f, n: px[1] + (b.x[1] - px[1])*f, u: zGround, tof: t - h + h*f, v: Math.hypot(b.v[0], b.v[1], b.v[2]) };
+      }
+    }
+    return null;
+  }
+
+  /* ===== CCRP (continuously computed release point) =====
+     Every control cycle the release is simulated from the drone's real state with the on-board wind estimate.
+     The bomb leaves the rack at the cycle in which the predicted impact point crosses the aim point along the
+     ground track (cross-track must be within CCRP_MAX_CROSS, otherwise the pass is aborted and the bomb kept). */
+  const CCRP_MAX_CROSS = 6.0;
+  function aimPoint(w){
+    const t = params.bomberTarget;
+    if (t && typeof t.e === 'number') return { e: t.e, n: t.n, u: t.h || 0, name: t.name || w.label };
+    return { e: w.e, n: w.n, u: 0, name: w.label || 'mục tiêu' };
+  }
+  function bombingRun(w){
+    const aim = aimPoint(w);
+    if (Math.hypot(aim.e - S.pos[0], aim.n - S.pos[1]) > 150){ S.ccrp = null; S.ccrpPrev = null; return false; }
+    const rel = releaseState();
+    const imp = predictImpact(rel.x, rel.v, S.bombMass, onboardWind(), aim.u);
+    if (!imp){ S.ccrp = null; return false; }
+    const gs = Math.hypot(S.vc[0], S.vc[1]);
+    let ux, uy;
+    if (gs > 0.5){ ux = S.vc[0]/gs; uy = S.vc[1]/gs; }
+    else { const dx = w.e - (S.legFrom ? S.legFrom.e : S.pos[0]), dy = w.n - (S.legFrom ? S.legFrom.n : S.pos[1]), d = Math.hypot(dx, dy) || 1; ux = dx/d; uy = dy/d; }
+    const de = aim.e - imp.e, dn = aim.n - imp.n;
+    const along = de*ux + dn*uy, xt = -de*uy + dn*ux;
+    const prev = S.ccrpPrev;
+    S.ccrp = { along, cross: xt, tof: imp.tof, imp, aim };
+    S.ccrpPrev = along;
+    if (prev == null || prev <= 0 || along > 0) return false;
+    if (Math.abs(xt) > CCRP_MAX_CROSS){
+      emit({ type:'warn', msg:'Huỷ lượt cắt bom: điểm rơi dự đoán lệch ngang ' + Math.abs(xt).toFixed(1) + ' m (> ' + CCRP_MAX_CROSS + ' m). Giữ bom, không thả.' });
+      return true;
+    }
+    return dropBomb('ccrp');
+  }
+
+  function dropBomb(src){
+    src = src || 'manual';
+    const why = S.bombs < 1 ? (S.bombDropped ? 'đã thả quả bom duy nhất của chuyến bay này (nạp lại khi hạ cánh về Nhà máy và tắt động cơ)' : 'drone không mang bom (chỉ nhiệm vụ Bomber mới gắn bom, nạp trên bãi đáp)')
+      : S.grounded || AIR.indexOf(S.state) < 0 ? 'drone chưa cất cánh'
+      : S.pos[2] < 3 ? 'độ cao dưới 3 m, chưa an toàn để thả'
+      : (src === 'manual' && params.linkLost) ? 'mất liên kết, lệnh không tới được drone' : null;
+    if (why){ emit({ type:'reject', msg:'Thả bom bị từ chối: ' + why }); return false; }
+    const rel = releaseState(), mb = S.bombMass, M = P.m, md = M - mb;
+    const pred = predictImpact(rel.x, rel.v, mb, onboardWind(), params.bomberTarget && params.bomberTarget.h || 0);
+    // separation conserves linear momentum: the lighter airframe keeps M·v − m_b·v_b
+    S.xc = [(M*S.xc[0] - mb*rel.x[0])/md, (M*S.xc[1] - mb*rel.x[1])/md, (M*S.xc[2] - mb*rel.x[2])/md];
+    S.vc = [(M*S.vc[0] - mb*rel.v[0])/md, (M*S.vc[1] - mb*rel.v[1])/md, (M*S.vc[2] - mb*rel.v[2])/md];
+    S.bombs = 0; S.bombMass = 0; S.bombDropped = true; S.ccrp = null; S.ccrpPrev = null;
+    syncMass(); deriveOutputs();
+    const g = bombGeom(mb), tgt = params.bomberTarget ? Object.assign({}, params.bomberTarget) : null;
+    const b = { id: ++S.sortie, x: rel.x.slice(), v: rel.v.slice(), m: mb, kA: bombKA(mb), D: g.D, len: g.len,
+                t0: S.t, x0: rel.x.slice(), v0: rel.v.slice(), path: [rel.x.slice()], pred, src, target: tgt };
+    S.bombsAir.push(b);
+    S.lastRelease = { t: S.t, x: rel.x.slice(), v: rel.v.slice(), m: mb, pred, src };
+    const gsr = Math.hypot(rel.v[0], rel.v[1]);
+    emit({ type:'bomb', src, bomb: b,
+      msg: '💣 ' + (src === 'ccrp' ? 'CẮT BOM TỰ ĐỘNG (CCRP)' : 'THẢ BOM THỦ CÔNG') + ': ' + mb.toFixed(2) + ' kg · cao ' + rel.x[2].toFixed(1) + ' m · v ' + gsr.toFixed(1) + ' m/s'
+        + (pred ? ' · rơi dự kiến sau ' + pred.tof.toFixed(2) + ' s tại (' + pred.e.toFixed(1) + ', ' + pred.n.toFixed(1) + ')' : '') });
+    if (params.linkLost || S.fsPendingDrop){
+      S.fsPendingDrop = false;
+      S.fsReason = 'đã hoàn thành cắt bom khi mất liên kết, tự động né vật cản về Nhà máy';
+      emit({ type:'warn', kind:'link-lost',
+        msg:'🎯 ĐÃ HOÀN THÀNH CẮT BOM KHI MẤT LIÊN KẾT → TỰ ĐỘNG CHUYỂN FAILSAFE VỀ CĂN CỨ!',
+        sub:'Drone đã hoàn thành thả bom tự hành. Lập tức kích hoạt FAILSAFE né vật cản quay về bãi đáp Nhà máy.' });
+      if (AIR.indexOf(S.state) >= 0) setState('FAILSAFE', 'đã hoàn thành cắt bom khi mất liên kết, tự động né vật cản về Nhà máy', 'fail');
+    }
+    return true;
+  }
+
+  // Bombs in flight: same RK4 at the loop rate, true wind (gusts included), impact on the ground or a building
+  function updateBombs(dt){
+    for (let i = S.bombsAir.length - 1; i >= 0; i--){
+      const b = S.bombsAir[i], px = b.x.slice();
+      bombStep(b, dt, S.t - dt, (x, t) => windAt(x[0], x[1], x[2], t));
+      if (S.t - (b.lastPathT || 0) > 0.03){ b.path.push(b.x.slice()); b.lastPathT = S.t; }
+      // ground, or the roof / walls of a building below its eaves
+      let zHit = 0, hitObs = null;
+      for (const o of obstacles){
+        if (Math.abs(b.x[0] - o.e) < o.rx && Math.abs(b.x[1] - o.n) < o.ry && b.x[2] <= o.h){ zHit = Math.min(o.h, px[2]); hitObs = o; break; }
+      }
+      if (b.x[2] > zHit) continue;
+      const f = (px[2] - zHit) / Math.max(1e-9, px[2] - b.x[2]);
+      const e = px[0] + (b.x[0] - px[0])*f, n = px[1] + (b.x[1] - px[1])*f;
+      const vImp = Math.hypot(b.v[0], b.v[1], b.v[2]), tof = S.t - dt + dt*f - b.t0;
+      S.bombsAir.splice(i, 1);
+      const predErr = b.pred ? Math.hypot(e - b.pred.e, n - b.pred.n) : null;
+      const imp = { e, n, u: zHit, tof, v: vImp, energy: 0.5*b.m*vImp*vImp, m: b.m, obstacle: hitObs ? hitObs.name : null, predErr, bomb: b };
+      S.lastImpact = imp;
+      emit({ type:'bomb_impact', impact: imp,
+        msg:'💥 Bom chạm ' + (hitObs ? hitObs.name : 'đất') + ' tại (' + e.toFixed(1) + ', ' + n.toFixed(1) + ') sau ' + tof.toFixed(2) + ' s · ' + vImp.toFixed(1) + ' m/s · ' + (0.5*b.m*vImp*vImp/1000).toFixed(2) + ' kJ'
+          + (predErr != null ? ' · lệch so với dự đoán ' + predErr.toFixed(2) + ' m' : '') });
+      if (b.target) imp.result = evalBombHit(e, n, params.bomberTarget || b.target);
+    }
+  }
+
+  // Continuously computed impact point for the HUD while a bomb is on board
+  function updateCcip(){
+    if (S.bombs < 1 || S.grounded || S.pos[2] < 1){ S.ccip = null; return; }
+    if (S.t - (S.ccipT || -1) < 0.1) return;
+    S.ccipT = S.t;
+    const rel = releaseState();
+    S.ccip = predictImpact(rel.x, rel.v, S.bombMass, onboardWind(), 0);
+  }
+
   function step(dt){
     S.t += dt; S.stateT += dt;
     if (S.state !== 'DISARMED') S.armT += dt;
@@ -2244,12 +2583,15 @@ var Sim = (function(){
       S.linkFailTriggeredBomber = true;
       setLink(true);
     }
+    if (S.state === 'DISARMED') syncLoadout();
     updateWind(dt);
     updateLidarAndAPF();
     const g = guidance(dt);
     control(dt, g);
     physics(dt);
+    updateBombs(dt);
     estimate(dt);
+    updateCcip();
     battery(dt);
     nfzUpdate(dt);
     checks();
@@ -2262,7 +2604,7 @@ var Sim = (function(){
     params.linkLost = lost;
     if (lost){
       S.linkLostT = S.t;
-      const isBomberPending = params.task === 'bomber' && (mission.some(w => w.role === 'bomb' && !w.dropped) || !S.bombDropped);
+      const isBomberPending = params.task === 'bomber' && S.bombs > 0 && mission.some(w => w.role === 'bomb' && !w.dropped);
       if (isBomberPending){
         S.fsPendingDrop = true;
         emit({
@@ -2324,7 +2666,7 @@ var Sim = (function(){
 
   function setDestinations(list, silent){
     destinations = list.map(d => ({ e: d.e, n: d.n, u: d.u, label: d.label || '', role: d.role || 'pass' }));
-    S.destDone = 0; S.lap = 1; S.bombDropped = false;
+    S.destDone = 0; S.lap = 1; S.ccrp = null; S.ccrpPrev = null;
     return rebuildTrajectory(silent);
   }
   function addDestination(d, silent){
@@ -2340,6 +2682,7 @@ var Sim = (function(){
 
   function reset(){
     S = fresh(); params.linkLost = false; params.autoLinkFailOnPatrol = false; params.autoLinkFailOnBomber = false;
+    syncMass(); syncLoadout();
     for (const k in sticks) sticks[k] = 0;
     rebuildTrajectory(true);
     updateLidarAndAPF();
@@ -2352,9 +2695,9 @@ var Sim = (function(){
 
   return {
     P, K, MOT, AIR, CMDS, obstacles, params, mission, blockedSegments, sticks,
-    on, step, command, check, setLink, evalBombHit, reset, syncMass,
+    on, step, command, check, setLink, evalBombHit, reset, syncMass, syncLoadout, dropBomb, predictImpact, bombGeom, bombKA, bombStep,
     rebuildTrajectory, setDestinations, addDestination, removeDestination, sanitizePoint, setOrbit, pointInObs, NFZ, JAM_AFTER, nfzAt,
-    planSegmentAStar, clearanceAt, windLimit, EST,
+    planSegmentAStar, clearanceAt, windLimit, windAt, windProfile, airDensity, qToR, eulerOf, qFromEuler, EST, CPTS,
     get destinations(){ return destinations; },
     get missionStart(){ return missionStart; },
     get rtlPath(){ return rtlPath; },
