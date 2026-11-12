@@ -721,19 +721,19 @@ table.an-t tr.on td{background:var(--accent-soft)}
           <div class="sec-h">
             <h3>Flight Mission</h3>
             <div class="seg" role="group" id="taskTypeSeg" aria-label="Mission type">
-              <button type="button" class="task-type-btn active" id="tabTaskPatrol" data-task="patrol">Patrol</button>
+              <button type="button" class="task-type-btn active" id="tabTaskPatrol" data-task="patrol">Surveillance</button>
               <button type="button" class="task-type-btn" id="tabTaskBomber" data-task="bomber">💣 Bomber</button>
             </div>
           </div>
           <div class="sv-opt" id="optPatrol" data-for="patrol">
             <div class="row" style="align-items:center;justify-content:space-between;margin-bottom:6px">
-              <label style="font-weight:600">Patrol Route:</label>
+              <label style="font-weight:600">Surveillance Route:</label>
               <span class="chip" style="background:var(--accent-soft);color:var(--accent);font-weight:600">Click 3D Terrain</span>
             </div>
             <input type="hidden" id="svPatrol" value="custom">
-            <div class="field"><label for="svPu">Patrol Altitude</label><output id="oSvPu"></output><input type="range" id="svPu" min="10" max="40" step="1" value="16"></div>
+            <div class="field"><label for="svPu">Surveillance Altitude</label><output id="oSvPu"></output><input type="range" id="svPu" min="10" max="40" step="1" value="16"></div>
             <div class="row" style="margin:4px 0 8px">
-              <button class="btn mini" id="btnPatrolClear" type="button" style="width:100%" title="Clear all selected patrol waypoints">Clear Waypoints</button>
+              <button class="btn mini" id="btnPatrolClear" type="button" style="width:100%" title="Clear all selected surveillance waypoints">Clear Waypoints</button>
             </div>
             <div class="sv-go"><button class="btn primary" id="svStart">Auto Fly 1 Lap</button><button class="btn" id="svStop" title="Abort mission, return to Plant">Recall Home (RTL)</button></div>
           </div>
@@ -834,7 +834,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
           <button class="btn mini" data-tilt="reset" title="Reset gimbal: -15°, boresight, 1× zoom">Reset</button>
         </span>
         <div class="seg" role="group" aria-label="Zoom camera" id="czSeg"><button data-cz="1" aria-pressed="true">1×</button><button data-cz="2">2×</button><button data-cz="4">4×</button></div>
-        <label class="chk" title="Autonomous gimbal tracking: sweeps along patrol route, tracks orbit center, nadir view for ground scan"><input type="checkbox" id="optAuto" checked> Autonomous Gimbal</label>
+        <label class="chk" title="Autonomous gimbal tracking: sweeps along surveillance route, tracks orbit center, nadir view for ground scan"><input type="checkbox" id="optAuto" checked> Autonomous Gimbal</label>
         <label class="chk"><input type="checkbox" id="optStab" checked> Gimbal Stabilization</label>
         <span class="sub" id="camHelp">Full view: Drag = rotate gimbal · Scroll = zoom · Double-click = reset</span>
       </div>
@@ -1187,7 +1187,7 @@ function aggregatePoints(points){
 /* ===== Surveillance planning helpers (no DOM): patrol routes, scan areas, lawn-mower lanes, camera footprint ===== */
 const SURV = (() => {
   const CAM_VFOV = 56, CAM_HFOV = 2 * Math.atan(Math.tan(CAM_VFOV / 2 * Math.PI / 180) * 16 / 9) * 180 / Math.PI;   // ≈ 87°
-  // Patrol routes across the base perimeter and surrounding terrain
+  // Surveillance routes across the base perimeter and surrounding terrain
   const PATROLS = {
     fence:  { name:'Plant Perimeter Fence',     u:16, pts:[[-20,-6],[10,-6],[10,14],[-20,14]] },
     center: { name:'Main Access Road Corridor', u:18, pts:[[-44,14],[46,14],[46,-6],[-44,-6]] },
@@ -1220,7 +1220,7 @@ const SURV = (() => {
   }
   function patrolPts(key, u){
     const r = PATROLS[key];
-    return r.pts.map((p, i) => ({ e: p[0], n: p[1], u: u || r.u, label: 'Patrol Waypoint ' + (i + 1), role: 'pass' }));
+    return r.pts.map((p, i) => ({ e: p[0], n: p[1], u: u || r.u, label: 'Surveillance Waypoint ' + (i + 1), role: 'pass' }));
   }
   // Suggested orbit around a building: clear of its walls by a comfortable margin
   function orbitFor(o){ return { e: o.e, n: o.n, r: Math.round(Math.max(o.rx, o.ry) * 1.4 + 9), lookU: Math.round(o.h * 0.6), name: o.name }; }
@@ -1914,7 +1914,7 @@ var Sim = (function(){
     HOLD:    { from:['TAKEOFF','MANUAL','MISSION','RTL','LANDING','FAILSAFE'], to:'HOVER',
                guard(){ if (S.state==='FAILSAFE' && S.soc < 0.15) return 'battery below 15%; failsafe cannot be aborted'; } },
     MANUAL:  { from:['HOVER','MISSION','RTL','TAKEOFF','LANDING'], to:'MANUAL' },
-    MISSION: { from:['HOVER','MANUAL'], to:'MISSION', guard(){ if (!mission.length && !(params.task === 'orbit' && params.orbit)) return 'no mission defined (patrol route, orbit, or strike target)'; } },
+    MISSION: { from:['HOVER','MANUAL'], to:'MISSION', guard(){ if (!mission.length && !(params.task === 'orbit' && params.orbit)) return 'no mission defined (surveillance route, orbit, or strike target)'; } },
     RTL:     { from:['TAKEOFF','HOVER','MANUAL','MISSION','LANDING'], to:'RTL' },
     LAND:    { from:['TAKEOFF','HOVER','MANUAL','MISSION','RTL','FAILSAFE'], to:'LANDING' },
     KILL:    { from:['ARMED'].concat(AIR), to:'EMERGENCY' },
@@ -2037,7 +2037,7 @@ var Sim = (function(){
     E.IHat = P.Ixx;   // the flight controller knows its own configuration (it commands the bomb release)
   }
 
-  const TASK_NAME = { patrol:'patrol', orbit:'orbit', scan:'scan area', bomber:'strike bomber' };
+  const TASK_NAME = { patrol:'surveillance', orbit:'orbit', scan:'scan area', bomber:'strike bomber' };
   function finishTask(why){
     S.wpIdx = 0; S.destDone = 0;
     if (params.linkLost){
@@ -2058,7 +2058,7 @@ var Sim = (function(){
         if (params.loops > 1 && S.lap < params.loops){
           S.lap++; S.destDone = 0;
           rebuildTrajectory(true);
-          emit({ type:'lap', msg:'Starting patrol lap ' + S.lap + '/' + params.loops });
+          emit({ type:'lap', msg:'Starting surveillance lap ' + S.lap + '/' + params.loops });
           return false;
         }
         finishTask();
@@ -2912,7 +2912,7 @@ const META = {
 
 let TK = {};
 let R3 = null;
-const TASK_LABEL = window.TASK_LABEL = { patrol:'Patrol', bomber:'Strike (Bomber)' };
+const TASK_LABEL = window.TASK_LABEL = { patrol:'Surveillance', bomber:'Strike (Bomber)' };
 const SV = window.SV = {
   task:'patrol', patrol:'custom', pu:16, loops:1,
   orbit:{ target:'F3', r:14, u:22, laps:1, dir:1, v:4 }, orbitPick:null,
@@ -3327,9 +3327,9 @@ function syncLinkBtn(){
 $('#chkAutoLinkFail')?.addEventListener('change', e => {
   Sim.params.autoLinkFailOnPatrol = e.target.checked;
   if (e.target.checked){
-    addLog('warn', '⚡ PATROL FAULT SCENARIO ARMED', 'During patrol, datalink loss will simulate onboard blackbox recording.', Sim.S.t);
+    addLog('warn', '⚡ SURVEILLANCE FAULT SCENARIO ARMED', 'During surveillance, datalink loss will simulate onboard blackbox recording.', Sim.S.t);
   } else {
-    addLog('info', 'Patrol datalink fault scenario disarmed', '', Sim.S.t);
+    addLog('info', 'Surveillance datalink fault scenario disarmed', '', Sim.S.t);
   }
 });
 $('#chkAutoLinkFailBomber')?.addEventListener('change', e => {
@@ -3425,7 +3425,7 @@ $('#wpBody').addEventListener('click', e => {
 $('#btnClear').addEventListener('click', () => { Sim.setDestinations([], true); renderMission(); });
 $('#wpMode').addEventListener('change', e => {
   $('#hint').textContent = e.target.checked
-    ? 'Drag: orbit · scroll/pinch/+/-: zoom · click ground: add patrol waypoint'
+    ? 'Drag: orbit · scroll/pinch/+/-: zoom · click ground: add surveillance waypoint'
     : 'Drag: orbit · scroll/pinch/+/-: zoom';
 });
 function addWaypointAt(e, n){
@@ -7659,7 +7659,7 @@ function svApply(silent){
     Sim.setDestinations(SURV.patrolPts(SV.patrol, SV.pu), true);
   } else {
     if (!Sim.destinations.length){
-      if (!silent) addLog('warn', 'No waypoints on patrol route! Click on 3D terrain to create waypoints.', '', Sim.S.t);
+      if (!silent) addLog('warn', 'No waypoints on surveillance route! Click on 3D terrain to create waypoints.', '', Sim.S.t);
       renderMission(); svDraw3D(); svRenderForm();
       return false;
     }
@@ -7667,7 +7667,7 @@ function svApply(silent){
   }
   Sim.S.lap = 1;
   Sim.S.destDone = 0;
-  if (!silent) addLog('info', 'Loaded patrol route from 3D terrain clicks', Sim.destinations.length + ' waypoints · alt ' + SV.pu + ' m · Auto Fly 1 Lap', Sim.S.t);
+  if (!silent) addLog('info', 'Loaded surveillance route from 3D terrain clicks', Sim.destinations.length + ' waypoints · alt ' + SV.pu + ' m · Auto Fly 1 Lap', Sim.S.t);
   renderMission(); svDraw3D(); svRenderForm();
   return true;
 }
@@ -7877,7 +7877,7 @@ function svBindForm(){
     if (SV.patrol === 'custom'){
       if (stage) stage.classList.add('custom-mode');
       Sim.setDestinations([], true);
-      addLog('info', 'Patrol: click 3D terrain to add waypoints', 'maximum 15 waypoints', Sim.S.t);
+      addLog('info', 'Surveillance: click 3D terrain to add waypoints', 'maximum 15 waypoints', Sim.S.t);
       renderMission();
     } else {
       if (stage) stage.classList.remove('custom-mode');
@@ -7888,7 +7888,7 @@ function svBindForm(){
     Sim.setDestinations([], true);
     renderMission();
     if (window.svDraw3D) window.svDraw3D();
-    addLog('info', 'Patrol waypoints cleared', 'Click 3D terrain to add new waypoints', Sim.S.t);
+    addLog('info', 'Surveillance waypoints cleared', 'Click 3D terrain to add new waypoints', Sim.S.t);
   });
   $('#svPu').addEventListener('input', e => { SV.pu = +e.target.value; svRenderForm(); });
   $('#svPu').addEventListener('change', re);
@@ -8354,7 +8354,7 @@ function foldOpen(el){ const sec = el && el.closest('.sec.folded'); if (sec){ fo
 updateWindHudUI();
 renderMission();
 onStateChanged();
-addLog('info', 'Ready at Manufacturing Plant Pad (0,0). 3-axis gimbal & 360° LiDAR online.', 'Patrol: Click 3D terrain to place waypoints, then click "Auto Fly 1 Lap".', 0);
+addLog('info', 'Ready at Manufacturing Plant Pad (0,0). 3-axis gimbal & 360° LiDAR online.', 'Surveillance: Click 3D terrain to place waypoints, then click "Auto Fly 1 Lap".', 0);
 const DT = 1/250;
 let last = performance.now(), accT = 0, lastDom = 0;
 function frame(now){

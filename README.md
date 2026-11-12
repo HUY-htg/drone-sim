@@ -1,6 +1,6 @@
 # Tactical & Surveillance Combat Drone Sim
 
-Browser-based tactical surveillance and combat drone simulator. The quadcopter takes off from the Manufacturing Plant launchpad, carrying a 3-axis gimbal camera for route patrol, precision strike sorties (Bomber), 2.5D A* and APF obstacle avoidance, and autonomous Return-to-Launch (RTL). You can control the drone via flight commands, keyboard, or virtual joysticks, monitoring full telemetry through the real-time dashboard and 3D scene.
+Browser-based tactical surveillance and combat drone simulator. The quadcopter takes off from the Manufacturing Plant launchpad, carrying a 3-axis gimbal camera for route surveillance, precision strike sorties (Bomber), 2.5D A* and APF obstacle avoidance, and autonomous Return-to-Launch (RTL). You can control the drone via flight commands, keyboard, or virtual joysticks, monitoring full telemetry through the real-time dashboard and 3D scene.
 
 **Live Demo:** https://huy-htg.github.io/drone-sim/
 
@@ -10,7 +10,7 @@ Browser-based tactical surveillance and combat drone simulator. The quadcopter t
 
 | Panel | Description |
 |---|---|
-| **Flight Operations** | Commands: ARM, DISARM, TAKEOFF, LAND, HOLD, MANUAL, MISSION, RTL, KILL; autonomous patrol route generation, precision Bomber strike, and wind disturbance model. |
+| **Flight Operations** | Commands: ARM, DISARM, TAKEOFF, LAND, HOLD, MANUAL, MISSION, RTL, KILL; autonomous surveillance route generation, precision Bomber strike, and wind disturbance model. |
 | **Surveillance** | Person and vehicle AI detection counters, live FOV footprint, ground coverage calculation, 2D tactical surveillance map, and 20MP high-res camera capture. |
 | **State Machine** | 10 flight states with real-time active state highlighting, previous state history, transition reasons, and guard conditions. |
 | **Telemetry Dashboard** | ALT, V/S, GS, HDG, distance to Plant, nearest obstacle distance, artificial horizon, battery state-of-charge, power consumption, motor outputs, and 30s telemetry history. |
@@ -22,7 +22,7 @@ Browser-based tactical surveillance and combat drone simulator. The quadcopter t
 
 Open `index.html` directly in any modern browser (requires internet connection to load Three.js and web fonts via CDN). No local installation or build process is required.
 
-- **Autonomous Patrol:** Click **Auto Fly 1 Lap** in the Patrol section: the drone autonomously executes ARM → TAKEOFF → MISSION (patrols all waypoints with A* obstacle avoidance) → RTL (returns to Plant) → LANDING → DISARMED.
+- **Autonomous Surveillance:** Click **Auto Fly 1 Lap** in the Surveillance section: the drone autonomously executes ARM → TAKEOFF → MISSION (flies surveillance waypoints with A* obstacle avoidance) → RTL (returns to Plant) → LANDING → DISARMED.
 - **Bomber Strike Sortie:** Select a ground target, configure payload mass (0.25–2.0 kg), and click **💣 Launch Strike Sortie**: the drone takes off, flies an ingress corridor, solves the CCRP ballistic trajectory under wind drag, releases the bomb, executes egress maneuvers, and returns to Plant.
 - **Simulate Datalink Loss:** Click **Simulate Datalink Loss (Blackbox)** to test autonomous fallback under complete communication loss.
 
