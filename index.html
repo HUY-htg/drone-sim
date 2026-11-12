@@ -732,7 +732,6 @@ table.an-t tr.on td{background:var(--accent-soft)}
             </div>
             <input type="hidden" id="svPatrol" value="custom">
             <div class="field"><label for="svPu">Độ cao tuần tra</label><output id="oSvPu"></output><input type="range" id="svPu" min="10" max="40" step="1" value="16"></div>
-            <p class="sv-info">📍 <b>Cách dùng:</b> Click chuột vào các vị trí trên <b>mặt đất 3D</b> để tạo điểm tuần tra. Drone tự lập quỹ đạo né vật cản A*, bay 1 vòng và tự động quay về Nhà máy (RTL).</p>
             <div class="row" style="margin:4px 0 8px">
               <button class="btn mini" id="btnPatrolClear" type="button" style="width:100%" title="Xoá tất cả các điểm tuần tra đã chọn">Xoá các điểm đã chọn</button>
             </div>
@@ -742,8 +741,6 @@ table.an-t tr.on td{background:var(--accent-soft)}
             <div class="row"><label for="bomberTarget">Mục tiêu</label><select id="bomberTarget"><option value="depot">Kho quân khí ngoại ô (52, 38)</option><option value="radar">Trạm radar phòng không (-42, 48)</option><option value="convoy">Đoàn xe cơ giới địch (18, -42)</option><option value="bunker">Boongke kiên cố (-48, -32)</option><option value="custom">Tự chọn mục tiêu (Click mặt đất 3D)</option></select></div>
             <div class="field"><label for="bomberAlt">Độ cao ném bom</label><output id="oBomberAlt">20 m</output><input type="range" id="bomberAlt" min="14" max="38" step="1" value="20"></div>
             <div class="field"><label for="bombMass">Khối lượng bom (1 quả / chuyến)</label><output id="oBombMass">1,00 kg</output><input type="range" id="bombMass" min="0.25" max="2" step="0.25" value="1"></div>
-            <p class="sv-info" id="bombStatus" style="margin:2px 0 6px">Bom: chưa nạp</p>
-            <p class="sv-info">Chế độ <b>Bomber</b>: mỗi chuyến chỉ mang <b>1 quả bom</b> (tối đa 2 kg), nạp trên bãi đáp khi tắt động cơ. Drone bay thẳng qua mục tiêu, máy tính trên drone giải đạn đạo (trọng lực + lực cản theo gió ước lượng) liên tục và <b>tự cắt bom (CCRP)</b> khi điểm rơi dự đoán trùng mục tiêu, rồi thoát ly về Nhà máy. Vòng đỏ trên mặt đất là điểm rơi dự đoán (CCIP).</p>
             <div class="sv-go">
               <button class="btn primary" id="btnBomberStart" style="background:#dc2626;border-color:#b91c1c;color:#fff;font-weight:700">💣 Xuất kích ném bom</button>
               <button class="btn" id="btnManualDrop" title="Thả bom ngay tại chỗ (phím B)">Thả bom ngay (B)</button>
