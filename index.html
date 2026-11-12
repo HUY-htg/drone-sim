@@ -5576,13 +5576,13 @@ const hemi = new THREE.HemisphereLight(0x90c4f4, 0x476842, 0.88); scene.add(hemi
 
   // 3D Wind Streamlines: dải vệt gió khí động học mờ mờ tự nhiên (mờ mờ như thật)
   const windStreamGroup = new THREE.Group(); scene.add(windStreamGroup);
-  const WIND_STREAKS = 120;
+  const WIND_STREAKS = 35;
   const PTS_PER_STREAK = 5;
   const windParticles = [];
   const streakMat = new THREE.LineBasicMaterial({
     color: 0xffffff,
     transparent: true,
-    opacity: 0.22,
+    opacity: 0.15,
     blending: THREE.AdditiveBlending,
     depthWrite: false
   });
@@ -5601,7 +5601,7 @@ const hemi = new THREE.HemisphereLight(0x90c4f4, 0x476842, 0.88); scene.add(hemi
       n: n0,
       u: u0,
       phase: Math.random() * Math.PI * 2,
-      len: 4.5 + Math.random() * 4.0,
+      len: 3.2 + Math.random() * 2.8,
       spdMul: 0.82 + Math.random() * 0.38
     });
   }
@@ -6181,8 +6181,8 @@ const hemi = new THREE.HemisphereLight(0x90c4f4, 0x476842, 0.88); scene.add(hemi
       const centerN = cam.tgt ? -cam.tgt.z : p[1];
       const wDirE = w[0] / ws, wDirN = w[1] / ws, wDirU = (w[2] || 0) / ws;
       const vDir = toV(wDirE, wDirN, wDirU);
-      // Độ mờ dịu nhẹ mờ mờ tự nhiên (tối đa ~0.24 để không che khuất cảnh quan)
-      streakMat.opacity = Math.min(0.24, Math.max(0.12, 0.08 + ws * 0.022));
+      // Độ mờ dịu nhẹ mờ mờ tự nhiên (tối đa ~0.18 để không che khuất cảnh quan)
+      streakMat.opacity = Math.min(0.18, Math.max(0.08, 0.05 + ws * 0.015));
       const BOX_R = 70;
       windParticles.forEach(pt => {
         // streaks are air parcels: advected by the local wind (log profile + travelling gusts)
