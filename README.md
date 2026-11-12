@@ -193,7 +193,7 @@ Lõi mô phỏng không phụ thuộc DOM, chạy kiểm thử tự động vớ
 node tests/run-scenarios.js
 ```
 
-Bộ kiểm thử gồm 33 kiểm tra:
+Bộ kiểm thử gồm 36 kiểm tra:
 
 - Các kịch bản bay: waypoint, cua 14 m/s, HOLD rồi MISSION, FAILSAFE, A*, tuần tra, quét, bay vòng, điều khiển thích nghi.
 - Vật lý: đạn đạo không cản trùng nghiệm giải tích, vận tốc tới hạn của bom khớp √(2mg/ρC_dA), lực đẩy treo = m·g, xoay mũi không trôi, KILL rơi đúng thời gian lý thuyết, đỗ trong gió không trôi.
