@@ -3390,16 +3390,38 @@ function init3D(){
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 800);
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x556270, 0.88); scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xffffff, 0.78); sun.position.set(45, 85, 35); scene.add(sun);
-  scene.fog = new THREE.Fog(0xffffff, 95, 320);
-
-  const groundMat = new THREE.MeshLambertMaterial({ color:0x528048 });
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), groundMat); ground.rotation.x = -Math.PI/2; scene.add(ground);
-  let grid = null;
+const hemi = new THREE.HemisphereLight(0x90c4f4, 0x476842, 0.88); scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xfff8ee, 0.95); sun.position.set(45, 95, 35); scene.add(sun);
+  scene.fog = new THREE.Fog(0xd8e7f5, 115, 390);
 
   const toV = (e, n, u) => new THREE.Vector3(e, u, -n);
-  function canvasTex(size, draw){ const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t; }
+  function canvasTex(size, draw){
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    draw(c.getContext('2d'), size);
+    const t = new THREE.CanvasTexture(c);
+    t.anisotropy = 4;
+    return t;
+  }
+
+  // 1. High-Resolution Natural Grass Terrain Texture
+  const groundTex = canvasTex(512, (x, s) => {
+    x.fillStyle = '#49773c'; x.fillRect(0, 0, s, s);
+    for (let i = 0; i < 5000; i++){
+      const rx = Math.random() * s, ry = Math.random() * s;
+      const r = Math.random();
+      x.fillStyle = r > 0.65 ? '#5b8e4c' : r > 0.35 ? '#3b6230' : r > 0.1 ? '#689d55' : '#746750';
+      x.fillRect(rx, ry, 1.5 + Math.random()*2, 2.5 + Math.random()*3);
+    }
+    // Subtle natural earth paths
+    x.strokeStyle = 'rgba(125, 115, 85, 0.13)'; x.lineWidth = 18;
+    x.beginPath(); x.moveTo(0, s*0.35); x.bezierCurveTo(s*0.3, s*0.48, s*0.7, s*0.28, s, s*0.45); x.stroke();
+  });
+  groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
+  groundTex.repeat.set(24, 24);
+  const groundMat = new THREE.MeshStandardMaterial({ map:groundTex, roughness:0.86, metalness:0.04 });
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), groundMat); ground.rotation.x = -Math.PI/2; scene.add(ground);
+  let grid = null;
 
   function textSprite(txt, fg, bg, scale){
     const tex = canvasTex(256, (x, s) => {
@@ -3420,220 +3442,598 @@ function init3D(){
 
   // Base & Factory Environment Root Group
   const cityEnvGroup = new THREE.Group(); scene.add(cityEnvGroup);
-
-  // Road Network omitted (nền đất tự nhiên)
-  const roadGroup = new THREE.Group(); roadGroup.visible = false;
-  const roadMat = new THREE.MeshLambertMaterial({ color:0x333b42 });
-  const swMat = new THREE.MeshLambertMaterial({ color:0x9aa4ad });
-  const dashMat = new THREE.MeshBasicMaterial({ color:0xe8edf2 });
-  const ewRoads = [-42, -6, 14, 44];
-  const nsRoads = [-44, -20, 10, 46];
-
-  // Helper to check if a point (e, n) overlaps factory compound or obstacles
-  function isZoneFree(e, n, padR){
-    if (e > -21 - padR && e < 7 + padR && n > -16 - padR && n < 12 + padR) return false;
-    for (let i = 0; i < Sim.obstacles.length; i++){
-      const o = Sim.obstacles[i];
-      if (Math.abs(e - o.e) < o.rx + padR + 1.2 && Math.abs(n - o.n) < o.ry + padR + 1.2) return false;
-    }
-    return true;
-  }
-
-  const parkMat = new THREE.MeshLambertMaterial({ color:0x688f64 });
-  const parkZones = [];
-  const streetLightGroup = new THREE.Group(); streetLightGroup.visible = false;
   const poolMat = new THREE.MeshBasicMaterial({ transparent:true, opacity:0 });
+  const roadMat = new THREE.MeshLambertMaterial({ color:0x333b42 });
+  const streetLightGroup = new THREE.Group(); streetLightGroup.visible = false;
 
-  // Residential Neighborhood: Exactly 34 houses across the countryside
+  // Procedural High-Resolution Architectural Textures
+  // A. Corrugated Industrial Steel Wall Texture
+  const corrugateTex = canvasTex(512, (x, s) => {
+    x.fillStyle = '#485564'; x.fillRect(0, 0, s, s);
+    for (let col = 0; col < s; col += 16){
+      const g = x.createLinearGradient(col, 0, col + 16, 0);
+      g.addColorStop(0, '#343f49');
+      g.addColorStop(0.35, '#5c6c7d');
+      g.addColorStop(0.65, '#43505d');
+      g.addColorStop(1, '#303943');
+      x.fillStyle = g; x.fillRect(col, 0, 16, s);
+    }
+    for (let row = 64; row < s; row += 128){
+      x.fillStyle = '#29323a'; x.fillRect(0, row - 4, s, 8);
+      x.fillStyle = '#94a3b8';
+      for (let b = 8; b < s; b += 24){
+        x.beginPath(); x.arc(b, row, 2, 0, Math.PI*2); x.fill();
+      }
+    }
+    x.fillStyle = '#353e47'; x.fillRect(0, s - 28, s, 28);
+    x.fillStyle = '#d97706'; x.fillRect(0, s - 42, s, 14);
+  });
+  corrugateTex.wrapS = corrugateTex.wrapT = THREE.RepeatWrapping;
+
+  // B. Standing Seam Industrial Metal Roof
+  const roofMetalTex = canvasTex(512, (x, s) => {
+    x.fillStyle = '#2b3540'; x.fillRect(0, 0, s, s);
+    for (let c = 0; c < s; c += 16){
+      x.fillStyle = (c % 32 === 0) ? '#3d4a57' : '#202830';
+      x.fillRect(c, 0, 8, s);
+    }
+  });
+  roofMetalTex.wrapS = roofMetalTex.wrapT = THREE.RepeatWrapping;
+
+  // C. Heavy Industrial Roll-up Shutter Door
+  const shutterTex = canvasTex(256, (x, s) => {
+    x.fillStyle = '#374151'; x.fillRect(0, 0, s, s);
+    for (let y = 0; y < s; y += 10){
+      const g = x.createLinearGradient(0, y, 0, y + 10);
+      g.addColorStop(0, '#1f2937');
+      g.addColorStop(0.4, '#4b5563');
+      g.addColorStop(1, '#111827');
+      x.fillStyle = g; x.fillRect(0, y, s, 9);
+    }
+    x.fillStyle = '#eab308'; x.fillRect(0, s - 18, s, 18);
+    x.strokeStyle = '#000000'; x.lineWidth = 7;
+    for (let d = -s; d < s * 2; d += 16){
+      x.beginPath(); x.moveTo(d, s - 18); x.lineTo(d + 16, s); x.stroke();
+    }
+  });
+
+  // D. Cylindrical Silo Rolled Steel & Hazard Markings
+  const siloTex = canvasTex(512, (x, s) => {
+    x.fillStyle = '#838e99'; x.fillRect(0, 0, s, s);
+    for (let c = 0; c < s; c += 128){
+      x.fillStyle = '#65717c'; x.fillRect(c - 2, 0, 4, s);
+      x.fillStyle = '#a6b2bd'; x.fillRect(c, 0, 2, s);
+    }
+    for (let r = 80; r < s; r += 100){
+      x.fillStyle = '#59646e'; x.fillRect(0, r - 3, s, 6);
+      x.fillStyle = '#b0bcc8'; x.fillRect(0, r, s, 2);
+    }
+    const dx = s * 0.45, dy = s * 0.35, dsz = 46;
+    x.save(); x.translate(dx, dy); x.rotate(Math.PI/4);
+    x.fillStyle = '#ef4444'; x.fillRect(-dsz/2, -dsz/2, dsz/2, dsz/2);
+    x.fillStyle = '#3b82f6'; x.fillRect(-dsz/2, 0, dsz/2, dsz/2);
+    x.fillStyle = '#eab308'; x.fillRect(0, -dsz/2, dsz/2, dsz/2);
+    x.fillStyle = '#ffffff'; x.fillRect(0, 0, dsz/2, dsz/2);
+    x.strokeStyle = '#000000'; x.lineWidth = 2; x.strokeRect(-dsz/2, -dsz/2, dsz, dsz);
+    x.restore();
+    x.fillStyle = '#ffffff'; x.font = '700 18px "JetBrains Mono", monospace';
+    x.fillText('FUEL SILO · FLAMMABLE', 24, dy + 54);
+    x.font = '600 13px "JetBrains Mono", monospace'; x.fillStyle = '#cbd5e1';
+    x.fillText('CAPACITY: 15,000L · JET-A1', 24, dy + 76);
+  });
+
+  // E. Terracotta Spanish Clay Roof Tiles (Countryside Houses)
+  const houseRoofTex = canvasTex(512, (x, s) => {
+    x.fillStyle = '#a64a38'; x.fillRect(0, 0, s, s);
+    for (let row = 0; row < s; row += 24){
+      const offset = (row / 24 % 2) * 16;
+      for (let col = -16; col < s + 16; col += 32){
+        const cx = col + offset;
+        const g = x.createLinearGradient(cx, row, cx + 30, row);
+        g.addColorStop(0, '#752d21');
+        g.addColorStop(0.35, '#c25b47');
+        g.addColorStop(0.7, '#963f2f');
+        g.addColorStop(1, '#66251b');
+        x.fillStyle = g;
+        x.beginPath();
+        x.arc(cx + 15, row + 12, 14, 0, Math.PI, true);
+        x.fill();
+        x.strokeStyle = 'rgba(0,0,0,0.35)'; x.lineWidth = 2; x.stroke();
+      }
+      x.fillStyle = 'rgba(0,0,0,0.25)'; x.fillRect(0, row + 22, s, 2);
+    }
+  });
+  houseRoofTex.wrapS = houseRoofTex.wrapT = THREE.RepeatWrapping;
+
+  // F. Horizontal Timber Lap Siding (Countryside Houses)
+  const houseWallTex = canvasTex(512, (x, s) => {
+    x.fillStyle = '#f1ece1'; x.fillRect(0, 0, s, s);
+    for (let y = 0; y < s; y += 20){
+      const g = x.createLinearGradient(0, y, 0, y + 20);
+      g.addColorStop(0, '#fbf8f2');
+      g.addColorStop(0.85, '#e4dcd0');
+      g.addColorStop(1, '#bfb4a4');
+      x.fillStyle = g; x.fillRect(0, y, s, 19);
+      x.fillStyle = '#a89c8c'; x.fillRect(0, y + 19, s, 1);
+    }
+  });
+  houseWallTex.wrapS = houseWallTex.wrapT = THREE.RepeatWrapping;
+
+  // Shared Architectural Materials
+  const concreteMat = new THREE.MeshStandardMaterial({ color: 0x5a6572, roughness: 0.85, metalness: 0.1 });
+  const corrugateMat = new THREE.MeshStandardMaterial({ map: corrugateTex, roughness: 0.48, metalness: 0.55 });
+  const indRoofMat = new THREE.MeshStandardMaterial({ map: roofMetalTex, roughness: 0.42, metalness: 0.65 });
+  const shutterMat = new THREE.MeshStandardMaterial({ map: shutterTex, roughness: 0.45, metalness: 0.4 });
+  const siloMat = new THREE.MeshStandardMaterial({ map: siloTex, roughness: 0.35, metalness: 0.72 });
+  const pipeMat = new THREE.MeshStandardMaterial({ color: 0x717f8d, roughness: 0.3, metalness: 0.8 });
+  const redValveMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.35, metalness: 0.2 });
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x93c5fd, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.75 });
+  const houseWallMat = new THREE.MeshStandardMaterial({ map: houseWallTex, roughness: 0.65, metalness: 0.05 });
+  const houseRoofMat = new THREE.MeshStandardMaterial({ map: houseRoofTex, roughness: 0.55, metalness: 0.1 });
+  const darkTrimMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 });
+  const whiteTrimMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 });
+
+  // 2. Concrete Apron Tarmac for Launch Yard
+  const apronTex = canvasTex(512, (x, s) => {
+    x.fillStyle = '#55606b'; x.fillRect(0, 0, s, s);
+    x.strokeStyle = '#38424c'; x.lineWidth = 3;
+    for (let i = 64; i < s; i += 64){
+      x.beginPath(); x.moveTo(i, 0); x.lineTo(i, s); x.stroke();
+      x.beginPath(); x.moveTo(0, i); x.lineTo(s, i); x.stroke();
+    }
+    for (let i = 0; i < 1500; i++){
+      x.fillStyle = Math.random() > 0.5 ? 'rgba(35,42,48,0.18)' : 'rgba(130,142,155,0.14)';
+      x.fillRect(Math.random()*s, Math.random()*s, 2 + Math.random()*3, 2 + Math.random()*3);
+    }
+    const border = 22;
+    x.fillStyle = '#eab308';
+    x.fillRect(0, 0, s, border); x.fillRect(0, s-border, s, border);
+    x.fillRect(0, 0, border, s); x.fillRect(s-border, 0, border, s);
+    x.strokeStyle = '#1a1f26'; x.lineWidth = 9;
+    for (let d = -s; d < s * 2; d += 20){
+      x.beginPath(); x.moveTo(d, 0); x.lineTo(d + border, border); x.stroke();
+      x.beginPath(); x.moveTo(d, s - border); x.lineTo(d + border, s); x.stroke();
+    }
+  });
+  const apronMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(28, 24),
+    new THREE.MeshStandardMaterial({ map: apronTex, roughness: 0.72, metalness: 0.12 })
+  );
+  apronMesh.rotation.x = -Math.PI/2;
+  apronMesh.position.set(-5.5, 0.015, -1.0);
+  cityEnvGroup.add(apronMesh);
+
+  // 3. High-Resolution Tactical Helipad H at (0, 0, 0)
+  const padTex = canvasTex(512, (x, s) => {
+    x.fillStyle = '#1e242c'; x.beginPath(); x.arc(s/2, s/2, s/2 - 4, 0, Math.PI*2); x.fill();
+    x.lineWidth = 14; x.strokeStyle = '#e2891a'; x.beginPath(); x.arc(s/2, s/2, s/2 - 16, 0, Math.PI*2); x.stroke();
+    x.lineWidth = 4; x.strokeStyle = '#ffffff'; x.beginPath(); x.arc(s/2, s/2, s/2 - 32, 0, Math.PI*2); x.stroke();
+    x.strokeStyle = 'rgba(255,255,255,0.6)'; x.lineWidth = 3;
+    x.beginPath();
+    x.moveTo(s/2, 24); x.lineTo(s/2, s*0.25);
+    x.moveTo(s/2, s*0.75); x.lineTo(s/2, s - 24);
+    x.moveTo(24, s/2); x.lineTo(s*0.25, s/2);
+    x.moveTo(s*0.75, s/2); x.lineTo(s - 24, s/2);
+    x.stroke();
+    x.shadowColor = 'rgba(0,0,0,0.8)'; x.shadowBlur = 8;
+    x.fillStyle = '#e2891a'; x.font = '900 190px "Barlow Condensed", "Arial Black", sans-serif';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText('H', s/2, s/2 - 10);
+    x.shadowColor = 'transparent';
+    x.font = '700 24px "JetBrains Mono", monospace'; x.fillStyle = '#ffffff';
+    x.fillText('TACTICAL UAV PAD 01', s/2, s/2 + 96);
+    x.font = '600 16px "JetBrains Mono", monospace'; x.fillStyle = '#cbd5e1';
+    x.fillText('HOME · ELEV 0.0m', s/2, s/2 + 124);
+  });
+  const pad = new THREE.Mesh(new THREE.CircleGeometry(2.2, 48), new THREE.MeshStandardMaterial({ map:padTex, transparent:true, depthWrite:false, roughness:0.65 }));
+  pad.rotation.x = -Math.PI/2; pad.position.y = 0.026; cityEnvGroup.add(pad);
+
+  // Signpost Labels
+  const facLabel = textSprite('NHÀ MÁY SX', '#1d1306', '#f2a33a', 0.026);
+  facLabel.material.opacity = 0.75;
+  facLabel.position.copy(toV(-7, 1.2, 8.5)); cityEnvGroup.add(facLabel);
+  const north = textSprite('BẮC (N)', '#ffffff', 'rgba(20,32,42,0.82)', 0.028);
+  north.material.opacity = 0.65; north.position.copy(toV(0, 74, 2.5)); cityEnvGroup.add(north);
+
+  // 4. ISO Shipping Containers in Logistics Yard
+  function createContainer(e, n, rotY, baseColor, idCode){
+    const g = new THREE.Group();
+    g.position.copy(toV(e, n, 0));
+    g.rotation.y = rotY;
+    const cTex = canvasTex(512, (x, s) => {
+      x.fillStyle = baseColor; x.fillRect(0, 0, s, s);
+      for (let c = 0; c < s; c += 16){
+        const grad = x.createLinearGradient(c, 0, c + 16, 0);
+        grad.addColorStop(0, 'rgba(0,0,0,0.25)');
+        grad.addColorStop(0.35, 'rgba(255,255,255,0.16)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.32)');
+        x.fillStyle = grad; x.fillRect(c, 0, 16, s);
+      }
+      x.fillStyle = '#ffffff'; x.font = '700 20px "JetBrains Mono", monospace';
+      x.fillText(idCode, 24, 48);
+      x.font = '600 13px "JetBrains Mono", monospace'; x.fillStyle = '#f59e0b';
+      x.fillText('ISO 668 · 20FT TACTICAL', 24, 72);
+    });
+    const cMat = new THREE.MeshStandardMaterial({ map: cTex, roughness: 0.42, metalness: 0.5 });
+    const cBody = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.3, 1.25), cMat);
+    cBody.position.y = 0.65; g.add(cBody);
+
+    // 8 Corner castings
+    const castMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.4, metalness: 0.8 });
+    const castGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+    [[-1.25, 1.25], [1.25, 1.25], [-1.25, 0.06], [1.25, 0.06]].forEach(([cx, cy]) => {
+      [-0.58, 0.58].forEach(cz => {
+        const cast = new THREE.Mesh(castGeo, castMat);
+        cast.position.set(cx, cy, cz);
+        g.add(cast);
+      });
+    });
+    // Door locking bars
+    [-0.2, 0.2].forEach(bx => {
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.1, 8), castMat);
+      bar.position.set(1.31, 0.65, bx);
+      g.add(bar);
+    });
+    cityEnvGroup.add(g);
+  }
+  createContainer(-9.5, -5.5, 0, '#1e4d75', 'UAV-LOG-01');
+  createContainer(-9.5, -3.8, 0.05, '#993325', 'UAV-LOG-02');
+
+  // Wooden Pallet with Strapped Supply Crate
+  const palletGroup = new THREE.Group();
+  palletGroup.position.copy(toV(-4.2, 0.6, 0));
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x855836, roughness: 0.8 });
+  const palletBase = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.12, 1.0), woodMat);
+  palletBase.position.y = 0.06; palletGroup.add(palletBase);
+  const crateMesh = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.65, 0.75), new THREE.MeshStandardMaterial({ color: 0x9a6b43, roughness: 0.7 }));
+  crateMesh.position.y = 0.45; palletGroup.add(crateMesh);
+  cityEnvGroup.add(palletGroup);
+
+  // 5. Detailed Countryside Houses
   const houseGroup = new THREE.Group(); cityEnvGroup.add(houseGroup);
-  const housePalette = [0xd8cfc4, 0xc7d3dd, 0xe3d5b8, 0xbec9be, 0xd9c2ba, 0xcbd0d6, 0xe8dfd5, 0xd2dcd2];
-  const roofPalette = [0x9e4736, 0x3f5364, 0x6b4c3b, 0x485c54, 0x8b3a2b, 0x415a6b];
-  const winStripMat = new THREE.MeshBasicMaterial({ color:0x263542 });
-  const doorMat = new THREE.MeshLambertMaterial({ color:0x4a3220 });
 
-  function addLowRiseHouse(e, n, w, d, h, rotY, palIdx){
+  function addDetailedHouse(e, n, w, d, h, rotY, idx){
     const g = new THREE.Group();
     g.position.copy(toV(e, n, 0));
     g.rotation.y = rotY || 0;
-    const wallM = new THREE.MeshLambertMaterial({ color: housePalette[palIdx % housePalette.length] });
-    const roofM = new THREE.MeshLambertMaterial({ color: roofPalette[palIdx % roofPalette.length] });
-    const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallM);
-    bodyMesh.position.y = h / 2;
-    g.add(bodyMesh);
 
-    // Pitched roof or terrace parapet
-    if (palIdx % 2 === 0){
-      const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d)*0.68, 1.4, 4), roofM);
-      roof.position.y = h + 0.7;
-      roof.rotation.y = Math.PI / 4;
-      g.add(roof);
-    } else {
-      const parapet = new THREE.Mesh(new THREE.BoxGeometry(w + 0.25, 0.45, d + 0.25), roofM);
-      parapet.position.y = h + 0.22;
-      g.add(parapet);
+    // Foundation plinth
+    const plinth = new THREE.Mesh(new THREE.BoxGeometry(w + 0.35, 0.45, d + 0.35), concreteMat);
+    plinth.position.y = 0.225; g.add(plinth);
+
+    // Main living walls
+    const wallHeight = h - 0.45;
+    const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(w, wallHeight, d), houseWallMat);
+    bodyMesh.position.y = 0.45 + wallHeight / 2; g.add(bodyMesh);
+
+    // White Corner Boards
+    const cornerGeo = new THREE.BoxGeometry(0.12, wallHeight, 0.12);
+    [[-w/2, -d/2], [w/2, -d/2], [w/2, d/2], [-w/2, d/2]].forEach(([cx, cz]) => {
+      const cMesh = new THREE.Mesh(cornerGeo, whiteTrimMat);
+      cMesh.position.set(cx, 0.45 + wallHeight/2, cz); g.add(cMesh);
+    });
+
+    // Pitch Gabled Roof using ExtrudeGeometry
+    const roofShape = new THREE.Shape();
+    roofShape.moveTo(-w/2 - 0.4, 0);
+    roofShape.lineTo(0, 1.85);
+    roofShape.lineTo(w/2 + 0.4, 0);
+    roofShape.closePath();
+    const roofGeo = new THREE.ExtrudeGeometry(roofShape, { depth: d + 0.8, bevelEnabled: false });
+    roofGeo.center();
+    const roofMesh = new THREE.Mesh(roofGeo, houseRoofMat);
+    roofMesh.position.y = h + 0.92;
+    g.add(roofMesh);
+
+    // Triangular Gable End Facades
+    [-d/2, d/2].forEach(gz => {
+      const gable = new THREE.Mesh(new THREE.ShapeGeometry(roofShape), houseWallMat);
+      gable.position.set(0, h, gz);
+      if (gz > 0) gable.rotation.y = Math.PI;
+      g.add(gable);
+    });
+
+    // Red Brick Chimney
+    const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.65, 1.7, 0.65), new THREE.MeshStandardMaterial({ color: 0x993527, roughness: 0.8 }));
+    chimney.position.set(-w * 0.25, h + 1.25, -d * 0.15); g.add(chimney);
+    const chimCap = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.12, 0.8), concreteMat);
+    chimCap.position.set(-w * 0.25, h + 2.15, -d * 0.15); g.add(chimCap);
+    [-0.15, 0.15].forEach(ox => {
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.35, 10), new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.6 }));
+      pot.position.set(-w * 0.25 + ox, h + 2.35, -d * 0.15); g.add(pot);
+    });
+
+    // Front Entrance Porch
+    const porchFloor = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.22, 1.2), concreteMat);
+    porchFloor.position.set(0, 0.11, d/2 + 0.6); g.add(porchFloor);
+    const porchStep = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.11, 0.45), concreteMat);
+    porchStep.position.set(0, 0.055, d/2 + 1.35); g.add(porchStep);
+    // 2 Porch Posts
+    const postGeo = new THREE.BoxGeometry(0.1, 2.1, 0.1);
+    [-0.75, 0.75].forEach(px => {
+      const post = new THREE.Mesh(postGeo, whiteTrimMat);
+      post.position.set(px, 1.15, d/2 + 1.1); g.add(post);
+    });
+    // Porch Gable Roof
+    const pRoof = new THREE.Mesh(new THREE.ConeGeometry(1.3, 0.65, 4), houseRoofMat);
+    pRoof.position.set(0, 2.4, d/2 + 0.6); pRoof.rotation.y = Math.PI / 4; g.add(pRoof);
+
+    // Front Entrance Mahogany Door with Brass Knob
+    const door = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.9, 0.08), new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.45 }));
+    door.position.set(0, 1.1, d/2 + 0.04); g.add(door);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9 }));
+    knob.position.set(0.35, 1.05, d/2 + 0.09); g.add(knob);
+
+    // 4-Pane Architectural Windows with Frames & Planter Box
+    function addWindow(wx, wy, wz, rot){
+      const winG = new THREE.Group();
+      winG.position.set(wx, wy, wz); winG.rotation.y = rot;
+      const f = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.15, 0.06), whiteTrimMat); winG.add(f);
+      const gMesh = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 0.08), glassMat); winG.add(gMesh);
+      // Crossbars
+      const barH = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.06, 0.09), whiteTrimMat); winG.add(barH);
+      const barV = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.0, 0.09), whiteTrimMat); winG.add(barV);
+      // Planter box under window
+      const planter = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.22, 0.25), darkTrimMat);
+      planter.position.set(0, -0.65, 0.1); winG.add(planter);
+      [-0.4, -0.15, 0.15, 0.4].forEach(fx => {
+        const fl = new THREE.Mesh(new THREE.DodecahedronGeometry(0.12, 0), new THREE.MeshLambertMaterial({ color: fx < 0 ? 0xe11d48 : 0x10b981 }));
+        fl.position.set(fx, -0.52, 0.1); winG.add(fl);
+      });
+      g.add(winG);
     }
+    addWindow(-w * 0.28, 1.6, d/2 + 0.03, 0);
+    addWindow(w * 0.28, 1.6, d/2 + 0.03, 0);
+    addWindow(-w/2 - 0.03, 1.6, 0, -Math.PI/2);
+    addWindow(w/2 + 0.03, 1.6, 0, Math.PI/2);
 
-    // Windows band
-    const win1 = new THREE.Mesh(new THREE.BoxGeometry(w + 0.06, 0.65, d * 0.65), winStripMat);
-    win1.position.y = h * 0.65;
-    g.add(win1);
-
-    // Front door
-    const door = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.5, 0.1), doorMat);
-    door.position.set(0, 0.75, d / 2 + 0.04);
-    g.add(door);
+    // Garden perimeter fence
+    const fenceMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.6 });
+    const fence = new THREE.Mesh(new THREE.BoxGeometry(w + 3.2, 0.45, 0.06), fenceMat);
+    fence.position.set(0, 0.22, d/2 + 2.4); g.add(fence);
 
     houseGroup.add(g);
   }
 
-  // Residential Houses: Exactly 3 houses across the countryside
+  // Exactly 3 Houses across the countryside
   const HOUSES_3 = [
-    { e: -36, n: 16, w: 5.2, d: 4.4, h: 4.5, rotY: 0.1 },
-    { e:  32, n: 24, w: 4.8, d: 4.6, h: 4.6, rotY: -0.2 },
-    { e:  28, n: -24, w: 5.0, d: 4.2, h: 4.4, rotY: 0.2 }
+    { e: -36, n: 16, w: 5.4, d: 4.6, h: 4.5, rotY: 0.1 },
+    { e:  32, n: 24, w: 5.0, d: 4.8, h: 4.6, rotY: -0.2 },
+    { e:  28, n: -24, w: 5.2, d: 4.4, h: 4.4, rotY: 0.2 }
   ];
-
   HOUSES_3.forEach((h, idx) => {
-    addLowRiseHouse(h.e, h.n, h.w, h.d, h.h, h.rotY, idx);
+    addDetailedHouse(h.e, h.n, h.w, h.d, h.h, h.rotY, idx);
   });
 
-  // Natural Trees across the grass terrain
+  // 6. High-Resolution Multi-layered Trees with Root Flares & Organic Canopies
   const treeCrowns = [];
-  const trunkMat = new THREE.MeshLambertMaterial({ color:0x533d28 });
-  const leafMat1 = new THREE.MeshLambertMaterial({ color:0x2d6e35 });
-  const leafMat2 = new THREE.MeshLambertMaterial({ color:0x397e41 });
-  const trunkGeo = new THREE.CylinderGeometry(0.18, 0.26, 1.8, 7);
-  const crownGeoSphere = new THREE.DodecahedronGeometry(1.4, 1);
-  const crownGeoCone = new THREE.ConeGeometry(1.3, 3.4, 8);
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x483624, roughness: 0.85 });
+  const leafMatA = new THREE.MeshStandardMaterial({ color: 0x275a2f, roughness: 0.65 });
+  const leafMatB = new THREE.MeshStandardMaterial({ color: 0x366e3e, roughness: 0.6 });
+  const leafMatC = new THREE.MeshStandardMaterial({ color: 0x48824c, roughness: 0.55 });
+  const leafMatD = new THREE.MeshStandardMaterial({ color: 0x5a9a5f, roughness: 0.5 });
 
-  function addTree(e, n, scale, style){
+  function addHighResTree(e, n, scale, idx){
     const g = new THREE.Group();
     g.position.copy(toV(e, n, 0));
-    const tr = new THREE.Mesh(trunkGeo, trunkMat);
-    tr.position.y = 0.9 * scale;
-    tr.scale.setScalar(scale);
-    g.add(tr);
 
-    const crownPivot = new THREE.Group();
-    crownPivot.position.y = 1.6 * scale;
-    if (style % 2 === 0){
-      const c1 = new THREE.Mesh(crownGeoSphere, leafMat1);
-      c1.position.y = 0.8 * scale;
-      c1.scale.set(scale, scale * 1.15, scale);
-      crownPivot.add(c1);
-    } else {
-      const c2 = new THREE.Mesh(crownGeoCone, leafMat2);
-      c2.position.y = 1.2 * scale;
-      c2.scale.setScalar(scale);
-      crownPivot.add(c2);
+    // Tapered trunk
+    const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.16 * scale, 0.28 * scale, 2.2 * scale, 10), trunkMat);
+    tr.position.y = 1.1 * scale; g.add(tr);
+
+    // 3 Root flares spreading into the grass
+    for (let r = 0; r < 3; r++){
+      const rAng = (r * Math.PI * 2) / 3 + idx * 0.5;
+      const root = new THREE.Mesh(new THREE.ConeGeometry(0.14 * scale, 0.65 * scale, 6), trunkMat);
+      root.rotation.z = Math.PI / 4;
+      root.rotation.y = rAng;
+      root.position.set(Math.cos(rAng) * 0.22 * scale, 0.15 * scale, Math.sin(rAng) * 0.22 * scale);
+      g.add(root);
     }
+
+    // Volumetric organic canopy connected to crownPivot for live wind swaying
+    const crownPivot = new THREE.Group();
+    crownPivot.position.y = 1.9 * scale;
+
+    const clusters = [
+      { x: 0, y: 0.4 * scale, z: 0, r: 1.35 * scale, m: leafMatA },
+      { x: -0.45 * scale, y: 0.85 * scale, z: 0.2 * scale, r: 1.15 * scale, m: leafMatB },
+      { x: 0.45 * scale, y: 0.95 * scale, z: -0.2 * scale, r: 1.2 * scale, m: leafMatC },
+      { x: 0.1 * scale, y: 1.55 * scale, z: 0.1 * scale, r: 1.05 * scale, m: leafMatD },
+      { x: -0.2 * scale, y: 1.3 * scale, z: -0.35 * scale, r: 0.95 * scale, m: leafMatB }
+    ];
+    clusters.forEach(cl => {
+      const cMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(cl.r, 1), cl.m);
+      cMesh.position.set(cl.x, cl.y, cl.z);
+      crownPivot.add(cMesh);
+    });
+
     g.add(crownPivot);
+
+    // 2 Understory flowering shrubs at tree base
+    [-0.55 * scale, 0.55 * scale].forEach((bx, bi) => {
+      const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35 * scale, 1), bi ? leafMatB : leafMatC);
+      bush.position.set(bx, 0.25 * scale, (bi ? -0.3 : 0.3) * scale);
+      g.add(bush);
+    });
+
     cityEnvGroup.add(g);
     treeCrowns.push({ pivot: crownPivot, phase: (e * 0.17 + n * 0.23) });
   }
 
-  // Scatter trees naturally near houses and across open meadows
   const TREE_POS = [
-    // Near Cluster A (West)
     [-64, 20], [-63, 10], [-64, -2], [-62, -16], [-61, -28],
     [-36, 18], [-36, 6], [-36, -8], [-48, -32], [-38, -26],
-    // Near Cluster B (North)
     [-30, 58], [-20, 62], [-4, 62], [14, 62], [26, 58],
     [-28, 44], [-4, 44], [4, 44], [28, 44], [0, 36],
-    // Near Cluster C (East)
     [44, 28], [66, 28], [44, 14], [66, 14], [44, -2],
     [66, -2], [44, -18], [66, -18], [44, -30], [66, -30],
-    // Near Cluster D (South)
     [-22, -52], [-2, -54], [10, -54], [22, -52],
     [-18, -40], [18, -40], [0, -40],
-    // Scattered scenic trees in meadows
     [-22, 18], [-18, -16], [22, 18], [24, -14],
     [-32, -2], [32, 2], [-14, 28], [14, 28]
   ];
-
   TREE_POS.forEach(([te, tn], i) => {
-    addTree(te, tn, 0.85 + (i % 3) * 0.15, i);
+    addHighResTree(te, tn, 0.85 + (i % 3) * 0.15, i);
   });
 
-  // Launch Pad H at (0,0,0) (no concrete apron - dirt ground)
-  const apron = new THREE.Mesh(new THREE.PlaneGeometry(13, 13), new THREE.MeshLambertMaterial({ color:0x525c66 }));
-  apron.visible = false;
-
-  const padTex = canvasTex(256, (x, s) => {
-    x.fillStyle = 'rgba(26,35,44,0.95)'; x.beginPath(); x.arc(s/2, s/2, s/2 - 4, 0, Math.PI*2); x.fill();
-    x.lineWidth = 12; x.strokeStyle = '#e2891a'; x.beginPath(); x.arc(s/2, s/2, s/2 - 18, 0, Math.PI*2); x.stroke();
-    x.fillStyle = '#e2891a'; x.font = '700 116px "Barlow Condensed", Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('H', s/2, s/2 - 10);
-    x.font = '700 28px "JetBrains Mono", monospace'; x.fillStyle = '#ffffff'; x.fillText('FACTORY', s/2, s/2 + 64);
-  });
-  const pad = new THREE.Mesh(new THREE.CircleGeometry(1.4, 40), new THREE.MeshBasicMaterial({ map:padTex, transparent:true, depthWrite:false }));
-  pad.rotation.x = -Math.PI/2; pad.position.y = 0.025; cityEnvGroup.add(pad);
-  const facLabel = textSprite('NHÀ MÁY SX', '#1d1306', '#f2a33a', 0.026);
-  facLabel.material.opacity = 0.65;
-  facLabel.position.copy(toV(-7, 1.2, 8.5)); cityEnvGroup.add(facLabel);
-
-  // Compact Conveyor loading dock extending from Main Factory Hall toward Launch Pad (0,0)
-  const dock = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.65, 1.5), new THREE.MeshLambertMaterial({ color:0x68737e }));
-  dock.position.copy(toV(-3.2, 0, 0.4)); cityEnvGroup.add(dock);
-  for (let i = 0; i < 2; i++){
-    const pkg = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, 0.45), new THREE.MeshLambertMaterial({ color:0xd97b16 }));
-    pkg.position.copy(toV(-3.8 + i*0.8, 0, 0.8)); cityEnvGroup.add(pkg);
-  }
-  // Shipping containers at the Factory yard
-  const contColors = [0x1f5f8b, 0xb83b2b];
-  for (let i = 0; i < 2; i++){
-    const cMesh = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.2, 1.1), new THREE.MeshLambertMaterial({ color:contColors[i] }));
-    cMesh.position.copy(toV(-9.5, -5.5 + i*1.6, 0.6));
-    cityEnvGroup.add(cMesh);
-  }
-
-  const north = textSprite('BẮC (N)', '#ffffff', 'rgba(20,32,42,0.82)', 0.028); north.material.opacity = 0.6; north.position.copy(toV(0, 74, 2.5)); cityEnvGroup.add(north);
-
-  // Build procedural window facade textures
-  const winTexLight = canvasTex(256, (x, s) => {
-    x.fillStyle = '#7e8c99'; x.fillRect(0, 0, s, s);
-    for (let r = 0; r < 8; r++){
-      for (let c = 0; c < 4; c++){
-        x.fillStyle = ((r + c) % 3 === 0) ? '#b8d0e6' : '#4a5a68';
-        x.fillRect(14 + c*58, 10 + r*30, 38, 18);
-      }
-    }
-  });
-  winTexLight.wrapS = winTexLight.wrapT = THREE.RepeatWrapping;
-
-  const winTexDark = canvasTex(256, (x, s) => {
-    x.fillStyle = '#25313d'; x.fillRect(0, 0, s, s);
-    for (let r = 0; r < 8; r++){
-      for (let c = 0; c < 4; c++){
-        const lit = ((r*3 + c*5) % 4 === 0);
-        x.fillStyle = lit ? '#f2c166' : '#18222c';
-        x.fillRect(14 + c*58, 10 + r*30, 38, 18);
-      }
-    }
-  });
-  winTexDark.wrapS = winTexDark.wrapT = THREE.RepeatWrapping;
-
-  // Construct 3D meshes for all `Sim.obstacles` (Factory halls, Silo) + safety buffer rings
+  // 7. High-Resolution Factory Complex (Sim.obstacles: F1, F2, F3, P1, P2, P3)
   const cityMeshes = [];
   const bufferGroup = new THREE.Group(); cityEnvGroup.add(bufferGroup);
-
   const obsGroups = [];
+
   Sim.obstacles.forEach((o, idx) => {
     const firstChild = cityEnvGroup.children.length;
     const w = o.rx * 2, d = o.ry * 2, h = o.h;
+
     if (o.kind === 'factory'){
-      const m = new THREE.MeshLambertMaterial({ color:0x607080 });
-      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-      b.position.copy(toV(o.e, o.n, h/2)); cityEnvGroup.add(b);
-      // Orange industrial stripe + rooftop skylights
-      const stripe = new THREE.Mesh(new THREE.BoxGeometry(w + 0.1, 1.1, d + 0.1), new THREE.MeshBasicMaterial({ color:0xe2891a }));
-      stripe.position.copy(toV(o.e, o.n, h - 1.4)); cityEnvGroup.add(stripe);
-      cityMeshes.push({ mesh:b, kind:'factory' });
+      const isMainF1 = (o.id === 'F1');
+      const fGroup = new THREE.Group();
+      fGroup.position.copy(toV(o.e, o.n, 0));
+
+      // Concrete plinth
+      const plinth = new THREE.Mesh(new THREE.BoxGeometry(w + 0.3, 0.45, d + 0.3), concreteMat);
+      plinth.position.y = 0.225; fGroup.add(plinth);
+
+      // Corrugated steel siding
+      const wallH = h - 0.45;
+      const b = new THREE.Mesh(new THREE.BoxGeometry(w, wallH, d), corrugateMat);
+      b.position.y = 0.45 + wallH / 2; fGroup.add(b);
+
+      if (isMainF1){
+        // Gabled Extruded Metal Roof with eaves overhang
+        const rShape = new THREE.Shape();
+        rShape.moveTo(-w/2 - 0.35, 0);
+        rShape.lineTo(0, 1.45);
+        rShape.lineTo(w/2 + 0.35, 0);
+        rShape.closePath();
+        const rGeo = new THREE.ExtrudeGeometry(rShape, { depth: d + 0.7, bevelEnabled: false });
+        rGeo.center();
+        const rMesh = new THREE.Mesh(rGeo, indRoofMat);
+        rMesh.position.y = h + 0.72; fGroup.add(rMesh);
+
+        // 3 Rooftop Translucent Skylights
+        for (let sk = -1; sk <= 1; sk++){
+          const skyMesh = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.32, 1.2), glassMat);
+          skyMesh.position.set(0, h + 1.25, sk * 1.8); fGroup.add(skyMesh);
+        }
+
+        // Rooftop HVAC Cooling Tower
+        const hvac = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.95, 1.4), new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.4 }));
+        hvac.position.set(-1.2, h + 0.65, 0); fGroup.add(hvac);
+        const fan = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.08, 16), darkTrimMat);
+        fan.position.set(-1.2, h + 1.15, 0); fGroup.add(fan);
+
+        // 2 Exhaust Chimneys with Conical Rain Hats
+        [-0.9, 0.9].forEach(cz => {
+          const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 1.6, 12), pipeMat);
+          stack.position.set(1.4, h + 0.8, cz); fGroup.add(stack);
+          const hat = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.22, 12), darkTrimMat);
+          hat.position.set(1.4, h + 1.7, cz); fGroup.add(hat);
+        });
+
+        // East Face Heavy Roll-up Shutter (facing Launch Pad)
+        const shutter = new THREE.Mesh(new THREE.BoxGeometry(0.08, 3.2, 2.8), shutterMat);
+        shutter.position.set(w/2 + 0.04, 1.6, 0); fGroup.add(shutter);
+        // Concrete loading dock ramp
+        const ramp = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.22, 3.2), concreteMat);
+        ramp.position.set(w/2 + 0.75, 0.11, 0); fGroup.add(ramp);
+
+        // 3D Title Sign on East Wall
+        const sSign = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.65, 3.6), darkTrimMat);
+        sSign.position.set(w/2 + 0.04, h - 0.65, 0); fGroup.add(sSign);
+
+        // North personnel entrance with steel canopy
+        const pDoor = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.0, 0.08), darkTrimMat);
+        pDoor.position.set(-0.8, 1.0, -d/2 - 0.04); fGroup.add(pDoor);
+        const canopy = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.08, 0.7), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8 }));
+        canopy.position.set(-0.8, 2.15, -d/2 - 0.35); fGroup.add(canopy);
+      } else {
+        // F2: North Parts Warehouse
+        const rShed = new THREE.Mesh(new THREE.BoxGeometry(w + 0.5, 0.45, d + 0.5), indRoofMat);
+        rShed.position.y = h + 0.22; fGroup.add(rShed);
+        // Loading shutter
+        const shutter2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.5, 2.2), shutterMat);
+        shutter2.position.set(w/2 + 0.04, 1.35, 0); fGroup.add(shutter2);
+        // Wall electrical transformer
+        const trBox = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.9), new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.5 }));
+        trBox.position.set(-w/2 - 0.2, 1.2, 0); fGroup.add(trBox);
+        // Rooftop turbine ventilator
+        const vent = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.45, 12), pipeMat);
+        vent.position.set(0, h + 0.5, 0); fGroup.add(vent);
+      }
+
+      cityEnvGroup.add(fGroup);
+      cityMeshes.push({ mesh: fGroup, kind: 'factory' });
     } else if (o.kind === 'silo'){
-      const cyl = new THREE.Mesh(new THREE.CylinderGeometry(o.rx*0.8, o.rx*0.95, h, 18), new THREE.MeshLambertMaterial({ color:0x8a949e }));
-      cyl.position.copy(toV(o.e, o.n, h/2)); cityEnvGroup.add(cyl);
-      const band = new THREE.Mesh(new THREE.CylinderGeometry(o.rx*0.83, o.rx*0.85, 1.8, 18), new THREE.MeshBasicMaterial({ color:0xc4302a }));
-      band.position.copy(toV(o.e, o.n, h - 2.2)); cityEnvGroup.add(band);
-      cityMeshes.push({ mesh:cyl, kind:'silo' });
+      // F3: High-Detail Stainless Steel Energy Silo Complex
+      const sGroup = new THREE.Group();
+      sGroup.position.copy(toV(o.e, o.n, 0));
+
+      // Octagonal concrete plinth
+      const plinth = new THREE.Mesh(new THREE.CylinderGeometry(o.rx * 1.15, o.rx * 1.25, 0.5, 8), concreteMat);
+      plinth.position.y = 0.25; sGroup.add(plinth);
+
+      // Smooth 32-sided Silo tank cylinder with rolled steel & NFPA hazard markings
+      const sHeight = h - 0.5;
+      const cyl = new THREE.Mesh(new THREE.CylinderGeometry(o.rx, o.rx, sHeight, 32), siloMat);
+      cyl.position.y = 0.5 + sHeight / 2; sGroup.add(cyl);
+
+      // Hemispherical domed top cap
+      const dome = new THREE.Mesh(
+        new THREE.SphereGeometry(o.rx, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.35, metalness: 0.75 })
+      );
+      dome.position.y = h; sGroup.add(dome);
+
+      // Inspection hatch & lightning antenna
+      const hatch = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.35, 16), darkTrimMat);
+      hatch.position.set(0, h + 0.85, 0); sGroup.add(hatch);
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.4, 6), pipeMat);
+      rod.position.set(0, h + 1.6, 0); sGroup.add(rod);
+
+      // 3D Circular Platform Safety Railing on top (8 posts + 2 circular handrail rings)
+      const rRad = o.rx * 0.95;
+      for (let p = 0; p < 8; p++){
+        const pAng = (p * Math.PI * 2) / 8;
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.9, 6), pipeMat);
+        post.position.set(Math.cos(pAng) * rRad, h + 0.45, Math.sin(pAng) * rRad);
+        sGroup.add(post);
+      }
+      [h + 0.45, h + 0.9].forEach(ry => {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(rRad, 0.025, 8, 32), pipeMat);
+        ring.rotation.x = Math.PI / 2; ring.position.y = ry; sGroup.add(ring);
+      });
+
+      // 3D Caged Safety Ladder
+      const ladX = o.rx + 0.12;
+      [-0.18, 0.18].forEach(lz => {
+        const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, h, 6), pipeMat);
+        rail.position.set(ladX, h/2, lz); sGroup.add(rail);
+      });
+      for (let r = 0.5; r < h; r += 0.45){
+        const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.36, 6), pipeMat);
+        rung.rotation.x = Math.PI / 2; rung.position.set(ladX, r, 0); sGroup.add(rung);
+      }
+      // Safety cage hoops
+      for (let ch = 2.2; ch < h; ch += 0.85){
+        const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.02, 6, 16, Math.PI), pipeMat);
+        hoop.rotation.y = -Math.PI / 2; hoop.position.set(ladX + 0.22, ch, 0); sGroup.add(hoop);
+      }
+
+      // Ground Piping & Valve Manifold connecting into Factory
+      const pipeA = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.2, 12), pipeMat);
+      pipeA.rotation.z = Math.PI / 2; pipeA.position.set(-o.rx - 1.1, 0.65, 0); sGroup.add(pipeA);
+      const pipeB = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.65, 12), pipeMat);
+      pipeB.position.set(-o.rx - 2.1, 0.32, 0); sGroup.add(pipeB);
+      // Red shut-off valve handwheel & pressure gauge
+      const vWheel = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.035, 8, 16), redValveMat);
+      vWheel.position.set(-o.rx - 1.2, 0.9, 0); sGroup.add(vWheel);
+      const gauge = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.05, 12), whiteTrimMat);
+      gauge.rotation.z = Math.PI / 2; gauge.position.set(-o.rx - 0.7, 0.95, 0); sGroup.add(gauge);
+
+      cityEnvGroup.add(sGroup);
+      cityMeshes.push({ mesh: sGroup, kind: 'silo' });
     } else if (o.kind === 'pylon'){
       // High-Voltage Steel Lattice Transmission Power Tower (Cột điện cao thế)
       const pylonGroup = new THREE.Group();
@@ -3641,7 +4041,6 @@ function init3D(){
       cityEnvGroup.add(pylonGroup);
 
       const steelMat = new THREE.MeshStandardMaterial({ color: 0x7c8a99, roughness: 0.45, metalness: 0.70 });
-      const concreteMat = new THREE.MeshLambertMaterial({ color: 0x949ea8 });
       const insulMat = new THREE.MeshStandardMaterial({ color: 0xc4ded9, roughness: 0.3, metalness: 0.1 });
 
       // 4 Concrete footing foundation piers
@@ -3691,49 +4090,35 @@ function init3D(){
         }
       }
 
-      // Horizontal Crossarms (Tay xà đỡ dây)
-      // 1. Lower Main Crossarm (span 7.6m)
+      // Horizontal Crossarms
       const arm1Span = 7.6;
       const arm1 = new THREE.Mesh(new THREE.BoxGeometry(arm1Span, 0.35, 0.6), steelMat);
-      arm1.position.set(0, 13.5, 0);
-      pylonGroup.add(arm1);
+      arm1.position.set(0, 13.5, 0); pylonGroup.add(arm1);
       [-arm1Span * 0.42, arm1Span * 0.42].forEach(ax => {
         const pArm = new THREE.Vector3(ax, 13.4, 0);
         const pBody = new THREE.Vector3(ax > 0 ? 0.3 : -0.3, 11.0, 0);
         strut(pBody, pArm, 0.05);
-
         const insul = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.4, 8), insulMat);
-        insul.position.set(ax, 12.6, 0);
-        pylonGroup.add(insul);
+        insul.position.set(ax, 12.6, 0); pylonGroup.add(insul);
       });
 
-      // 2. Middle Crossarm (span 5.6m)
       const arm2Span = 5.6;
       const arm2 = new THREE.Mesh(new THREE.BoxGeometry(arm2Span, 0.3, 0.5), steelMat);
-      arm2.position.set(0, 15.6, 0);
-      pylonGroup.add(arm2);
+      arm2.position.set(0, 15.6, 0); pylonGroup.add(arm2);
       [-arm2Span * 0.45, arm2Span * 0.45].forEach(ax => {
         const insul = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.2, 8), insulMat);
-        insul.position.set(ax, 14.8, 0);
-        pylonGroup.add(insul);
+        insul.position.set(ax, 14.8, 0); pylonGroup.add(insul);
       });
 
-      // 3. Top Peak Bridge
       const arm3 = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.22, 0.35), steelMat);
-      arm3.position.set(0, h, 0);
-      pylonGroup.add(arm3);
+      arm3.position.set(0, h, 0); pylonGroup.add(arm3);
 
       cityMeshes.push({ mesh: pylonGroup, kind: 'pylon' });
     } else {
-      const mat = new THREE.MeshLambertMaterial({ map: winTexLight });
+      const mat = new THREE.MeshStandardMaterial({ map: corrugateTex, roughness: 0.5 });
       const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
       b.position.copy(toV(o.e, o.n, h/2)); cityEnvGroup.add(b);
-      // Rooftop cap + HVAC unit
-      const cap = new THREE.Mesh(new THREE.BoxGeometry(w + 0.3, 0.6, d + 0.3), new THREE.MeshLambertMaterial({ color:0x434e58 }));
-      cap.position.copy(toV(o.e, o.n, h + 0.3)); cityEnvGroup.add(cap);
-      const hvac = new THREE.Mesh(new THREE.BoxGeometry(w*0.35, 1.4, d*0.35), new THREE.MeshLambertMaterial({ color:0x5b6773 }));
-      hvac.position.copy(toV(o.e + (idx%2?1:-1)*1.2, o.n, h + 1.0)); cityEnvGroup.add(hvac);
-      cityMeshes.push({ mesh:b, kind:'building', mat });
+      cityMeshes.push({ mesh: b, kind: 'building' });
     }
     obsGroups[idx] = cityEnvGroup.children.slice(firstChild);
   });
@@ -3789,11 +4174,17 @@ function init3D(){
     });
   }
 
-  // Windsock at Factory edge
+  // Windsock with Striped Fabric Cone at Factory Edge
   const sock = new THREE.Group(); sock.position.copy(toV(4.2, 4.2, 0)); cityEnvGroup.add(sock);
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 3.0, 8), new THREE.MeshLambertMaterial({ color:0xb8bec4 })); pole.position.y = 1.5; sock.add(pole);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 3.0, 8), new THREE.MeshStandardMaterial({ color:0xb8bec4, roughness:0.3, metalness:0.8 })); pole.position.y = 1.5; sock.add(pole);
   const sockPivot = new THREE.Group(); sockPivot.position.y = 2.95; sock.add(sockPivot);
-  const sockCone = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.2, 14, 1, true), new THREE.MeshLambertMaterial({ color:0xe2891a, side:THREE.DoubleSide }));
+  const sockTex = canvasTex(128, (x, s) => {
+    x.fillStyle = '#ea580c'; x.fillRect(0, 0, s, s);
+    x.fillStyle = '#ffffff';
+    x.fillRect(s * 0.25, 0, s * 0.25, s);
+    x.fillRect(s * 0.75, 0, s * 0.25, s);
+  });
+  const sockCone = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.2, 16, 1, true), new THREE.MeshStandardMaterial({ map:sockTex, side:THREE.DoubleSide, roughness:0.7 }));
   sockCone.rotation.z = Math.PI/2; sockCone.position.x = 0.6; sockPivot.add(sockCone);
 
   // High-Visibility Surveillance Drone 3D Model (with 360° Lidar turret & 3-axis Gimbal Camera)
@@ -4527,9 +4918,12 @@ function init3D(){
       const hit = segBox(A, Bc, [o.e - o.rx - 0.4, o.n - o.ry - 0.4, 0], [o.e + o.rx + 0.4, o.n + o.ry + 0.4, o.h + 2.5]);
       if (hit === !!faded[i]) return;
       faded[i] = hit;
-      (obsGroups[i] || []).forEach(m => {
-        if (!m.material) return;
-        m.material.transparent = hit; m.material.opacity = hit ? 0.16 : 1; m.material.depthWrite = !hit; m.material.needsUpdate = true;
+      (obsGroups[i] || []).forEach(obj => {
+        if (!obj) return;
+        obj.traverse(m => {
+          if (!m.isMesh || !m.material) return;
+          m.material.transparent = hit; m.material.opacity = hit ? 0.16 : 1; m.material.depthWrite = !hit; m.material.needsUpdate = true;
+        });
       });
     });
   }
