@@ -3077,8 +3077,8 @@ Sim.on(ev => {
   else if (ev.type === 'info') addLog('info', ev.msg, '', ev.t);
   else if (ev.type === 'warn') addLog('warn', ev.msg, '', ev.t);
   else if (ev.type === 'reject') addLog('rej', ev.msg, '', ev.t);
-  else if (ev.type === 'bomb') addLog('warn', ev.msg, 'Tách bom bảo toàn động lượng: drone nhẹ đi ' + ev.bomb.m.toFixed(2) + ' kg, bộ ước lượng m̂ tự hội tụ lại', ev.t);
-  else if (ev.type === 'bomb_impact') addLog('bad', ev.msg, ev.impact.obstacle ? 'Bom chạm công trình trước khi chạm đất' : '', ev.t);
+  else if (ev.type === 'bomb'){ /* Không báo các tham số cắt bom lên nhật ký, chỉ xác định khi bom chạm đất */ }
+  else if (ev.type === 'bomb_impact') addLog('bad', '💥 Bom đã chạm ' + (ev.impact.obstacle || 'đất') + ' tại (' + ev.impact.e.toFixed(1) + ', ' + ev.impact.n.toFixed(1) + ')', ev.impact.obstacle ? 'Bom chạm công trình trước khi chạm đất' : '', ev.t);
   else if (ev.type === 'bomb_hit' || ev.type === 'bomb_miss'){
     addLog(ev.hit ? 'good' : 'warn', ev.msg, '', ev.t);
     window.bombResultBanner = { text: ev.hit ? '🎯 TRÚNG MỤC TIÊU ' + ev.target.name + ' (lệch ' + ev.dist.toFixed(1) + ' m)' : '❌ NÉM BOM TRƯỢT ' + ev.target.name + ' (lệch ' + ev.dist.toFixed(1) + ' m)', cls: ev.hit ? 'good' : 'bad', until: ev.t + 6 };
