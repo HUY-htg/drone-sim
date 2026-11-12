@@ -465,5 +465,31 @@ function toHover(Sim, alt){
     `trôi ${(creep * 1000).toFixed(1)} mm · nghiêng ${tilt.toFixed(2)}° · phản lực ${S.contactN.toFixed(1)} N / m·g ${(Sim.P.m * Sim.P.g).toFixed(1)} N`);
 }
 
+// 23. Ground traffic: kinematic bicycle (vehicles) and unicycle (people) stay within their physical limits
+{
+  const sc = html.match(/<script id="surv-core">([\s\S]*?)<\/script>/)[1];
+  const SURV = new Function(sc + ';return SURV;')();
+  const A = SURV.makeAgents();
+  let latMax = 0, accMax = 0, accMin = 0, rMin = 1e9, vPed = 0, gapMin = 1e9, off = 0;
+  const DTA = 0.05;
+  for (let k = 0; k < 4800; k++){            // 4 minutes
+    SURV.stepAgents(A, DTA);
+    A.forEach(a => {
+      if (a.type === 'v'){
+        const td = Math.abs(Math.tan(a.delta));
+        latMax = Math.max(latMax, a.v * a.v * td / a.L);
+        accMax = Math.max(accMax, a.acc); accMin = Math.min(accMin, a.acc);
+        if (td > 1e-4) rMin = Math.min(rMin, a.L / td);
+        const p = SURV.pointAt(SURV.GEOM[a.loop], a.s); off = Math.max(off, Math.hypot(p.e - a.e, p.n - a.n));
+        A.forEach(b => { if (b !== a && b.type === 'v' && b.loop === a.loop) gapMin = Math.min(gapMin, Math.hypot(a.e - b.e, a.n - b.n)); });
+      } else vPed = Math.max(vPed, a.v);
+    });
+  }
+  const rLim = 2.7 / Math.tan(35 * Math.PI / 180);
+  check('Giao thông mặt đất: xe theo mô hình xe đạp động học (gia tốc ngang ≤ 3 m/s², +2,5/−4 m/s², bán kính ≥ L/tan 35°), người ≤ 1,4 m/s, không đâm nhau',
+    latMax <= 3.05 && accMax <= 2.5 + 1e-9 && accMin >= -4 - 1e-9 && rMin >= rLim - 1e-6 && vPed <= 1.4 + 1e-9 && gapMin > 4 && off < 3,
+    `a_ngang max ${latMax.toFixed(2)} · a ${accMin.toFixed(1)}…${accMax.toFixed(1)} m/s² · R min ${rMin.toFixed(1)} m · người ${vPed.toFixed(2)} m/s · xe gần nhất ${gapMin.toFixed(1)} m · lệch làn ${off.toFixed(2)} m`);
+}
+
 console.log(failures ? `\n${failures} kiểm tra thất bại` : '\nTất cả kiểm tra đều đạt');
 process.exit(failures ? 1 : 0);
