@@ -738,7 +738,11 @@ table.an-t tr.on td{background:var(--accent-soft)}
             <div class="sv-go"><button class="btn primary" id="svStart">Auto bay 1 vòng</button><button class="btn" id="svStop" title="Dừng nhiệm vụ, bay về Nhà máy">Gọi về (RTL)</button></div>
           </div>
           <div class="sv-opt" id="optBomber" style="display:none" data-for="bomber">
-            <div class="row"><label for="bomberTarget">Mục tiêu</label><select id="bomberTarget"><option value="depot">Kho quân khí ngoại ô (52, 38)</option><option value="radar">Trạm radar phòng không (-42, 48)</option><option value="convoy">Đoàn xe cơ giới địch (18, -42)</option><option value="bunker">Boongke kiên cố (-48, -32)</option><option value="custom">Tự chọn mục tiêu (Click mặt đất 3D)</option></select></div>
+            <div class="row" style="align-items:center;justify-content:space-between;margin-bottom:6px">
+              <label style="font-weight:600">Mục tiêu ném bom:</label>
+              <span class="chip" id="chipBomberTarget" style="background:var(--accent-soft);color:var(--accent);font-weight:600">Click mặt đất 3D</span>
+            </div>
+            <input type="hidden" id="bomberTarget" value="custom">
             <div class="field"><label for="bomberAlt">Độ cao ném bom</label><output id="oBomberAlt">20 m</output><input type="range" id="bomberAlt" min="14" max="38" step="1" value="20"></div>
             <div class="field"><label for="bombMass">Khối lượng bom (1 quả / chuyến)</label><output id="oBombMass">1,00 kg</output><input type="range" id="bombMass" min="0.25" max="2" step="0.25" value="1"></div>
             <div class="sv-go">
@@ -1952,6 +1956,7 @@ var Sim = (function(){
       case 'MISSION':
         // Resume from where the drone is, skipping waypoints already reached on this run
         S.dwell = 0;
+        S.lap = 1;
         if (params.task === 'orbit' && params.orbit){ S.orbPhase = 'approach'; destinations = [orbitEntry()]; S.destDone = 0; }
         rebuildTrajectory(true);
         break;
@@ -2049,11 +2054,15 @@ var Sim = (function(){
     S.wpIdx++;
     if (S.wpIdx >= mission.length){
       if (params.task === 'orbit' && params.orbit && S.orbPhase === 'approach'){ startCircle(); return false; }
-      if (params.task === 'patrol' && (params.loops === 0 || S.lap < params.loops)){
-        S.lap++; S.destDone = 0;
-        rebuildTrajectory(true);
-        emit({ type:'lap', msg:'Bắt đầu vòng tuần tra ' + S.lap + (params.loops ? '/' + params.loops : '') });
-        return false;
+      if (params.task === 'patrol'){
+        if (params.loops > 1 && S.lap < params.loops){
+          S.lap++; S.destDone = 0;
+          rebuildTrajectory(true);
+          emit({ type:'lap', msg:'Bắt đầu vòng tuần tra ' + S.lap + '/' + params.loops });
+          return false;
+        }
+        finishTask();
+        return true;
       }
       finishTask();
       return true;
@@ -2892,9 +2901,9 @@ const META = {
   DISARMED: { cls:'idle',  sub:'tắt động cơ',    top:'Tại Nhà Máy Sản Xuất — Động cơ tắt', desc:'Drone giám sát đang đỗ trên bãi phóng H của Nhà Máy Sản Xuất (0,0). Bấm ARM để khởi hành.' },
   ARMED:    { cls:'armed', sub:'chờ tại xưởng',  top:'Động cơ quay không tải — Sẵn sàng cất cánh', desc:'4 động cơ quay không tải. Sẵn sàng TAKEOFF hoặc MISSION. Tự DISARM sau 12 giây nếu không cất cánh.' },
   TAKEOFF:  { cls:'air',   sub:'cất cánh',       top:'Đang cất cánh khỏi Nhà Máy Sản Xuất', desc:'Leo thẳng đứng lên độ cao hành trình an toàn trước khi rời khuôn viên Nhà Máy. Tới độ cao đặt sẽ tự chuyển sang HOVER.' },
-  HOVER:    { cls:'air',   sub:'treo giữ vị trí', top:'Treo giữ vị trí ổn định', desc:'Giữ cố định toạ độ E/N/U và hướng mũi, tự động bù gió môi trường. Bấm MISSION để bay nhiệm vụ.' },
+  HOVER:    { cls:'air',   sub:'treo giữ vị trí', top:'Treo giữ vị trí ổn định', desc:'Giữ cố định toạ độ E/N/U và hướng mũi, tự động bù gió môi trường. Bấm MISSION để bay tự động.' },
   MANUAL:   { cls:'air',   sub:'lái tay + APF',  top:'Lái bằng tay (có trường lực APF bảo vệ)', desc:'Lái tự do bằng bàn phím hoặc cần ảo. Khi bật né vật cản, cảm biến Lidar 360° tạo lực đẩy APF giúp hạn chế va vào vật cản.' },
-  MISSION:  { cls:'air',   sub:'bay nhiệm vụ',   top:'Đang bay nhiệm vụ tự động', desc:'Bay qua chuỗi điểm dẫn đường đã được thuật toán A* tối ưu hóa để vòng tránh các vật cản.' },
+  MISSION:  { cls:'air',   sub:'tự động',        top:'Đang bay tự động', desc:'Bay tự động qua chuỗi điểm dẫn đường đã được thuật toán A* tối ưu hóa để vòng tránh các vật cản.' },
   RTL:      { cls:'air',   sub:'về Nhà Máy',     top:'Quay về Nhà Máy Sản Xuất (có né vật cản)', desc:'Tự động tính toán hành lang né các vật cản từ vị trí hiện tại về lại bãi đáp Nhà Máy Sản Xuất (0,0) rồi hạ cánh.' },
   LANDING:  { cls:'land',  sub:'hạ cánh',        top:'Đang hạ cánh chính xác', desc:'Hạ cánh tốc độ giảm dần êm ái và chính xác. Chạm đất ổn định 0,4 giây thì chuyển về ARMED.' },
   FAILSAFE: { cls:'fs',    sub:'tự bảo vệ',      top:'Failsafe — Tự động né vật cản về Nhà Máy', desc:'Kích hoạt khi pin dưới 15% hoặc mất sóng. Drone tự lập đường né vật cản về Nhà Máy; nếu pin dưới 6% sẽ đáp khẩn cấp tại chỗ.' },
@@ -3430,6 +3439,8 @@ function addWaypointAt(e, n){
   const alt = (SV && SV.pu) ? SV.pu : 16;
   const newIdx = Sim.destinations.length + 1;
   Sim.addDestination({ e, n, u: alt, label: 'Điểm ' + newIdx, role: 'pass' });
+  Sim.S.lap = 1;
+  Sim.S.destDone = 0;
   addLog('info', 'Đã thêm điểm #' + newIdx + ' tại (' + e + ', ' + n + ', ' + alt + 'm)', 'Bấm "Auto bay 1 vòng" để drone cất cánh bay!', Sim.S.t);
   renderMission();
   if (window.svDraw3D) window.svDraw3D();
@@ -7642,6 +7653,8 @@ function svApply(silent){
   SV.loops = 1;
   P_.task = 'patrol';
   P_.loops = 1;
+  Sim.S.lap = 1;
+  Sim.S.destDone = 0;
   if (SV.patrol !== 'custom' && window.SURV && SURV.PATROLS && SURV.PATROLS[SV.patrol]){
     Sim.setDestinations(SURV.patrolPts(SV.patrol, SV.pu), true);
   } else {
@@ -7652,6 +7665,8 @@ function svApply(silent){
     }
     Sim.setDestinations(Sim.destinations.map(d => Object.assign({}, d, { role:'pass', u:SV.pu })), true);
   }
+  Sim.S.lap = 1;
+  Sim.S.destDone = 0;
   if (!silent) addLog('info', 'Đã nạp tuyến tuần tra click khu vực', Sim.destinations.length + ' điểm · cao ' + SV.pu + ' m · Auto bay 1 vòng', Sim.S.t);
   renderMission(); svDraw3D(); svRenderForm();
   return true;
@@ -7667,6 +7682,10 @@ function svSetTask(task, opts){
 
 /* --- launching: from the pad all the way into the mission --- */
 function svStart(){
+  Sim.params.task = 'patrol';
+  Sim.params.loops = 1;
+  Sim.S.lap = 1;
+  Sim.S.destDone = 0;
   if (!svApply(false)) return;
   if (R3 && R3.advanceFlightRun) R3.advanceFlightRun();
   if (SV.task === 'scan' && SV.cov) SV.cov.scan.fill(0);
@@ -7697,8 +7716,11 @@ function svPick(kind){
   svDraw3D();
 }
 function svGroundClick(e, n){
-  if (SV.task === 'bomber' && $('#bomberTarget')?.value === 'custom'){
-    bomberCustomTarget = { e: Math.round(e), n: Math.round(n), name: 'Mục tiêu tự chọn (' + Math.round(e) + ', ' + Math.round(n) + ')' };
+  if (SV.task === 'bomber'){
+    bomberCustomTarget = { e: Math.round(e), n: Math.round(n), name: 'Mục tiêu (' + Math.round(e) + ', ' + Math.round(n) + ')', radius: 5.5, destroyed: false };
+    const chip = $('#chipBomberTarget');
+    if (chip) chip.textContent = '(' + Math.round(e) + ', ' + Math.round(n) + ')';
+    if (window.showClickRipple) window.showClickRipple(Math.round(e), Math.round(n));
     addLog('bad', '🎯 ĐÃ CHỌN TỌA ĐỘ MỤC TIÊU NÉM BOM:', bomberCustomTarget.name, Sim.S.t);
     const alt = +($('#bomberAlt')?.value || 20);
     const dests = buildBomberRoute(bomberCustomTarget, alt);
@@ -7753,9 +7775,7 @@ function svDraw3D(){
     m.rotation.x = -Math.PI / 2; m.position.copy(C.toV(SV.pickA.e, SV.pickA.n, 0.15)); g.add(m);
   }
   if (SV.task === 'bomber'){
-    const key = $('#bomberTarget')?.value || 'depot';
-    let tgt = BOMBER_TARGETS[key] || BOMBER_TARGETS.depot;
-    if (key === 'custom') tgt = bomberCustomTarget;
+    let tgt = bomberCustomTarget;
     if (tgt){
       let topH = 0.12;
       if (Sim.obstacles){
@@ -7824,13 +7844,12 @@ function buildBomberRoute(tgt, alt){
 }
 
 function startBomberMission(){
-  const key = $('#bomberTarget')?.value || 'depot';
-  let tgt = BOMBER_TARGETS[key] || BOMBER_TARGETS.depot;
-  if (key === 'custom') tgt = bomberCustomTarget;
+  let tgt = bomberCustomTarget;
   const alt = +($('#bomberAlt')?.value || 20);
 
   Sim.params.task = 'bomber';
   Sim.params.loops = 1;
+  Sim.S.lap = 1;
   SV.task = 'bomber';
 
   const dests = buildBomberRoute(tgt, alt);
@@ -7881,33 +7900,13 @@ function svBindForm(){
   // Bomber Mission Form bindings
   $('#bomberAlt')?.addEventListener('input', e => {
     if ($('#oBomberAlt')) $('#oBomberAlt').textContent = e.target.value + ' m';
-    const key = $('#bomberTarget')?.value || 'depot';
-    let tgt = BOMBER_TARGETS[key] || BOMBER_TARGETS.depot;
-    if (key === 'custom') tgt = bomberCustomTarget;
+    let tgt = bomberCustomTarget;
     if (tgt){
       const alt = +e.target.value;
       const dests = buildBomberRoute(tgt, alt);
       Sim.setDestinations(dests, true);
       renderMission();
       if (window.svDraw3D) window.svDraw3D();
-    }
-  });
-  $('#bomberTarget')?.addEventListener('change', e => {
-    const stage = $('#stage');
-    if (e.target.value === 'custom'){
-      addLog('info', 'Click mặt đất 3D để chọn toạ độ mục tiêu ném bom!', '', Sim.S.t);
-      if (stage) stage.classList.add('custom-mode');
-    } else {
-      if (stage) stage.classList.remove('custom-mode');
-      const key = e.target.value;
-      const tgt = BOMBER_TARGETS[key];
-      if (tgt){
-        const alt = +($('#bomberAlt')?.value || 20);
-        const dests = buildBomberRoute(tgt, alt);
-        Sim.setDestinations(dests, true);
-        renderMission();
-        if (window.svDraw3D) window.svDraw3D();
-      }
     }
   });
   $('#bombMass')?.addEventListener('input', e => {
@@ -7926,7 +7925,6 @@ function svBindForm(){
   $('#btnManualDrop')?.addEventListener('click', () => {
     if (window.dropBomb) window.dropBomb();
   });
-
   $('#tabTaskPatrol')?.addEventListener('click', () => {
     $('#tabTaskPatrol').classList.add('active');
     $('#tabTaskBomber').classList.remove('active');
@@ -7944,14 +7942,8 @@ function svBindForm(){
     $('#optPatrol').style.display = 'none';
     SV.task = 'bomber'; Sim.params.task = 'bomber';
     const stage = $('#stage');
-    if ($('#bomberTarget')?.value === 'custom'){
-      if (stage) stage.classList.add('custom-mode');
-    } else {
-      if (stage) stage.classList.remove('custom-mode');
-    }
-    const key = $('#bomberTarget')?.value || 'depot';
-    let tgt = BOMBER_TARGETS[key] || BOMBER_TARGETS.depot;
-    if (key === 'custom') tgt = bomberCustomTarget;
+    if (stage) stage.classList.add('custom-mode');
+    let tgt = bomberCustomTarget;
     if (tgt){
       const alt = +($('#bomberAlt')?.value || 20);
       const dests = buildBomberRoute(tgt, alt);
@@ -7959,7 +7951,7 @@ function svBindForm(){
       renderMission();
       if (window.svDraw3D) window.svDraw3D();
     }
-    addLog('warn', '💣 Đã chọn nhiệm vụ BOMBER (Oanh tạc mục tiêu)', 'Lộ trình tiếp cận → Cắt bom → Thoát ly thẳng → Vòng lượn về đã được nạp.', Sim.S.t);
+    addLog('warn', '💣 Đã chọn nhiệm vụ BOMBER (Oanh tạc mục tiêu)', 'Click mặt đất 3D để chọn toạ độ mục tiêu ném bom.', Sim.S.t);
   });
 
   addEventListener('keydown', e => {
