@@ -3951,34 +3951,34 @@ const hemi = new THREE.HemisphereLight(0x90c4f4, 0x476842, 0.88); scene.add(hemi
   const streetLightGroup = new THREE.Group(); streetLightGroup.visible = false;
 
   // Procedural High-Resolution Architectural Textures
-  // A. Corrugated Industrial Steel Wall Texture
+  // A. Corrugated Industrial Steel Wall Texture (Factory in Drone Orange finish)
   const corrugateTex = canvasTex(512, (x, s) => {
-    x.fillStyle = '#485564'; x.fillRect(0, 0, s, s);
+    x.fillStyle = '#ff6a00'; x.fillRect(0, 0, s, s);
     for (let col = 0; col < s; col += 16){
       const g = x.createLinearGradient(col, 0, col + 16, 0);
-      g.addColorStop(0, '#343f49');
-      g.addColorStop(0.35, '#5c6c7d');
-      g.addColorStop(0.65, '#43505d');
-      g.addColorStop(1, '#303943');
+      g.addColorStop(0, '#e65a00');
+      g.addColorStop(0.35, '#ff8533');
+      g.addColorStop(0.65, '#ff6a00');
+      g.addColorStop(1, '#cc5200');
       x.fillStyle = g; x.fillRect(col, 0, 16, s);
     }
     for (let row = 64; row < s; row += 128){
-      x.fillStyle = '#29323a'; x.fillRect(0, row - 4, s, 8);
-      x.fillStyle = '#94a3b8';
+      x.fillStyle = '#b34700'; x.fillRect(0, row - 4, s, 8);
+      x.fillStyle = '#ffd23f';
       for (let b = 8; b < s; b += 24){
         x.beginPath(); x.arc(b, row, 2, 0, Math.PI*2); x.fill();
       }
     }
-    x.fillStyle = '#353e47'; x.fillRect(0, s - 28, s, 28);
-    x.fillStyle = '#d97706'; x.fillRect(0, s - 42, s, 14);
+    x.fillStyle = '#b34700'; x.fillRect(0, s - 28, s, 28);
+    x.fillStyle = '#ffd23f'; x.fillRect(0, s - 42, s, 14);
   });
   corrugateTex.wrapS = corrugateTex.wrapT = THREE.RepeatWrapping;
 
-  // B. Standing Seam Industrial Metal Roof
+  // B. Standing Seam Industrial Metal Roof (Factory in Drone Orange finish)
   const roofMetalTex = canvasTex(512, (x, s) => {
-    x.fillStyle = '#2b3540'; x.fillRect(0, 0, s, s);
+    x.fillStyle = '#c25500'; x.fillRect(0, 0, s, s);
     for (let c = 0; c < s; c += 16){
-      x.fillStyle = (c % 32 === 0) ? '#3d4a57' : '#202830';
+      x.fillStyle = (c % 32 === 0) ? '#e66700' : '#a84500';
       x.fillRect(c, 0, 8, s);
     }
   });
@@ -5331,9 +5331,9 @@ const hemi = new THREE.HemisphereLight(0x90c4f4, 0x476842, 0.88); scene.add(hemi
   const glowTex = canvasTex(64, (x, s) => { const g = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,255,255,0.5)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, s, s); });
   const k = 6.8;   // drawn enlarged so the 0.8 m airframe stays visible over a large scene (physics uses the real size)
   const drone = new THREE.Group(); scene.add(drone);
-  // high-visibility orange with a self-lit component so the airframe reads clearly in shade, haze and at night
-  const darkM = new THREE.MeshStandardMaterial({ color:0xff6a00, emissive:0xff5a00, emissiveIntensity:0.55, roughness:0.35, metalness:0.15 });
-  const plateM = new THREE.MeshStandardMaterial({ color:0xffd23f, emissive:0xffb000, emissiveIntensity:0.45, roughness:0.38, metalness:0.2 });
+  // High-visibility slate steel & charcoal finish (swapped from factory colors)
+  const darkM = new THREE.MeshStandardMaterial({ color:0x485564, roughness:0.38, metalness:0.35 });
+  const plateM = new THREE.MeshStandardMaterial({ color:0x2b3540, roughness:0.40, metalness:0.30 });
   const metalM = new THREE.MeshStandardMaterial({ color:0xc5ccd6, roughness:0.20, metalness:0.80 });
   const goldM = new THREE.MeshStandardMaterial({ color:0xdfa328, roughness:0.30, metalness:0.55 });
   const blackM = new THREE.MeshStandardMaterial({ color:0x1e242b, roughness:0.55, metalness:0.20 });
@@ -5542,32 +5542,16 @@ const hemi = new THREE.HemisphereLight(0x90c4f4, 0x476842, 0.88); scene.add(hemi
   lidarRing.rotation.x = -Math.PI/2; lidarGroup.add(lidarRing);
   const ringBase = Sim.params.safeMargin;
 
-  /* Locator: a screen-sized marker above the drone, a drop line and a ground ring that show where the drone is
-     and how high it flies. Overlay only: hidden in the drone's own camera picture and in the thermal image. */
+  /* Locator: a drop line and ground ring that show where the drone is and how high it flies.
+     Overhead arrow marker removed per user request. Overlay only: hidden in the drone's own camera picture and in the thermal image. */
   const locator = new THREE.Group(); scene.add(locator);
-  const locTex = canvasTex(128, (x, s) => {
-    x.fillStyle = '#ff6a00'; x.strokeStyle = '#ffffff'; x.lineWidth = 10;
-    x.beginPath(); x.moveTo(s / 2, s - 10); x.lineTo(s - 22, 30); x.lineTo(22, 30); x.closePath(); x.fill(); x.stroke();
-  });
-  const locMark = new THREE.Sprite(new THREE.SpriteMaterial({ map: locTex, depthTest:false, depthWrite:false, transparent:true, sizeAttenuation:false }));
-  locMark.scale.set(0.06, 0.06, 1); locMark.renderOrder = 40; locator.add(locMark);
-  const locLabel = textSprite('UAV', '#ffffff', 'rgba(255,106,0,0.92)', 0.055); locLabel.material.depthTest = false; locLabel.renderOrder = 41; locator.add(locLabel);
-  let locTxt = '';
   const locLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
-    new THREE.LineDashedMaterial({ color:0xff6a00, dashSize:0.6, gapSize:0.4, transparent:true, opacity:0.9 }));
+    new THREE.LineDashedMaterial({ color:0x64748b, dashSize:0.6, gapSize:0.4, transparent:true, opacity:0.9 }));
   locator.add(locLine);
-  const locRing = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.6, 40), new THREE.MeshBasicMaterial({ color:0xff6a00, transparent:true, opacity:0.75, side:THREE.DoubleSide, depthWrite:false }));
+  const locRing = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.6, 40), new THREE.MeshBasicMaterial({ color:0x64748b, transparent:true, opacity:0.75, side:THREE.DoubleSide, depthWrite:false }));
   locRing.rotation.x = -Math.PI / 2; locator.add(locRing);
   function updateLocator(){
-    const S = Sim.S, p = S.pos, top = toV(p[0], p[1], p[2] + 1.6 + 0.012 * camera.position.distanceTo(drone.position));
-    locMark.position.copy(top);
-    locLabel.position.copy(top).add(new THREE.Vector3(0, 0.6 + 0.045 * camera.position.distanceTo(drone.position), 0));
-    const txt = 'UAV · ' + Math.max(0, p[2]).toFixed(0) + ' m';
-    if (txt !== locTxt){
-      locTxt = txt;
-      const old = locLabel.material.map;
-      locLabel.material.map = textSprite(txt, '#ffffff', 'rgba(255,106,0,0.92)', 0.03).material.map; old.dispose(); locLabel.material.needsUpdate = true;
-    }
+    const S = Sim.S, p = S.pos;
     const air = !S.grounded && p[2] > 0.6;
     locLine.visible = locRing.visible = air;
     if (air){
@@ -6527,7 +6511,7 @@ const hemi = new THREE.HemisphereLight(0x90c4f4, 0x476842, 0.88); scene.add(hemi
       const d = drone.position;
       mapCam.aspect = w / h; mapCam.updateProjectionMatrix();
       mapCam.position.set(d.x, d.y + 46, d.z + 0.001); mapCam.up.set(0, 0, -1); mapCam.lookAt(d);
-      mapArrow.position.set(d.x, d.y + 0.6, d.z); mapArrow.rotation.y = Sim.S.att[2]; mapArrow.visible = true; arrowMat.color.set(TK.accent);
+      mapArrow.position.set(d.x, d.y + 0.6, d.z); mapArrow.rotation.y = Sim.S.att[2]; mapArrow.visible = false;
       renderer.render(scene, mapCam);
       mapArrow.visible = false;
     } else {
@@ -8046,8 +8030,8 @@ function svDrawMap(){
     ctx.fillStyle = TK.bad; ctx.font = '600 10px ' + getComputedStyle(document.body).getPropertyValue('--f-mono'); ctx.fillText('CẤM BAY', X(z.e0) + 4, Y(z.n1) + 12);
   });
   if (SV.incident){ const p = SV.incident.pos; ctx.strokeStyle = TK.bad; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X(p[0]) - 6, Y(p[1]) - 6); ctx.lineTo(X(p[0]) + 6, Y(p[1]) + 6); ctx.moveTo(X(p[0]) + 6, Y(p[1]) - 6); ctx.lineTo(X(p[0]) - 6, Y(p[1]) + 6); ctx.stroke(); }
-  // buildings
-  Sim.obstacles.forEach(o => { ctx.fillStyle = TK['line-2']; ctx.fillRect(X(o.e - o.rx), Y(o.n + o.ry), 2 * o.rx * sc, 2 * o.ry * sc); });
+  // buildings (factory in orange)
+  Sim.obstacles.forEach(o => { ctx.fillStyle = o.kind === 'factory' ? '#ff6a00' : TK['line-2']; ctx.fillRect(X(o.e - o.rx), Y(o.n + o.ry), 2 * o.rx * sc, 2 * o.ry * sc); });
   // task geometry
   ctx.strokeStyle = TK.accent; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
   if (P_.task === 'orbit' && P_.orbit){ ctx.beginPath(); ctx.arc(X(P_.orbit.e), Y(P_.orbit.n), P_.orbit.r * sc, 0, 2 * Math.PI); ctx.stroke(); }
@@ -8081,11 +8065,14 @@ function svDrawMap(){
     if (a.vis){ ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 6, 0, 2 * Math.PI); ctx.stroke(); }
     if (SV.track === a.id){ ctx.strokeStyle = TK.fg; ctx.lineWidth = 1.5; ctx.strokeRect(x - 8, y - 8, 16, 16); }
   });
-  // home pad and drone
+  // home pad and drone (quadcopter icon without arrow)
   ctx.strokeStyle = TK.fg; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(X(0), Y(0), 3, 0, 2 * Math.PI); ctx.stroke();
   const px = X(S.pos[0]), py = Y(S.pos[1]), yaw = S.att[2];
   ctx.save(); ctx.translate(px, py); ctx.rotate(-yaw);
-  ctx.fillStyle = TK.fg; ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(-6, 5.5); ctx.lineTo(-3, 0); ctx.lineTo(-6, -5.5); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = TK.fg; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(-4, -4); ctx.lineTo(4, 4); ctx.moveTo(-4, 4); ctx.lineTo(4, -4); ctx.stroke();
+  ctx.fillStyle = TK['line-2']; ctx.beginPath(); ctx.arc(0, 0, 3.2, 0, 2 * Math.PI); ctx.fill();
+  [[-4,-4],[4,-4],[-4,4],[4,4]].forEach(([mx, my]) => { ctx.beginPath(); ctx.arc(mx, my, 1.6, 0, 2 * Math.PI); ctx.stroke(); });
   ctx.restore();
   // scale bar + north
   ctx.fillStyle = TK.muted; ctx.font = '600 10px ' + getComputedStyle(document.body).getPropertyValue('--f-mono');
