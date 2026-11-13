@@ -1190,7 +1190,7 @@ function aggregatePoints(points){
 
 <script id="surv-core">
 /* ===== Surveillance planning helpers (no DOM): patrol routes, scan areas, lawn-mower lanes, camera footprint ===== */
-const SURV = (() => {
+var SURV = window.SURV = (() => {
   const CAM_VFOV = 56, CAM_HFOV = 2 * Math.atan(Math.tan(CAM_VFOV / 2 * Math.PI / 180) * 16 / 9) * 180 / Math.PI;   // ≈ 87°
   // Surveillance routes across the base perimeter and surrounding terrain
   const PATROLS = {
@@ -7660,8 +7660,9 @@ function svApply(silent){
   P_.loops = 1;
   Sim.S.lap = 1;
   Sim.S.destDone = 0;
-  if (SV.patrol !== 'custom' && window.SURV && SURV.PATROLS && SURV.PATROLS[SV.patrol]){
-    Sim.setDestinations(SURV.patrolPts(SV.patrol, SV.pu), true);
+  const surv = window.SURV || (typeof SURV !== 'undefined' ? SURV : null);
+  if (SV.patrol !== 'custom' && surv && surv.PATROLS && surv.PATROLS[SV.patrol]){
+    Sim.setDestinations(surv.patrolPts(SV.patrol, SV.pu), true);
   } else {
     if (!Sim.destinations.length){
       if (!silent) addLog('warn', 'No waypoints on surveillance route! Click on 3D terrain to create waypoints.', '', Sim.S.t);
@@ -7673,7 +7674,7 @@ function svApply(silent){
   Sim.S.lap = 1;
   Sim.S.destDone = 0;
   if (!silent){
-    const rName = (SV.patrol !== 'custom' && window.SURV && SURV.PATROLS && SURV.PATROLS[SV.patrol]) ? SURV.PATROLS[SV.patrol].name : 'Custom 3D Terrain Route';
+    const rName = (SV.patrol !== 'custom' && surv && surv.PATROLS && surv.PATROLS[SV.patrol]) ? surv.PATROLS[SV.patrol].name : 'Custom 3D Terrain Route';
     addLog('info', 'Loaded surveillance route: ' + rName, Sim.destinations.length + ' waypoints · alt ' + SV.pu + ' m · Auto Fly 1 Lap', Sim.S.t);
   }
   renderMission(); svDraw3D(); svRenderForm();
