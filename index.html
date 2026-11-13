@@ -726,15 +726,20 @@ table.an-t tr.on td{background:var(--accent-soft)}
             </div>
           </div>
           <div class="sv-opt" id="optPatrol" data-for="patrol">
-            <div class="row" style="align-items:center;justify-content:space-between;margin-bottom:6px">
-              <label style="font-weight:600">Surveillance Route:</label>
-              <span class="chip" style="background:var(--accent-soft);color:var(--accent);font-weight:600">Click 3D Terrain</span>
+            <div class="row" style="flex-direction:column;align-items:stretch;gap:4px;margin-bottom:8px">
+              <label for="svPatrol" style="font-weight:600">Surveillance Route</label>
+              <select id="svPatrol" style="width:100%;padding:5px 8px;font-size:12px;background:var(--panel-2);color:inherit;border:1px solid var(--line);border-radius:4px;outline:none">
+                <option value="fence" selected>🏭 Around Manufacturing Plant</option>
+                <option value="center">🛣️ Around Access Road Corridor</option>
+                <option value="city">🛡️ Outer Base Perimeter</option>
+                <option value="custom">📍 Click 3D Terrain (Custom)</option>
+              </select>
             </div>
-            <input type="hidden" id="svPatrol" value="custom">
             <div class="field"><label for="svPu">Surveillance Altitude</label><output id="oSvPu"></output><input type="range" id="svPu" min="10" max="40" step="1" value="16"></div>
-            <div class="row" style="margin:4px 0 8px">
-              <button class="btn mini" id="btnPatrolClear" type="button" style="width:100%" title="Clear all selected surveillance waypoints">Clear Waypoints</button>
+            <div class="row" id="rowPatrolClear" style="margin:4px 0 8px;display:none">
+              <button class="btn mini" id="btnPatrolClear" type="button" style="width:100%" title="Clear all selected surveillance waypoints">Clear Custom Waypoints</button>
             </div>
+            <p class="note" id="patrolHint" style="margin:4px 0 8px;font-size:11px;color:var(--dim)">🏭 Pre-configured perimeter route around Manufacturing Plant. Auto flies 1 lap and returns to Plant (RTL).</p>
             <div class="sv-go"><button class="btn primary" id="svStart">Auto Fly 1 Lap</button><button class="btn" id="svStop" title="Abort mission, return to Plant">Recall Home (RTL)</button></div>
           </div>
           <div class="sv-opt" id="optBomber" style="display:none" data-for="bomber">
@@ -777,7 +782,7 @@ table.an-t tr.on td{background:var(--accent-soft)}
           <button data-cam="orbit" aria-pressed="true">Orbit 3D</button><button data-cam="follow">Chase Cam</button><button data-cam="traj">Trajectory</button><button data-cam="fpv" title="Onboard drone camera view (Key C)">Drone<span class="wide-only"> Cam</span></button>
         </div>
       </div>
-      <div class="stage custom-mode" id="stage">
+      <div class="stage" id="stage">
         <canvas id="gl" aria-label="3D Base and Manufacturing Plant Scene"></canvas>
         <div class="ov ov-hint" id="hint" style="display:none!important"></div>
         <div class="ov ov-hud" id="hud">
@@ -1189,9 +1194,9 @@ const SURV = (() => {
   const CAM_VFOV = 56, CAM_HFOV = 2 * Math.atan(Math.tan(CAM_VFOV / 2 * Math.PI / 180) * 16 / 9) * 180 / Math.PI;   // ≈ 87°
   // Surveillance routes across the base perimeter and surrounding terrain
   const PATROLS = {
-    fence:  { name:'Plant Perimeter Fence',     u:16, pts:[[-20,-6],[10,-6],[10,14],[-20,14]] },
-    center: { name:'Main Access Road Corridor', u:18, pts:[[-44,14],[46,14],[46,-6],[-44,-6]] },
-    city:   { name:'Outer Base Perimeter',    u:18, pts:[[-44,-42],[46,-42],[46,44],[-44,44]] }
+    fence:  { name:'Around Manufacturing Plant',     u:16, pts:[[-20,-6],[10,-6],[10,14],[-20,14]] },
+    center: { name:'Around Access Road Corridor',   u:18, pts:[[-44,14],[46,14],[46,-6],[-44,-6]] },
+    city:   { name:'Outer Base Perimeter',          u:18, pts:[[-44,-42],[46,-42],[46,44],[-44,44]] }
   };
   // Scan areas: e0..e1 × n0..n1 (m, ENU)
   const AREAS = {
@@ -2914,7 +2919,7 @@ let TK = {};
 let R3 = null;
 const TASK_LABEL = window.TASK_LABEL = { patrol:'Surveillance', bomber:'Strike (Bomber)' };
 const SV = window.SV = {
-  task:'patrol', patrol:'custom', pu:16, loops:1,
+  task:'patrol', patrol:'fence', pu:16, loops:1,
   orbit:{ target:'F3', r:14, u:22, laps:1, dir:1, v:4 }, orbitPick:null,
   area:'factory', su:31, areaPick:null, pick:null, pickA:null,
   agents:[], dets:[], seen:{}, uniq:{ p:new Set(), v:new Set() }, track:null, now:0,
@@ -7667,7 +7672,10 @@ function svApply(silent){
   }
   Sim.S.lap = 1;
   Sim.S.destDone = 0;
-  if (!silent) addLog('info', 'Loaded surveillance route from 3D terrain clicks', Sim.destinations.length + ' waypoints · alt ' + SV.pu + ' m · Auto Fly 1 Lap', Sim.S.t);
+  if (!silent){
+    const rName = (SV.patrol !== 'custom' && window.SURV && SURV.PATROLS && SURV.PATROLS[SV.patrol]) ? SURV.PATROLS[SV.patrol].name : 'Custom 3D Terrain Route';
+    addLog('info', 'Loaded surveillance route: ' + rName, Sim.destinations.length + ' waypoints · alt ' + SV.pu + ' m · Auto Fly 1 Lap', Sim.S.t);
+  }
   renderMission(); svDraw3D(); svRenderForm();
   return true;
 }
@@ -7868,6 +7876,28 @@ function startBomberMission(){
 function svRenderForm(){
   $('#oSvPu').textContent = SV.pu + ' m';
   if ($('#oBomberAlt') && $('#bomberAlt')) $('#oBomberAlt').textContent = $('#bomberAlt').value + ' m';
+  if ($('#svPatrol') && $('#svPatrol').value !== SV.patrol) $('#svPatrol').value = SV.patrol || 'fence';
+  const isCustom = (SV.patrol === 'custom');
+  if ($('#rowPatrolClear')) $('#rowPatrolClear').style.display = isCustom ? 'flex' : 'none';
+  const stage = $('#stage');
+  if (stage){
+    if (SV.task === 'bomber' || (SV.task === 'patrol' && isCustom)){
+      stage.classList.add('custom-mode');
+    } else {
+      stage.classList.remove('custom-mode');
+    }
+  }
+  if ($('#patrolHint')){
+    if (SV.patrol === 'fence'){
+      $('#patrolHint').textContent = '🏭 Pre-configured perimeter route around Manufacturing Plant. Auto flies 1 lap and returns to Plant (RTL).';
+    } else if (SV.patrol === 'center'){
+      $('#patrolHint').textContent = '🛣️ Pre-configured surveillance corridor along Access Road. Auto flies 1 lap and returns to Plant (RTL).';
+    } else if (SV.patrol === 'city'){
+      $('#patrolHint').textContent = '🛡️ Pre-configured extended patrol along Outer Base Perimeter. Auto flies 1 lap and returns to Plant (RTL).';
+    } else {
+      $('#patrolHint').textContent = '📍 Click on 3D terrain to add waypoints (up to 15 points). Drone will plan A* obstacle-avoiding trajectory, fly 1 lap, and return to Plant (RTL).';
+    }
+  }
 }
 function svBindForm(){
   const re = () => { svApply(true); svRenderForm(); };
@@ -7879,6 +7909,8 @@ function svBindForm(){
       Sim.setDestinations([], true);
       addLog('info', 'Surveillance: click 3D terrain to add waypoints', 'maximum 15 waypoints', Sim.S.t);
       renderMission();
+      if (window.svDraw3D) window.svDraw3D();
+      svRenderForm();
     } else {
       if (stage) stage.classList.remove('custom-mode');
       svApply(false);
@@ -7932,7 +7964,11 @@ function svBindForm(){
     $('#optBomber').style.display = 'none';
     SV.task = 'patrol'; Sim.params.task = 'patrol';
     const stage = $('#stage');
-    if (stage) stage.classList.add('custom-mode');
+    if (SV.patrol === 'custom'){
+      if (stage) stage.classList.add('custom-mode');
+    } else {
+      if (stage) stage.classList.remove('custom-mode');
+    }
     svApply(true);
   });
   $('#tabTaskBomber')?.addEventListener('click', () => {

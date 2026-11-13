@@ -22,7 +22,7 @@ Browser-based tactical surveillance and combat drone simulator. The quadcopter t
 
 Open `index.html` directly in any modern browser (requires internet connection to load Three.js and web fonts via CDN). No local installation or build process is required.
 
-- **Autonomous Surveillance:** Click **Auto Fly 1 Lap** in the Surveillance section: the drone autonomously executes ARM → TAKEOFF → MISSION (flies surveillance waypoints with A* obstacle avoidance) → RTL (returns to Plant) → LANDING → DISARMED.
+- **Autonomous Surveillance:** Select a surveillance route (**Around Manufacturing Plant**, **Around Access Road Corridor**, **Outer Base Perimeter**, or custom **Click 3D Terrain**), adjust altitude, and click **Auto Fly 1 Lap**: the drone autonomously executes ARM → TAKEOFF → MISSION (flies surveillance waypoints with A* obstacle avoidance) → RTL (returns to Plant) → LANDING → DISARMED.
 - **Bomber Strike Sortie:** Select a ground target, configure payload mass (0.25–2.0 kg), and click **💣 Launch Strike Sortie**: the drone takes off, flies an ingress corridor, solves the CCRP ballistic trajectory under wind drag, releases the bomb, executes egress maneuvers, and returns to Plant.
 - **Simulate Datalink Loss:** Click **Simulate Datalink Loss (Blackbox)** to test autonomous fallback under complete communication loss.
 
